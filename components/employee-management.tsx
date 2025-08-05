@@ -250,7 +250,7 @@ export default function EmployeeManagement() {
                   </SelectTrigger>
                   <SelectContent>
                     {shifts.map((shift) => (
-                      <SelectItem key={shift.id} value={shift.name.toLowerCase().replace(" ", "")}>
+                      <SelectItem key={shift.id} value={shift.id.toLowerCase().replace(" ", "")}>
                         {shift.name} ({formatTime12Hour(shift.startTime)} - {formatTime12Hour(shift.endTime)})
                       </SelectItem>
                     ))}
