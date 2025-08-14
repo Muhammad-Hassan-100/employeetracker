@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
-import { Clock, CheckCircle, XCircle, AlertCircle, Loader2 } from "lucide-react"
+import { Clock, CheckCircle, XCircle, AlertCircle, Loader2, FileText } from "lucide-react"
 import { toast } from "sonner"
 
 interface User {
@@ -42,6 +42,14 @@ export default function AttendanceTab({ user }: AttendanceTabProps) {
   const [isCheckingIn, setIsCheckingIn] = useState(false)
   const [isCheckingOut, setIsCheckingOut] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
+  const [todayStatus, setTodayStatus] = useState<"present" | "absent" | "on_leave" | null>(null)
+  const [showSameDayLeaveForm, setShowSameDayLeaveForm] = useState(false)
+  const [sameDayLeaveReason, setSameDayLeaveReason] = useState("")
+  const [isApplyingLeave, setIsApplyingLeave] = useState(false)
+  const [statusMessage, setStatusMessage] = useState("")
+  const [canCheckIn, setCanCheckIn] = useState(false)
+  const [canApplyLeave, setCanApplyLeave] = useState(false)
+  const [canCheckOut, setCanCheckOut] = useState(false)
 
   const parseTime = (timeString: string) => {
     const [hours, minutes] = timeString.split(":").map(Number)
@@ -83,10 +91,29 @@ export default function AttendanceTab({ user }: AttendanceTabProps) {
 
   const checkTodayAttendance = async () => {
     try {
+      // First check comprehensive status
+      const statusResponse = await fetch(`/api/employees/status?userId=${user.id}`)
+      if (statusResponse.ok) {
+        const statusData = await statusResponse.json()
+        setTodayStatus(statusData.status)
+        setStatusMessage(statusData.message)
+        setCanCheckIn(statusData.canCheckIn)
+        setCanApplyLeave(statusData.canApplyLeave)
+        setCanCheckOut(statusData.canCheckOut)
+        
+        if (statusData.attendanceRecord) {
+          setIsCheckedIn(!!statusData.attendanceRecord.checkInTime && !statusData.attendanceRecord.checkOutTime)
+        }
+      }
+
+      // Also check the legacy today API for backward compatibility
       const response = await fetch(`/api/attendance/today?userId=${user.id}`)
       if (response.ok) {
         const data = await response.json()
-        setIsCheckedIn(data.isCheckedIn)
+        if (data.record && !todayStatus) {
+          setIsCheckedIn(data.isCheckedIn)
+          setTodayStatus(data.record.status || null)
+        }
       }
     } catch (error) {
       console.error("Error checking attendance:", error)
@@ -127,8 +154,10 @@ export default function AttendanceTab({ user }: AttendanceTabProps) {
 
       if (response.ok) {
         setIsCheckedIn(true)
+        setTodayStatus("present")
         setShowLateForm(false)
         setLateReason("")
+        checkTodayAttendance() // Refresh the status
         toast.success("Check-in successful!", {
           description: `Welcome to work, ${user.name}!`,
         })
@@ -182,6 +211,7 @@ export default function AttendanceTab({ user }: AttendanceTabProps) {
         setIsCheckedIn(false)
         setShowEarlyForm(false)
         setEarlyReason("")
+        checkTodayAttendance() // Refresh the status
         toast.success("Check-out successful!", {
           description: `Hours worked: ${data.hoursWorked}. Have a great day!`,
         })
@@ -197,6 +227,52 @@ export default function AttendanceTab({ user }: AttendanceTabProps) {
       })
     } finally {
       setIsCheckingOut(false)
+    }
+  }
+
+  const handleSameDayLeave = async () => {
+    if (!sameDayLeaveReason.trim()) {
+      toast.error("Please provide a reason for same-day leave")
+      return
+    }
+
+    setIsApplyingLeave(true)
+    const today = new Date().toISOString().split("T")[0]
+
+    try {
+      const response = await fetch("/api/leaves/same-day", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          userId: user.id,
+          employeeName: user.name,
+          reason: sameDayLeaveReason,
+          date: today,
+        }),
+      })
+
+      if (response.ok) {
+        toast.success("Same-day leave applied successfully!", {
+          description: "Your leave has been auto-approved for today.",
+        })
+        setShowSameDayLeaveForm(false)
+        setSameDayLeaveReason("")
+        setTodayStatus("on_leave")
+        checkTodayAttendance()
+      } else {
+        const error = await response.json()
+        toast.error("Failed to apply leave", {
+          description: error.error || "Please try again",
+        })
+      }
+    } catch (error) {
+      toast.error("Connection error", {
+        description: "Unable to apply for leave",
+      })
+    } finally {
+      setIsApplyingLeave(false)
     }
   }
 
@@ -285,7 +361,7 @@ export default function AttendanceTab({ user }: AttendanceTabProps) {
             )}
             <Button
               onClick={handleCheckIn}
-              disabled={isCheckedIn || isCheckingIn || !canCheckInNow}
+              disabled={!canCheckIn || isCheckingIn}
               className="w-full bg-green-600 hover:bg-green-700"
             >
               {isCheckingIn ? (
@@ -293,10 +369,11 @@ export default function AttendanceTab({ user }: AttendanceTabProps) {
                   <Loader2 className="h-4 w-4 animate-spin" />
                   <span>Checking In...</span>
                 </div>
-              ) : isCheckedIn ? (
-                "Already Checked In"
-              ) : !canCheckInNow ? (
-                "Check In (Available 5 min before shift)"
+              ) : !canCheckIn ? (
+                todayStatus === "on_leave" ? "On Leave Today" :
+                isCheckedIn ? "Already Checked In" :
+                !canCheckInNow ? "Check In (Available 5 min before shift)" :
+                "Cannot Check In"
               ) : (
                 "Check In"
               )}
@@ -328,7 +405,7 @@ export default function AttendanceTab({ user }: AttendanceTabProps) {
             )}
             <Button
               onClick={handleCheckOut}
-              disabled={!isCheckedIn || isCheckingOut}
+              disabled={!canCheckOut || isCheckingOut}
               variant="destructive"
               className="w-full"
             >
@@ -337,8 +414,9 @@ export default function AttendanceTab({ user }: AttendanceTabProps) {
                   <Loader2 className="h-4 w-4 animate-spin" />
                   <span>Checking Out...</span>
                 </div>
-              ) : !isCheckedIn ? (
-                "Not Checked In"
+              ) : !canCheckOut ? (
+                todayStatus === "on_leave" ? "On Leave Today" :
+                !isCheckedIn ? "Not Checked In" : "Cannot Check Out"
               ) : (
                 "Check Out"
               )}
@@ -346,6 +424,107 @@ export default function AttendanceTab({ user }: AttendanceTabProps) {
           </CardContent>
         </Card>
       </div>
+
+      {/* Today's Status */}
+      {todayStatus && (
+        <Card className="shadow-sm">
+          <CardHeader>
+            <CardTitle className="flex items-center space-x-2">
+              <AlertCircle className="h-5 w-5" />
+              <span>Today's Status</span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex flex-col items-center space-y-2">
+              <Badge 
+                variant={
+                  todayStatus === "on_leave" ? "default" : 
+                  todayStatus === "present" || isCheckedIn ? "default" : 
+                  "destructive"
+                }
+                className="text-lg px-4 py-2"
+              >
+                {todayStatus === "on_leave" ? "🏠 On Leave" : 
+                 todayStatus === "present" || isCheckedIn ? "✅ Checked In" :
+                 todayStatus === "absent" ? "❌ Absent" :
+                 "⏰ Available"}
+              </Badge>
+              {statusMessage && (
+                <p className="text-sm text-gray-600 text-center">{statusMessage}</p>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Same Day Leave Application */}
+      {canApplyLeave && (
+        <Card className="shadow-sm border-orange-200">
+          <CardHeader>
+            <CardTitle className="flex items-center space-x-2 text-orange-700">
+              <FileText className="h-5 w-5" />
+              <span>Same-Day Leave</span>
+            </CardTitle>
+            <CardDescription>
+              Can't come to work today? Apply for same-day emergency leave
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {!showSameDayLeaveForm ? (
+              <Button
+                onClick={() => setShowSameDayLeaveForm(true)}
+                variant="outline"
+                className="w-full border-orange-300 text-orange-700 hover:bg-orange-50"
+              >
+                <FileText className="h-4 w-4 mr-2" />
+                Apply for Same-Day Leave
+              </Button>
+            ) : (
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="same-day-reason">Reason for emergency leave:</Label>
+                  <Textarea
+                    id="same-day-reason"
+                    placeholder="Please provide a reason for your emergency leave today..."
+                    value={sameDayLeaveReason}
+                    onChange={(e) => setSameDayLeaveReason(e.target.value)}
+                    className="min-h-[100px]"
+                  />
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    onClick={handleSameDayLeave}
+                    disabled={isApplyingLeave || !sameDayLeaveReason.trim()}
+                    className="bg-orange-600 hover:bg-orange-700"
+                  >
+                    {isApplyingLeave ? (
+                      <div className="flex items-center space-x-2">
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        <span>Applying...</span>
+                      </div>
+                    ) : (
+                      "Submit Leave Application"
+                    )}
+                  </Button>
+                  <Button
+                    onClick={() => {
+                      setShowSameDayLeaveForm(false)
+                      setSameDayLeaveReason("")
+                    }}
+                    variant="outline"
+                  >
+                    Cancel
+                  </Button>
+                </div>
+                <div className="text-sm text-gray-600 p-3 bg-blue-50 rounded">
+                  <strong>Note:</strong> Same-day emergency leave will be automatically approved 
+                  and marked in your attendance record. Use this only for genuine emergencies.
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {/* Dynamic Work Schedule */}
       <Card className="shadow-sm">

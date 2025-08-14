@@ -7,17 +7,41 @@ export async function POST(request: NextRequest) {
 
     const db = await getDatabase()
     const attendanceCollection = db.collection("attendance")
+    const leavesCollection = db.collection("leaves")
 
     const today = new Date().toISOString().split("T")[0]
 
-    // Check if user already checked in today
+    // Check if user already has an attendance record today
     const existingRecord = await attendanceCollection.findOne({
       userId: userId,
       date: today,
     })
 
     if (existingRecord) {
-      return NextResponse.json({ error: "Already checked in today" }, { status: 400 })
+      if (existingRecord.status === "on_leave") {
+        return NextResponse.json({ 
+          error: "Cannot check in while on approved leave" 
+        }, { status: 400 })
+      }
+      if (existingRecord.checkInTime) {
+        return NextResponse.json({ 
+          error: "Already checked in today" 
+        }, { status: 400 })
+      }
+    }
+
+    // Check if user has approved leave for today
+    const hasLeave = await leavesCollection.findOne({
+      userId: userId,
+      status: "approved",
+      startDate: { $lte: today },
+      endDate: { $gte: today }
+    })
+
+    if (hasLeave) {
+      return NextResponse.json({ 
+        error: "Cannot check in while on approved leave" 
+      }, { status: 400 })
     }
 
     const record = {
@@ -30,6 +54,7 @@ export async function POST(request: NextRequest) {
       lateReason: lateReason || null,
       earlyReason: null,
       hoursWorked: 0,
+      status: "present",
       createdAt: new Date(),
       updatedAt: new Date(),
     }

@@ -15,6 +15,8 @@ interface AttendanceReport {
   department: string
   totalDays: number
   presentDays: number
+  absentDays: number
+  leaveDays: number
   lateDays: number
   earlyLeaveDays: number
   avgHours: number
@@ -247,24 +249,29 @@ export default function AttendanceReports() {
                     </div>
                   </div>
 
-                  <div className="grid md:grid-cols-6 gap-4 text-sm">
+                  <div className="grid md:grid-cols-7 gap-4 text-sm">
                     <div className="text-center p-2 bg-blue-50 rounded">
                       <div className="font-bold text-blue-600">{report.presentDays}</div>
                       <div className="text-gray-600">Present Days</div>
                     </div>
 
-                    <div className="text-center p-2 bg-gray-50 rounded">
-                      <div className="font-bold text-gray-600">{report.totalDays}</div>
-                      <div className="text-gray-600">Total Days</div>
-                    </div>
-
                     <div className="text-center p-2 bg-red-50 rounded">
-                      <div className="font-bold text-red-600">{report.lateDays}</div>
-                      <div className="text-gray-600">Late Days</div>
+                      <div className="font-bold text-red-600">{report.absentDays || 0}</div>
+                      <div className="text-gray-600">Absent Days</div>
                     </div>
 
                     <div className="text-center p-2 bg-yellow-50 rounded">
-                      <div className="font-bold text-yellow-600">{report.earlyLeaveDays}</div>
+                      <div className="font-bold text-yellow-600">{report.leaveDays || 0}</div>
+                      <div className="text-gray-600">Leave Days</div>
+                    </div>
+
+                    <div className="text-center p-2 bg-orange-50 rounded">
+                      <div className="font-bold text-orange-600">{report.lateDays}</div>
+                      <div className="text-gray-600">Late Days</div>
+                    </div>
+
+                    <div className="text-center p-2 bg-pink-50 rounded">
+                      <div className="font-bold text-pink-600">{report.earlyLeaveDays}</div>
                       <div className="text-gray-600">Early Leaves</div>
                     </div>
 
@@ -275,9 +282,9 @@ export default function AttendanceReports() {
 
                     <div className="text-center p-2 bg-purple-50 rounded">
                       <div className="font-bold text-purple-600">
-                        {((report.presentDays / report.totalDays) * 100 || 0).toFixed(0)}%
+                        {report.attendanceRate.toFixed(0)}%
                       </div>
-                      <div className="text-gray-600">Presence Rate</div>
+                      <div className="text-gray-600">Attendance Rate</div>
                     </div>
                   </div>
                 </div>

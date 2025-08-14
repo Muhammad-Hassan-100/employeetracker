@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/sidebar"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Users, Clock, Calendar, UserPlus, History, LogOut, Home, BarChart3 } from "lucide-react"
+import { Users, Clock, Calendar, UserPlus, History, LogOut, Home, BarChart3, FileText } from "lucide-react"
 import Link from "next/link"
 import { toast } from "sonner"
 
@@ -46,6 +46,11 @@ export function AppSidebar({ user }: AppSidebarProps) {
       icon: Clock,
     },
     {
+      title: "Leave Management",
+      url: "/dashboard/leaves",
+      icon: FileText,
+    },
+    {
       title: "My History",
       url: "/dashboard/history",
       icon: History,
@@ -67,6 +72,11 @@ export function AppSidebar({ user }: AppSidebarProps) {
       title: "All Employees",
       url: "/dashboard/employee-list",
       icon: Users,
+    },
+    {
+      title: "Leave Management",
+      url: "/dashboard/leaves",
+      icon: FileText,
     },
     {
       title: "Attendance Reports",

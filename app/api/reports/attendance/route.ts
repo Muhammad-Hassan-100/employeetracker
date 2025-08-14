@@ -48,12 +48,20 @@ export async function GET(request: NextRequest) {
           })
           .toArray()
 
-        // Calculate working days in the range (excluding weekends)
-        const totalWorkingDays = getWorkingDaysCount(startDate, endDate)
-        const presentDays = attendanceRecords.length
-        const lateDays = attendanceRecords.filter((record) => record.isLate).length
-        const earlyLeaveDays = attendanceRecords.filter((record) => record.isEarly).length
-        const totalHours = attendanceRecords.reduce((sum, record) => sum + (record.hoursWorked || 0), 0)
+        // Calculate working days in the range (excluding weekends) starting from join date
+        const employeeStartDate = new Date(employee.joinDate) > startDate ? new Date(employee.joinDate) : startDate
+        const totalWorkingDays = getWorkingDaysCount(employeeStartDate, endDate)
+        
+        // Count different types of attendance
+        const presentDays = attendanceRecords.filter((record) => record.status === "present" || !record.status).length
+        const absentDays = attendanceRecords.filter((record) => record.status === "absent").length
+        const leaveDays = attendanceRecords.filter((record) => record.status === "on_leave").length
+        const lateDays = attendanceRecords.filter((record) => record.isLate && (record.status === "present" || !record.status)).length
+        const earlyLeaveDays = attendanceRecords.filter((record) => record.isEarly && (record.status === "present" || !record.status)).length
+        
+        const totalHours = attendanceRecords
+          .filter((record) => record.status === "present" || !record.status)
+          .reduce((sum, record) => sum + (record.hoursWorked || 0), 0)
         const avgHours = presentDays > 0 ? totalHours / presentDays : 0
         const attendanceRate = totalWorkingDays > 0 ? (presentDays / totalWorkingDays) * 100 : 0
 
@@ -63,6 +71,8 @@ export async function GET(request: NextRequest) {
           department: employee.department || "N/A",
           totalDays: totalWorkingDays,
           presentDays,
+          absentDays,
+          leaveDays,
           lateDays,
           earlyLeaveDays,
           avgHours: Math.round(avgHours * 100) / 100,

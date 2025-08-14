@@ -5,13 +5,15 @@ export interface Attendance {
   id?: string
   userId: string
   date: string
-  checkInTime: Date
+  checkInTime?: Date
   checkOutTime?: Date
   isLate: boolean
   isEarly: boolean
   lateReason?: string
   earlyReason?: string
   hoursWorked: number
+  status: "present" | "absent" | "on_leave"
+  leaveId?: string
   createdAt: Date
   updatedAt: Date
 }

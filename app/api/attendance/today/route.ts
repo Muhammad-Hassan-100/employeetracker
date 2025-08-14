@@ -20,7 +20,7 @@ export async function GET(request: NextRequest) {
     })
 
     return NextResponse.json({
-      isCheckedIn: !!todayRecord && !todayRecord.checkOutTime,
+      isCheckedIn: !!todayRecord && !!todayRecord.checkInTime && !todayRecord.checkOutTime,
       record: todayRecord
         ? {
             id: todayRecord._id.toString(),

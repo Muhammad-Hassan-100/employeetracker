@@ -10,13 +10,15 @@ import { History, Calendar, Clock, AlertCircle } from "lucide-react"
 interface AttendanceRecord {
   id: string
   date: string
-  checkInTime: string
+  checkInTime: string | null
   checkOutTime: string | null
   isLate: boolean
   isEarly: boolean
   lateReason: string | null
   earlyReason: string | null
   hoursWorked: number
+  status: "present" | "absent" | "on_leave"
+  leaveId?: string
 }
 
 interface User {
@@ -82,7 +84,11 @@ export default function AttendanceHistory({ user }: AttendanceHistoryProps) {
   }
 
   const getStatusBadge = (record: AttendanceRecord) => {
-    if (record.isLate && record.isEarly) {
+    if (record.status === "absent") {
+      return <Badge variant="destructive">Absent</Badge>
+    } else if (record.status === "on_leave") {
+      return <Badge variant="outline">On Leave</Badge>
+    } else if (record.isLate && record.isEarly) {
       return <Badge variant="destructive">Late & Early Leave</Badge>
     } else if (record.isLate) {
       return <Badge variant="destructive">Late Arrival</Badge>
@@ -188,11 +194,21 @@ export default function AttendanceHistory({ user }: AttendanceHistoryProps) {
                   <div className="flex items-center justify-between mb-2">
                     <div>
                       <h3 className="font-semibold">{formatDate(record.date)}</h3>
-                      <div className="flex items-center space-x-4 text-sm text-gray-600">
-                        <span>In: {formatTime12Hour(record.checkInTime)}</span>
-                        {record.checkOutTime && <span>Out: {formatTime12Hour(record.checkOutTime)}</span>}
-                        <span>Hours: {record.hoursWorked.toFixed(1)}</span>
-                      </div>
+                      {record.status === "absent" ? (
+                        <div className="text-sm text-gray-600">
+                          <span>Status: Absent</span>
+                        </div>
+                      ) : record.status === "on_leave" ? (
+                        <div className="text-sm text-gray-600">
+                          <span>Status: On Leave</span>
+                        </div>
+                      ) : (
+                        <div className="flex items-center space-x-4 text-sm text-gray-600">
+                          <span>In: {record.checkInTime ? formatTime12Hour(record.checkInTime) : "N/A"}</span>
+                          {record.checkOutTime && <span>Out: {formatTime12Hour(record.checkOutTime)}</span>}
+                          <span>Hours: {record.hoursWorked.toFixed(1)}</span>
+                        </div>
+                      )}
                     </div>
                     {getStatusBadge(record)}
                   </div>

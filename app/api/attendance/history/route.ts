@@ -25,6 +25,8 @@ export async function GET(request: NextRequest) {
       lateReason: record.lateReason,
       earlyReason: record.earlyReason,
       hoursWorked: record.hoursWorked,
+      status: record.status || "present", // Default to present for backward compatibility
+      leaveId: record.leaveId,
     }))
 
     return NextResponse.json(formattedRecords)
