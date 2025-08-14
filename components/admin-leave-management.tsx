@@ -25,6 +25,7 @@ interface Leave {
   reviewedBy?: string
   reviewedDate?: string
   reviewComments?: string
+  attendanceStatus?: "synced" | "not_synced" | "partial" | "unknown"
 }
 
 interface AdminLeaveManagementProps {
@@ -57,6 +58,34 @@ export default function AdminLeaveManagement({ adminUser }: AdminLeaveManagement
         leave.employeeName.toLowerCase().includes(searchTerm.toLowerCase())
       )
     }
+
+    // Sort leaves with priority for same-day urgent leaves
+    filtered = filtered.sort((a, b) => {
+      const today = new Date().toISOString().split("T")[0]
+      const aIsSameDay = a.startDate === today && a.status === "pending"
+      const bIsSameDay = b.startDate === today && b.status === "pending"
+      
+      // Same-day pending leaves go first
+      if (aIsSameDay && !bIsSameDay) return -1
+      if (!aIsSameDay && bIsSameDay) return 1
+      
+      // Then sort by urgency (leaves starting soon)
+      const aStartDate = new Date(a.startDate)
+      const bStartDate = new Date(b.startDate)
+      const now = new Date()
+      
+      const aDaysUntilStart = Math.ceil((aStartDate.getTime() - now.getTime()) / (1000 * 3600 * 24))
+      const bDaysUntilStart = Math.ceil((bStartDate.getTime() - now.getTime()) / (1000 * 3600 * 24))
+      
+      // Pending leaves starting within 3 days get priority
+      if (a.status === "pending" && b.status === "pending") {
+        if (aDaysUntilStart <= 3 && bDaysUntilStart > 3) return -1
+        if (aDaysUntilStart > 3 && bDaysUntilStart <= 3) return 1
+      }
+      
+      // Finally sort by application date (newest first)
+      return new Date(b.appliedDate).getTime() - new Date(a.appliedDate).getTime()
+    })
 
     setFilteredLeaves(filtered)
   }, [leaves, statusFilter, searchTerm])
@@ -96,6 +125,9 @@ export default function AdminLeaveManagement({ adminUser }: AdminLeaveManagement
 
       if (response.ok) {
         toast.success(`Leave application ${status} successfully!`)
+        if (status === "approved") {
+          toast.success("Attendance records have been automatically updated")
+        }
         setSelectedLeave(null)
         setReviewComments("")
         fetchLeaves()
@@ -159,16 +191,39 @@ export default function AdminLeaveManagement({ adminUser }: AdminLeaveManagement
   const getUrgencyIndicator = (leave: Leave) => {
     const startDate = new Date(leave.startDate)
     const today = new Date()
+    const todayStr = today.toISOString().split("T")[0]
     const daysUntilStart = Math.ceil((startDate.getTime() - today.getTime()) / (1000 * 3600 * 24))
     
-    if (leave.status === "pending" && daysUntilStart <= 3) {
+    // Same-day leave (highest priority)
+    if (leave.startDate === todayStr && leave.status === "pending") {
       return (
-        <Badge variant="destructive" className="text-xs">
+        <Badge variant="destructive" className="text-xs animate-pulse">
           <AlertTriangle className="h-3 w-3 mr-1" />
-          Urgent
+          Same Day - URGENT
         </Badge>
       )
     }
+    
+    // Urgent leave (starting within 3 days)
+    if (leave.status === "pending" && daysUntilStart <= 3 && daysUntilStart > 0) {
+      return (
+        <Badge variant="destructive" className="text-xs">
+          <AlertTriangle className="h-3 w-3 mr-1" />
+          Urgent ({daysUntilStart} day{daysUntilStart !== 1 ? 's' : ''})
+        </Badge>
+      )
+    }
+    
+    // Past due leave (should have been reviewed)
+    if (leave.status === "pending" && daysUntilStart < 0) {
+      return (
+        <Badge variant="destructive" className="text-xs bg-red-600">
+          <AlertTriangle className="h-3 w-3 mr-1" />
+          OVERDUE
+        </Badge>
+      )
+    }
+    
     return null
   }
 
@@ -189,7 +244,7 @@ export default function AdminLeaveManagement({ adminUser }: AdminLeaveManagement
       </div>
 
       {/* Summary Cards */}
-      <div className="grid md:grid-cols-4 gap-4">
+      <div className="grid md:grid-cols-3 gap-4">
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center space-x-2">

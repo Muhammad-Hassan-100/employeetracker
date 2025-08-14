@@ -38,6 +38,9 @@ export default function AttendanceTracker() {
   const checkDailyStatus = async () => {
     setIsLoading(true)
     try {
+      // First, sync attendance with leaves for this date
+      await syncAttendanceWithLeaves()
+      
       const response = await fetch(`/api/attendance/mark-absent?date=${selectedDate}`)
       if (response.ok) {
         const data = await response.json()
@@ -50,6 +53,32 @@ export default function AttendanceTracker() {
       toast.error("Error fetching daily status")
     } finally {
       setIsLoading(false)
+    }
+  }
+
+  const syncAttendanceWithLeaves = async () => {
+    try {
+      // Sync for the selected date only
+      const response = await fetch("/api/attendance/sync-leaves", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          startDate: selectedDate,
+          endDate: selectedDate,
+        }),
+      })
+
+      if (response.ok) {
+        const result = await response.json()
+        if (result.details.totalChanges > 0) {
+          toast.success(`Synced ${result.details.totalChanges} attendance records with leaves`)
+        }
+      }
+    } catch (error) {
+      console.error("Error syncing attendance with leaves:", error)
+      // Don't show error toast here as it's a background operation
     }
   }
 

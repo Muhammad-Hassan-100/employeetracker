@@ -23,11 +23,17 @@ export async function POST(request: NextRequest) {
           error: "Cannot check in while on approved leave" 
         }, { status: 400 })
       }
+      if (existingRecord.status === "leave_pending") {
+        return NextResponse.json({ 
+          error: "Cannot check in while leave application is pending. Wait for admin decision." 
+        }, { status: 400 })
+      }
       if (existingRecord.checkInTime) {
         return NextResponse.json({ 
           error: "Already checked in today" 
         }, { status: 400 })
       }
+      // Allow check-in if status is "attendance_pending" (leave was rejected)
     }
 
     // Check if user has approved leave for today
@@ -59,15 +65,45 @@ export async function POST(request: NextRequest) {
       updatedAt: new Date(),
     }
 
-    const result = await attendanceCollection.insertOne(record)
+    if (existingRecord) {
+      // Update existing record
+      const result = await attendanceCollection.updateOne(
+        { _id: existingRecord._id },
+        {
+          $set: {
+            checkInTime: new Date(checkInTime),
+            isLate: isLate || false,
+            lateReason: lateReason || null,
+            status: "present",
+            updatedAt: new Date(),
+          },
+          $unset: {
+            rejectedLeaveId: "",
+            leaveRejectedAt: "",
+            pendingLeaveId: ""
+          }
+        }
+      )
 
-    return NextResponse.json({
-      message: "Check-in successful",
-      record: {
-        id: result.insertedId.toString(),
-        ...record,
-      },
-    })
+      return NextResponse.json({
+        message: "Check-in successful",
+        record: {
+          id: existingRecord._id.toString(),
+          ...record,
+        },
+      })
+    } else {
+      // Create new record
+      const result = await attendanceCollection.insertOne(record)
+
+      return NextResponse.json({
+        message: "Check-in successful",
+        record: {
+          id: result.insertedId.toString(),
+          ...record,
+        },
+      })
+    }
   } catch (error) {
     console.error("Check-in error:", error)
     return NextResponse.json({ error: "Check-in failed" }, { status: 500 })

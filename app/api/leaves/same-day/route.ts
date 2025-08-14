@@ -51,7 +51,7 @@ export async function POST(request: NextRequest) {
       )
     }
     
-    // Create same-day leave application with auto-approval for emergencies
+    // Create same-day leave application (requires admin approval)
     const leave = {
       userId,
       employeeName,
@@ -59,43 +59,53 @@ export async function POST(request: NextRequest) {
       startDate: date,
       endDate: date,
       reason,
-      status: "approved", // Auto-approve same-day emergency leave
+      status: "pending", // Same-day leaves require admin approval
       appliedDate: new Date(),
-      reviewedBy: "System (Same-day Auto-approval)",
-      reviewedDate: new Date(),
-      reviewComments: "Auto-approved same-day emergency leave",
       createdAt: new Date(),
       updatedAt: new Date(),
     }
     
     const leaveResult = await leavesCollection.insertOne(leave)
     
-    // Create or update attendance record for leave
-    await attendanceCollection.updateOne(
-      { userId: userId, date: date },
-      {
-        $set: {
-          userId: userId,
-          date: date,
-          checkInTime: null,
-          checkOutTime: null,
-          isLate: false,
-          isEarly: false,
-          hoursWorked: 0,
-          status: "on_leave",
-          leaveId: leaveResult.insertedId.toString(),
-          updatedAt: new Date(),
-        },
-        $setOnInsert: {
-          createdAt: new Date(),
-        },
-      },
-      { upsert: true }
-    )
+    // Do NOT automatically update attendance - wait for admin approval
+    // Create a temporary attendance record that shows leave is pending
+    const existingRecord = await attendanceCollection.findOne({
+      userId: userId,
+      date: date
+    })
+    
+    if (!existingRecord) {
+      await attendanceCollection.insertOne({
+        userId: userId,
+        date: date,
+        checkInTime: null,
+        checkOutTime: null,
+        isLate: false,
+        isEarly: false,
+        hoursWorked: 0,
+        status: "leave_pending", // New status to indicate leave is pending approval
+        pendingLeaveId: leaveResult.insertedId.toString(),
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      })
+    } else {
+      // Update existing record to show leave is pending
+      await attendanceCollection.updateOne(
+        { userId: userId, date: date },
+        {
+          $set: {
+            status: "leave_pending",
+            pendingLeaveId: leaveResult.insertedId.toString(),
+            updatedAt: new Date(),
+          }
+        }
+      )
+    }
     
     return NextResponse.json({
-      message: "Same-day leave applied successfully",
+      message: "Same-day leave application submitted for admin approval",
       leaveId: leaveResult.insertedId.toString(),
+      note: "This leave requires admin approval. You will be marked absent until approved."
     })
   } catch (error) {
     console.error("Same-day leave error:", error)

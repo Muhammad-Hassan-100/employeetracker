@@ -58,20 +58,45 @@ export async function POST(request: NextRequest) {
           // Check if it's a weekend (Saturday = 6, Sunday = 0)
           const dayOfWeek = new Date(date).getDay()
           if (dayOfWeek !== 0 && dayOfWeek !== 6) {
-            // Mark as absent (only on weekdays)
-            await attendanceCollection.insertOne({
+            // Check if employee has pending leave or rejected same-day leave
+            const pendingLeave = await leavesCollection.findOne({
               userId: employee._id.toString(),
-              date: date,
-              checkInTime: null,
-              checkOutTime: null,
-              isLate: false,
-              isEarly: false,
-              hoursWorked: 0,
-              status: "absent",
-              createdAt: new Date(),
-              updatedAt: new Date(),
+              status: "pending",
+              startDate: { $lte: date },
+              endDate: { $gte: date }
             })
-            markedAbsent++
+
+            if (pendingLeave) {
+              // Don't mark as absent if leave is pending
+              await attendanceCollection.insertOne({
+                userId: employee._id.toString(),
+                date: date,
+                checkInTime: null,
+                checkOutTime: null,
+                isLate: false,
+                isEarly: false,
+                hoursWorked: 0,
+                status: "leave_pending",
+                pendingLeaveId: pendingLeave._id.toString(),
+                createdAt: new Date(),
+                updatedAt: new Date(),
+              })
+            } else {
+              // Mark as absent (only on weekdays)
+              await attendanceCollection.insertOne({
+                userId: employee._id.toString(),
+                date: date,
+                checkInTime: null,
+                checkOutTime: null,
+                isLate: false,
+                isEarly: false,
+                hoursWorked: 0,
+                status: "absent",
+                createdAt: new Date(),
+                updatedAt: new Date(),
+              })
+              markedAbsent++
+            }
           }
         }
       }

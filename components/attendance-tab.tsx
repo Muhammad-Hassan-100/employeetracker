@@ -42,13 +42,14 @@ export default function AttendanceTab({ user }: AttendanceTabProps) {
   const [isCheckingIn, setIsCheckingIn] = useState(false)
   const [isCheckingOut, setIsCheckingOut] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
-  const [todayStatus, setTodayStatus] = useState<"present" | "absent" | "on_leave" | null>(null)
+  const [todayStatus, setTodayStatus] = useState<"present" | "absent" | "on_leave" | "leave_pending" | "attendance_pending" | null>(null)
   const [showSameDayLeaveForm, setShowSameDayLeaveForm] = useState(false)
   const [sameDayLeaveReason, setSameDayLeaveReason] = useState("")
   const [isApplyingLeave, setIsApplyingLeave] = useState(false)
   const [statusMessage, setStatusMessage] = useState("")
   const [canCheckIn, setCanCheckIn] = useState(false)
   const [canApplyLeave, setCanApplyLeave] = useState(false)
+  const [employeeOptions, setEmployeeOptions] = useState<any>(null)
   const [canCheckOut, setCanCheckOut] = useState(false)
 
   const parseTime = (timeString: string) => {
@@ -91,32 +92,36 @@ export default function AttendanceTab({ user }: AttendanceTabProps) {
 
   const checkTodayAttendance = async () => {
     try {
-      // First check comprehensive status
-      const statusResponse = await fetch(`/api/employees/status?userId=${user.id}`)
-      if (statusResponse.ok) {
-        const statusData = await statusResponse.json()
-        setTodayStatus(statusData.status)
-        setStatusMessage(statusData.message)
-        setCanCheckIn(statusData.canCheckIn)
-        setCanApplyLeave(statusData.canApplyLeave)
-        setCanCheckOut(statusData.canCheckOut)
+      // Check employee options (what actions are available)
+      const optionsResponse = await fetch(`/api/employees/options?userId=${user.id}`)
+      if (optionsResponse.ok) {
+        const optionsData = await optionsResponse.json()
+        setEmployeeOptions(optionsData)
+        setCanApplyLeave(optionsData.canApplyLeave)
+        setCanCheckIn(optionsData.canCheckIn)
+        setStatusMessage(optionsData.message)
         
-        if (statusData.attendanceRecord) {
-          setIsCheckedIn(!!statusData.attendanceRecord.checkInTime && !statusData.attendanceRecord.checkOutTime)
+        if (optionsData.attendanceRecord) {
+          setIsCheckedIn(!!optionsData.attendanceRecord.checkInTime && !optionsData.attendanceRecord.checkOutTime)
+          setCanCheckOut(!!optionsData.attendanceRecord.checkInTime && !optionsData.attendanceRecord.checkOutTime)
+          setTodayStatus(optionsData.attendanceRecord.status)
+        } else {
+          setIsCheckedIn(false)
+          setCanCheckOut(false)
         }
       }
 
-      // Also check the legacy today API for backward compatibility
+      // Also check today's attendance for additional details
       const response = await fetch(`/api/attendance/today?userId=${user.id}`)
       if (response.ok) {
         const data = await response.json()
-        if (data.record && !todayStatus) {
+        if (data.record) {
           setIsCheckedIn(data.isCheckedIn)
-          setTodayStatus(data.record.status || null)
+          setCanCheckOut(data.isCheckedIn)
         }
       }
     } catch (error) {
-      console.error("Error checking attendance:", error)
+      console.error("Error checking today's attendance:", error)
     } finally {
       setIsLoading(false)
     }
@@ -254,13 +259,13 @@ export default function AttendanceTab({ user }: AttendanceTabProps) {
       })
 
       if (response.ok) {
+        const result = await response.json()
         toast.success("Same-day leave applied successfully!", {
-          description: "Your leave has been auto-approved for today.",
+          description: result.note || "Your leave application has been submitted for admin approval.",
         })
         setShowSameDayLeaveForm(false)
         setSameDayLeaveReason("")
-        setTodayStatus("on_leave")
-        checkTodayAttendance()
+        checkTodayAttendance() // Refresh the status
       } else {
         const error = await response.json()
         toast.error("Failed to apply leave", {
@@ -318,6 +323,55 @@ export default function AttendanceTab({ user }: AttendanceTabProps) {
 
   return (
     <div className="space-y-6">
+      {/* Status Message Card */}
+      {statusMessage && (
+        <Card className="shadow-sm border-l-4 border-l-blue-500">
+          <CardContent className="pt-6">
+            <div className="flex items-center space-x-2">
+              <AlertCircle className="h-5 w-5 text-blue-600" />
+              <p className="text-sm font-medium text-blue-800">{statusMessage}</p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Current Status Card */}
+      {employeeOptions && (
+        <Card className="shadow-sm">
+          <CardHeader>
+            <CardTitle>Today's Status</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center justify-between">
+              <div>
+                <Badge 
+                  variant={
+                    employeeOptions.currentStatus === "checked_in" ? "default" :
+                    employeeOptions.currentStatus === "on_leave" ? "secondary" :
+                    employeeOptions.currentStatus === "leave_pending" ? "outline" :
+                    employeeOptions.currentStatus === "attendance_only" ? "destructive" :
+                    "secondary"
+                  }
+                  className="text-sm"
+                >
+                  {employeeOptions.currentStatus === "checked_in" && "✅ Checked In"}
+                  {employeeOptions.currentStatus === "on_leave" && "🏖️ On Leave"}
+                  {employeeOptions.currentStatus === "leave_pending" && "⏳ Leave Pending"}
+                  {employeeOptions.currentStatus === "attendance_only" && "⚠️ Attendance Only"}
+                  {employeeOptions.currentStatus === "available" && "📅 Available"}
+                </Badge>
+              </div>
+              {employeeOptions.pendingLeave && (
+                <div className="text-right">
+                  <p className="text-sm text-gray-600">Pending: {employeeOptions.pendingLeave.leaveType}</p>
+                  <p className="text-xs text-gray-500">{employeeOptions.pendingLeave.reason}</p>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Current Time Card */}
       <Card className="shadow-sm">
         <CardHeader className="text-center">
@@ -370,8 +424,9 @@ export default function AttendanceTab({ user }: AttendanceTabProps) {
                   <span>Checking In...</span>
                 </div>
               ) : !canCheckIn ? (
-                todayStatus === "on_leave" ? "On Leave Today" :
-                isCheckedIn ? "Already Checked In" :
+                employeeOptions?.currentStatus === "on_leave" ? "On Leave Today" :
+                employeeOptions?.currentStatus === "leave_pending" ? "Leave Pending Approval" :
+                employeeOptions?.currentStatus === "checked_in" ? "Already Checked In" :
                 !canCheckInNow ? "Check In (Available 5 min before shift)" :
                 "Cannot Check In"
               ) : (
@@ -517,8 +572,9 @@ export default function AttendanceTab({ user }: AttendanceTabProps) {
                   </Button>
                 </div>
                 <div className="text-sm text-gray-600 p-3 bg-blue-50 rounded">
-                  <strong>Note:</strong> Same-day emergency leave will be automatically approved 
-                  and marked in your attendance record. Use this only for genuine emergencies.
+                  <strong>Note:</strong> Same-day emergency leave requires admin approval. 
+                  You will not be able to check in while your application is pending. 
+                  If rejected, you can then check in normally.
                 </div>
               </div>
             )}
