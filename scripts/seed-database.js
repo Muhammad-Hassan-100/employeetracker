@@ -1,7 +1,5 @@
-
 require('dotenv').config();
 const { MongoClient } = require("mongodb")
-const bcrypt = require("bcryptjs")
 
 const MONGODB_URI = process.env.MONGODB_URI
 
@@ -60,12 +58,11 @@ async function seedDatabase() {
     const shiftResult = await db.collection("shifts").insertMany(shifts)
     console.log(`Created ${shiftResult.insertedCount} shifts`)
 
-    // Create admin user
-    const adminPassword = await bcrypt.hash("admin123", 12)
+    // Create admin user (plain text password)
     const admin = {
       name: "Admin User",
       email: "admin@gmail.com",
-      password: adminPassword,
+      password: "admin123", // plain text
       role: "admin",
       department: "Management",
       position: "System Administrator",
@@ -78,13 +75,12 @@ async function seedDatabase() {
     await db.collection("users").insertOne(admin)
     console.log("Created admin user")
 
-    // Create sample employees
-    const employeePassword = await bcrypt.hash("emp123", 12)
+    // Create sample employees (plain text password)
     const employees = [
       {
         name: "John Employee",
         email: "employee@company.com",
-        password: employeePassword,
+        password: "emp123",
         role: "employee",
         department: "IT",
         position: "Software Developer",
@@ -97,7 +93,7 @@ async function seedDatabase() {
       {
         name: "Jane Smith",
         email: "jane@company.com",
-        password: employeePassword,
+        password: "emp123",
         role: "employee",
         department: "HR",
         position: "HR Manager",
@@ -110,7 +106,7 @@ async function seedDatabase() {
       {
         name: "Mike Johnson",
         email: "mike@company.com",
-        password: employeePassword,
+        password: "emp123",
         role: "employee",
         department: "Finance",
         position: "Accountant",
@@ -123,7 +119,7 @@ async function seedDatabase() {
       {
         name: "Sarah Wilson",
         email: "sarah@company.com",
-        password: employeePassword,
+        password: "emp123",
         role: "employee",
         department: "Marketing",
         position: "Marketing Specialist",
@@ -189,7 +185,7 @@ async function seedDatabase() {
 
     console.log("Database seeded successfully!")
     console.log("\nLogin Credentials:")
-    console.log("Admin: admin@company.com / admin123")
+    console.log("Admin: admin@gmail.com / admin123")
     console.log("Employee: employee@company.com / emp123")
     console.log("Employee: jane@company.com / emp123")
     console.log("Employee: mike@company.com / emp123")

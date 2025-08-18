@@ -69,11 +69,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
     const db = await getDatabase()
     const usersCollection = db.collection("users")
 
-    // If password is being updated, hash it
-    if (updateData.password) {
-      const bcrypt = require("bcryptjs")
-      updateData.password = await bcrypt.hash(updateData.password, 12)
-    }
+    // Keep password as-is (no hashing)
 
     const updateResult = await usersCollection.updateOne(
       { _id: new ObjectId(params.id) },

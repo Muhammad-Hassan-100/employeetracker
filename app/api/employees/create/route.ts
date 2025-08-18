@@ -1,6 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { getDatabase } from "@/lib/mongodb"
-import bcrypt from "bcryptjs"
 
 export async function POST(request: NextRequest) {
   try {
@@ -23,14 +22,11 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Hash password
-    const hashedPassword = await bcrypt.hash(password, 12)
-
-    // Create new employee
+    // Create new employee with plain text password
     const newEmployee = {
       name,
       email: email.toLowerCase(),
-      password: hashedPassword,
+      password, // store as plain text per request
       role: "employee",
       department,
       position,

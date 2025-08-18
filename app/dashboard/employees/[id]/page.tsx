@@ -330,7 +330,11 @@ export default function EmployeeDetailPage() {
                       <div className="flex items-center space-x-2">
                         <Input
                           type={showPassword ? "text" : "password"}
-                          value={employee.password || "••••••••"}
+                          value={
+                            isEditing
+                              ? editForm.password ?? ""
+                              : employee.password || "••••••••"
+                          }
                           readOnly={!isEditing}
                           onChange={
                             isEditing

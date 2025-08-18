@@ -60,6 +60,9 @@ export default function EmployeeManagement() {
     setIsLoading(true)
 
     try {
+      // TEMP: Inspect what is being sent (remove after debugging)
+      console.log("[EmployeeManagement] Payload to /api/employees/create:", formData)
+
       const response = await fetch("/api/employees/create", {
         method: "POST",
         headers: {
