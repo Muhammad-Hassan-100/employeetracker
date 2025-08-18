@@ -72,7 +72,7 @@ export default function EmployeesPage() {
           </div>
           
           {/* Sync Status Panel */}
-          <SyncStatusPanel />
+          {/* <SyncStatusPanel /> */}
           
           {/* Employee Management */}
           <EmployeeManagement />
