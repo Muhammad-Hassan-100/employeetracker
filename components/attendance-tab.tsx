@@ -415,7 +415,7 @@ export default function AttendanceTab({ user }: AttendanceTabProps) {
             )}
             <Button
               onClick={handleCheckIn}
-              disabled={!canCheckIn || isCheckingIn}
+              disabled={!canCheckIn || !canCheckInNow || isCheckingIn}
               className="w-full bg-green-600 hover:bg-green-700"
             >
               {isCheckingIn ? (
@@ -427,8 +427,9 @@ export default function AttendanceTab({ user }: AttendanceTabProps) {
                 employeeOptions?.currentStatus === "on_leave" ? "On Leave Today" :
                 employeeOptions?.currentStatus === "leave_pending" ? "Leave Pending Approval" :
                 employeeOptions?.currentStatus === "checked_in" ? "Already Checked In" :
-                !canCheckInNow ? "Check In (Available 5 min before shift)" :
                 "Cannot Check In"
+              ) : !canCheckInNow ? (
+                "Check In (Available 5 min before shift)"
               ) : (
                 "Check In"
               )}

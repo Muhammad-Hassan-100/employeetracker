@@ -204,7 +204,7 @@ export default function AttendanceReports() {
               />
             </div>
 
-            <Select value={departmentFilter} onValueChange={setDepartmentFilter}>
+            {/* <Select value={departmentFilter} onValueChange={setDepartmentFilter}>
               <SelectTrigger className="w-48">
                 <SelectValue placeholder="Filter by department" />
               </SelectTrigger>
@@ -216,7 +216,7 @@ export default function AttendanceReports() {
                 <SelectItem value="Marketing">Marketing</SelectItem>
                 <SelectItem value="Operations">Operations</SelectItem>
               </SelectContent>
-            </Select>
+            </Select> */}
 
             <Select value={dateRange} onValueChange={setDateRange}>
               <SelectTrigger className="w-48">

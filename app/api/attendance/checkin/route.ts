@@ -1,5 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { getDatabase } from "@/lib/mongodb"
+import { ObjectId } from "mongodb"
 
 export async function POST(request: NextRequest) {
   try {
@@ -8,8 +9,45 @@ export async function POST(request: NextRequest) {
     const db = await getDatabase()
     const attendanceCollection = db.collection("attendance")
     const leavesCollection = db.collection("leaves")
+    const usersCollection = db.collection("users")
+    const shiftsCollection = db.collection("shifts")
 
+    const now = new Date(checkInTime)
     const today = new Date().toISOString().split("T")[0]
+
+    // Enforce: check-in allowed only from 5 minutes before shift start (if shift exists)
+    try {
+      const user = await usersCollection.findOne({ _id: new ObjectId(userId) })
+      if (user?.shiftId) {
+        let shift: any = null
+        // Try ObjectId first
+        try {
+          shift = await shiftsCollection.findOne({ _id: new ObjectId(user.shiftId) })
+        } catch {}
+        // Try by name (case-insensitive)
+        if (!shift) {
+          shift = await shiftsCollection.findOne({ name: { $regex: new RegExp(`^${user.shiftId}$`, "i") } })
+        }
+        // Try normalized name (remove spaces)
+        if (!shift) {
+          const normalizedShiftId = String(user.shiftId).toLowerCase().replace(/\s+/g, "")
+          const allShifts = await shiftsCollection.find({}).toArray()
+          shift = allShifts.find((s: any) => String(s.name).toLowerCase().replace(/\s+/g, "") === normalizedShiftId)
+        }
+        if (shift?.startTime) {
+          const [h, m] = String(shift.startTime).split(":").map(Number)
+          const shiftStart = new Date()
+          shiftStart.setHours(h, m ?? 0, 0, 0)
+          const earliestCheckIn = new Date(shiftStart.getTime() - 5 * 60 * 1000)
+          if (now < earliestCheckIn) {
+            return NextResponse.json(
+              { error: "Check-in allowed only 5 minutes before shift start" },
+              { status: 400 },
+            )
+          }
+        }
+      }
+    } catch {}
 
     // Check if user already has an attendance record today
     const existingRecord = await attendanceCollection.findOne({
@@ -19,19 +57,16 @@ export async function POST(request: NextRequest) {
 
     if (existingRecord) {
       if (existingRecord.status === "on_leave") {
-        return NextResponse.json({ 
-          error: "Cannot check in while on approved leave" 
-        }, { status: 400 })
+        return NextResponse.json({ error: "Cannot check in while on approved leave" }, { status: 400 })
       }
       if (existingRecord.status === "leave_pending") {
-        return NextResponse.json({ 
-          error: "Cannot check in while leave application is pending. Wait for admin decision." 
-        }, { status: 400 })
+        return NextResponse.json(
+          { error: "Cannot check in while leave application is pending. Wait for admin decision." },
+          { status: 400 },
+        )
       }
       if (existingRecord.checkInTime) {
-        return NextResponse.json({ 
-          error: "Already checked in today" 
-        }, { status: 400 })
+        return NextResponse.json({ error: "Already checked in today" }, { status: 400 })
       }
       // Allow check-in if status is "attendance_pending" (leave was rejected)
     }
@@ -41,13 +76,11 @@ export async function POST(request: NextRequest) {
       userId: userId,
       status: "approved",
       startDate: { $lte: today },
-      endDate: { $gte: today }
+      endDate: { $gte: today },
     })
 
     if (hasLeave) {
-      return NextResponse.json({ 
-        error: "Cannot check in while on approved leave" 
-      }, { status: 400 })
+      return NextResponse.json({ error: "Cannot check in while on approved leave" }, { status: 400 })
     }
 
     const record = {
@@ -67,7 +100,7 @@ export async function POST(request: NextRequest) {
 
     if (existingRecord) {
       // Update existing record
-      const result = await attendanceCollection.updateOne(
+      await attendanceCollection.updateOne(
         { _id: existingRecord._id },
         {
           $set: {
@@ -80,9 +113,9 @@ export async function POST(request: NextRequest) {
           $unset: {
             rejectedLeaveId: "",
             leaveRejectedAt: "",
-            pendingLeaveId: ""
-          }
-        }
+            pendingLeaveId: "",
+          },
+        },
       )
 
       return NextResponse.json({

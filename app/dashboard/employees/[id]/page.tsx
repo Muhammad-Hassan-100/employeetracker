@@ -67,6 +67,7 @@ interface AttendanceRecord {
   lateReason: string | null;
   earlyReason: string | null;
   hoursWorked: number;
+  status: "present" | "absent" | "on_leave";
 }
 
 export default function EmployeeDetailPage() {
@@ -554,27 +555,37 @@ export default function EmployeeDetailPage() {
                             {formatDate(record.date)}
                           </p>
                           <div className="flex items-center space-x-4 text-sm text-gray-600">
-                            <span>In: {formatTime(record.checkInTime)}</span>
-                            {record.checkOutTime && (
-                              <span>
-                                Out: {formatTime(record.checkOutTime)}
-                              </span>
+                            {record.status === "on_leave" ? (
+                              <span>Status: On Leave</span>
+                            ) : (
+                              <>
+                                <span>
+                                  In: {record.checkInTime ? formatTime(record.checkInTime) : "N/A"}
+                                </span>
+                                {record.checkOutTime && (
+                                  <span>
+                                    Out: {formatTime(record.checkOutTime)}
+                                  </span>
+                                )}
+                                <span>Hours: {record.hoursWorked.toFixed(1)}</span>
+                              </>
                             )}
-                            <span>Hours: {record.hoursWorked.toFixed(1)}</span>
                           </div>
                         </div>
                         <div className="flex flex-col items-end space-y-1">
-                          {record.isLate && (
+                          {record.status === "on_leave" ? (
+                            <Badge variant="secondary" className="text-xs">
+                              On Leave
+                            </Badge>
+                          ) : record.isLate ? (
                             <Badge variant="destructive" className="text-xs">
                               Late
                             </Badge>
-                          )}
-                          {record.isEarly && (
+                          ) : record.isEarly ? (
                             <Badge variant="secondary" className="text-xs">
                               Early Leave
                             </Badge>
-                          )}
-                          {!record.isLate && !record.isEarly && (
+                          ) : (
                             <Badge variant="default" className="text-xs">
                               On Time
                             </Badge>
@@ -608,7 +619,7 @@ export default function EmployeeDetailPage() {
 
                   <div className="text-center p-4 bg-green-50 rounded-lg">
                     <div className="text-2xl font-bold text-green-600">
-                      {attendance.filter((r) => !r.isLate && !r.isEarly).length}
+                      {attendance.filter((r) => r.status !== "on_leave" && !r.isLate && !r.isEarly).length}
                     </div>
                     <div className="text-sm text-gray-600">On Time</div>
                   </div>
