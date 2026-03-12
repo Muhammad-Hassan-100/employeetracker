@@ -13,7 +13,7 @@ export default function LandingPage() {
             <div className="bg-gradient-to-r from-blue-600 to-indigo-600 p-2 rounded-lg shadow-md">
               <Users className="h-6 w-6 text-white" />
             </div>
-            <span className="text-xl font-bold text-gray-800">EmployeeTracker <span className="text-blue-600">by Hassan</span></span>
+            <span className="text-xl font-bold text-gray-800">EmployeeTracker</span>
           </div>
           <div className="flex items-center">
             <Link href="/login">
@@ -113,7 +113,7 @@ export default function LandingPage() {
             <div className="lg:w-1/2">
               <h2 className="text-3xl font-bold text-gray-900 mb-6">About This Project</h2>
               <p className="text-gray-600 mb-6 leading-relaxed">
-                This Employee Management System is a personal project developed by <span className="font-semibold text-blue-600">Hassan</span> specifically for Glidrone's internal use. It's not a commercial product but a custom solution built to address Glidrone's specific workforce management requirements.
+                This Employee Management System is a personal project developed by <span className="font-semibold text-blue-600"></span> specifically for Glidrone's internal use. It's not a commercial product but a custom solution built to address Glidrone's specific workforce management requirements.
               </p>
               <p className="text-gray-600 mb-8 leading-relaxed">
                 The system was designed with Glidrone's operational workflows in mind, ensuring optimal efficiency and usability for their specific context.
@@ -121,7 +121,7 @@ export default function LandingPage() {
               <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
                 <h3 className="font-medium text-gray-900 mb-3">Developer Note</h3>
                 <p className="text-gray-600">
-                  "This project represents my personal contribution to improving Glidrone's operations. While working at Glidrone, I identified opportunities to streamline workforce management and developed this solution accordingly." <span className="font-semibold">- Hassan</span>
+                  "This project represents my personal contribution to improving Glidrone's operations. While working at Glidrone, I identified opportunities to streamline workforce management and developed this solution accordingly."
                 </p>
               </div>
             </div>
@@ -176,10 +176,9 @@ export default function LandingPage() {
               <Users className="h-5 w-5 text-white" />
             </div>
             <span className="font-bold text-white">EmployeeTracker</span>
-            <span className="text-gray-400 ml-2">by Hassan</span>
           </div>
           <p className="text-gray-400 text-sm mb-1">A custom solution developed for Glidrone</p>
-          <p className="text-gray-500 text-xs">© {new Date().getFullYear()} Hassan's Project for Glidrone. Not a commercial product.</p>
+          <p className="text-gray-500 text-xs">© {new Date().getFullYear()}Project for Glidrone. Not a commercial product.</p>
         </div>
       </footer>
     </div>
