@@ -1,5 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { getDatabase } from "@/lib/mongodb"
+import { buildSessionUser } from "@/lib/session"
 
 export async function POST(request: NextRequest) {
   try {
@@ -8,8 +9,8 @@ export async function POST(request: NextRequest) {
     // Get database connection
     const db = await getDatabase()
     const usersCollection = db.collection("users")
+    const companiesCollection = db.collection("companies")
 
-    // Find user with matching email (check both admin and employee)
     const user = await usersCollection.findOne({
       email: email.toLowerCase(),
       status: "active",
@@ -19,22 +20,16 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Invalid email or password" }, { status: 401 })
     }
 
-    // Check password in plain text
     if (user.password !== password) {
       return NextResponse.json({ error: "Invalid email or password" }, { status: 401 })
     }
 
-    // Return user data (excluding password)
+    const company = user.companyId
+      ? await companiesCollection.findOne({ companyId: user.companyId })
+      : null
+
     return NextResponse.json({
-      user: {
-        id: user._id.toString(),
-        name: user.name,
-        email: user.email,
-        role: user.role, // Auto-detected from database
-        department: user.department,
-        position: user.position,
-        shiftId: user.shiftId,
-      },
+      user: buildSessionUser(user, company?.name, company?.domain),
       message: "Login successful",
     })
   } catch (error) {

@@ -4,6 +4,7 @@ export interface Attendance {
   _id?: ObjectId
   id?: string
   userId: string
+  companyId: string
   date: string
   checkInTime?: Date
   checkOutTime?: Date
@@ -20,6 +21,7 @@ export interface Attendance {
 
 export interface CreateAttendanceData {
   userId: string
+  companyId: string
   checkInTime: Date
   isLate: boolean
   lateReason?: string

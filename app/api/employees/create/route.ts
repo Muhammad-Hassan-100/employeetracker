@@ -1,36 +1,77 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { getDatabase } from "@/lib/mongodb"
+import { ObjectId } from "mongodb"
+import { requireAdmin } from "@/lib/session"
+import { buildEmailLocalPart } from "@/lib/company-utils"
 
 export async function POST(request: NextRequest) {
   try {
-    const { name, email, password, shift, department, position } = await request.json()
+    const { session, response } = requireAdmin(request)
+    if (!session) {
+      return response
+    }
 
-    const db = await getDatabase()
-    const usersCollection = db.collection("users")
+    const { name, password, shift, department, position, checkInBeforeMinutes, lateGraceMinutes } = await request.json()
+    if (!name || !password || !shift || !department || !position) {
+      return NextResponse.json({ error: "All fields are required" }, { status: 400 })
+    }
 
-    // Check if employee already exists
-    const existingEmployee = await usersCollection.findOne({
-      email: email.toLowerCase(),
-    })
+    const parsedCheckInBefore = Number(checkInBeforeMinutes)
+    const parsedLateGrace = Number(lateGraceMinutes)
 
-    if (existingEmployee) {
+    if (
+      !Number.isFinite(parsedCheckInBefore) ||
+      !Number.isInteger(parsedCheckInBefore) ||
+      parsedCheckInBefore < 0 ||
+      !Number.isFinite(parsedLateGrace) ||
+      !Number.isInteger(parsedLateGrace) ||
+      parsedLateGrace < 0
+    ) {
       return NextResponse.json(
-        {
-          error: "Employee with this email already exists",
-        },
+        { error: "Check-in before minutes and late relaxation must be whole non-negative numbers" },
         { status: 400 },
       )
     }
 
-    // Create new employee with plain text password
+    const db = await getDatabase()
+    const usersCollection = db.collection("users")
+    const shiftsCollection = db.collection("shifts")
+
+    const assignedShift = await shiftsCollection.findOne({
+      _id: new ObjectId(shift),
+      companyId: session.companyId,
+    })
+
+    if (!assignedShift) {
+      return NextResponse.json({ error: "Selected shift was not found in this workspace" }, { status: 400 })
+    }
+
+    const emailLocalPart = buildEmailLocalPart(String(name))
+    if (!emailLocalPart) {
+      return NextResponse.json({ error: "Enter a valid employee name" }, { status: 400 })
+    }
+
+    let email = `${emailLocalPart}@${session.companyDomain}`
+    let suffix = 1
+
+    while (await usersCollection.findOne({ email })) {
+      email = `${emailLocalPart}${suffix}@${session.companyDomain}`
+      suffix += 1
+    }
+
     const newEmployee = {
       name,
-      email: email.toLowerCase(),
-      password, // store as plain text per request
+      email,
+      password,
       role: "employee",
+      companyId: session.companyId,
+      companyName: session.companyName,
+      companyDomain: session.companyDomain,
       department,
       position,
       shiftId: shift,
+      checkInBeforeMinutes: parsedCheckInBefore,
+      lateGraceMinutes: parsedLateGrace,
       joinDate: new Date(),
       status: "active",
       createdAt: new Date(),
@@ -49,8 +90,11 @@ export async function POST(request: NextRequest) {
         position: newEmployee.position,
         role: newEmployee.role,
         shiftId: newEmployee.shiftId,
+        checkInBeforeMinutes: newEmployee.checkInBeforeMinutes,
+        lateGraceMinutes: newEmployee.lateGraceMinutes,
         joinDate: newEmployee.joinDate,
         status: newEmployee.status,
+        companyId: newEmployee.companyId,
       },
     })
   } catch (error) {

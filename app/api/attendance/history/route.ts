@@ -1,8 +1,14 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { getDatabase } from "@/lib/mongodb"
+import { assertSelfOrAdmin, requireSession } from "@/lib/session"
 
 export async function GET(request: NextRequest) {
   try {
+    const { session, response } = requireSession(request)
+    if (!session) {
+      return response
+    }
+
     const { searchParams } = new URL(request.url)
     const userId = searchParams.get("userId")
 
@@ -10,10 +16,18 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "User ID is required" }, { status: 400 })
     }
 
+    const accessError = assertSelfOrAdmin(session, userId)
+    if (accessError) {
+      return accessError
+    }
+
     const db = await getDatabase()
     const attendanceCollection = db.collection("attendance")
 
-    const userRecords = await attendanceCollection.find({ userId: userId }).sort({ date: -1 }).toArray()
+    const userRecords = await attendanceCollection
+      .find({ userId: userId, companyId: session.companyId })
+      .sort({ date: -1 })
+      .toArray()
 
     const formattedRecords = userRecords.map((record) => ({
       id: record._id.toString(),

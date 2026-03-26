@@ -12,27 +12,20 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb"
-import AttendanceTracker from "@/components/attendance-tracker"
+import AdminAttendanceMonitor from "@/components/admin-attendance-monitor"
+import { getStoredUser } from "@/lib/client-session"
+import type { SessionUser } from "@/lib/session"
 
-interface User {
-  id: string
-  name: string
-  email: string
-  role: string
-}
-
-export default function TrackerPage() {
-  const [user, setUser] = useState<User | null>(null)
+export default function AttendanceMonitorPage() {
+  const [user, setUser] = useState<SessionUser | null>(null)
   const router = useRouter()
 
   useEffect(() => {
-    const userData = localStorage.getItem("user")
+    const userData = getStoredUser()
     if (userData) {
-      const parsedUser = JSON.parse(userData)
-      setUser(parsedUser)
-      if (parsedUser.role !== "admin") {
+      setUser(userData)
+      if (userData.role !== "admin") {
         router.push("/dashboard/attendance")
-        return
       }
     } else {
       router.push("/login")
@@ -48,8 +41,8 @@ export default function TrackerPage() {
   }
 
   return (
-    <div className="flex flex-col h-full">
-      <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4 bg-white">
+    <>
+      <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4">
         <SidebarTrigger className="-ml-1" />
         <Separator orientation="vertical" className="mr-2 h-4" />
         <Breadcrumb>
@@ -59,17 +52,19 @@ export default function TrackerPage() {
             </BreadcrumbItem>
             <BreadcrumbSeparator className="hidden md:block" />
             <BreadcrumbItem>
-              <BreadcrumbPage>Attendance Tracker</BreadcrumbPage>
+              <BreadcrumbPage>Attendance Monitor</BreadcrumbPage>
             </BreadcrumbItem>
           </BreadcrumbList>
         </Breadcrumb>
       </header>
 
-      <main className="flex-1 p-4 md:p-6 bg-gray-50">
-        <div className="max-w-7xl mx-auto">
-          <AttendanceTracker />
+      <div className="flex flex-1 flex-col gap-4 p-4">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Attendance Monitor</h1>
+          <p className="text-muted-foreground">Review detailed attendance for the entire team on the selected date.</p>
         </div>
-      </main>
-    </div>
+        <AdminAttendanceMonitor />
+      </div>
+    </>
   )
 }

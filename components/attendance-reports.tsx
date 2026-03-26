@@ -1,13 +1,14 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
+import { useEffect, useMemo, useState } from "react"
+import { BarChart3, Download, Loader2, Search } from "lucide-react"
+import { toast } from "sonner"
 import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { BarChart, Users, Clock, AlertCircle, Search, Download } from "lucide-react"
-import { toast } from "sonner"
+import { authFetch } from "@/lib/client-session"
 
 interface AttendanceReport {
   employeeId: string
@@ -23,204 +24,142 @@ interface AttendanceReport {
   attendanceRate: number
 }
 
+function getRateBadge(rate: number) {
+  if (rate >= 95) return <Badge className="bg-emerald-100 text-emerald-900">Excellent</Badge>
+  if (rate >= 85) return <Badge className="bg-sky-100 text-sky-900">Good</Badge>
+  if (rate >= 75) return <Badge className="bg-amber-100 text-amber-900">Average</Badge>
+  return <Badge className="bg-rose-100 text-rose-900">Needs Attention</Badge>
+}
+
 export default function AttendanceReports() {
   const [reports, setReports] = useState<AttendanceReport[]>([])
-  const [filteredReports, setFilteredReports] = useState<AttendanceReport[]>([])
   const [searchTerm, setSearchTerm] = useState("")
-  const [departmentFilter, setDepartmentFilter] = useState("all")
   const [dateRange, setDateRange] = useState("thisMonth")
   const [isLoading, setIsLoading] = useState(true)
 
-  useEffect(() => {
-    fetchAttendanceReports()
-  }, [dateRange])
-
-  useEffect(() => {
-    let filtered = reports
-
-    if (searchTerm) {
-      filtered = filtered.filter((report) => report.employeeName.toLowerCase().includes(searchTerm.toLowerCase()))
+  const fetchReports = async (withLoader = false) => {
+    if (withLoader) {
+      setIsLoading(true)
     }
 
-    if (departmentFilter !== "all") {
-      filtered = filtered.filter((report) => report.department === departmentFilter)
-    }
-
-    setFilteredReports(filtered)
-  }, [searchTerm, departmentFilter, reports])
-
-  const fetchAttendanceReports = async () => {
     try {
-      const response = await fetch(`/api/reports/attendance?range=${dateRange}`)
-      if (response.ok) {
-        const data = await response.json()
-        setReports(data)
-        setFilteredReports(data)
+      const response = await authFetch(`/api/reports/attendance?range=${dateRange}`)
+      const data = await response.json()
+
+      if (!response.ok) {
+        toast.error("Unable to load reports", {
+          description: data.error || "Please try again.",
+        })
+        return
       }
-    } catch (error) {
-      console.error("Error fetching reports:", error)
+
+      setReports(data)
+    } catch {
+      toast.error("Unable to load reports")
     } finally {
       setIsLoading(false)
     }
   }
 
-  const getAttendanceRateBadge = (rate: number) => {
-    if (rate >= 95) return <Badge className="bg-green-100 text-green-800">Excellent</Badge>
-    if (rate >= 85) return <Badge className="bg-blue-100 text-blue-800">Good</Badge>
-    if (rate >= 75) return <Badge className="bg-yellow-100 text-yellow-800">Average</Badge>
-    return <Badge className="bg-red-100 text-red-800">Poor</Badge>
-  }
+  useEffect(() => {
+    fetchReports(true)
+  }, [dateRange])
+
+  const filteredReports = useMemo(() => {
+    return reports.filter((report) => report.employeeName.toLowerCase().includes(searchTerm.toLowerCase()))
+  }, [reports, searchTerm])
 
   const exportToCSV = () => {
-    try {
-      const csvContent = [
-        [
-          "Employee Name",
-          "Department",
-          "Total Days",
-          "Present Days",
-          "Late Days",
-          "Early Leave",
-          "Avg Hours",
-          "Attendance Rate",
-        ],
-        ...filteredReports.map((report) => [
-          report.employeeName,
-          report.department,
-          report.totalDays,
-          report.presentDays,
-          report.lateDays,
-          report.earlyLeaveDays,
-          report.avgHours.toFixed(1),
-          `${report.attendanceRate.toFixed(1)}%`,
-        ]),
-      ]
-        .map((row) => row.join(","))
-        .join("\n")
+    const rows = [
+      ["Employee", "Department", "Present", "Absent", "Leave", "Late", "Early", "Avg Hours", "Attendance Rate"],
+      ...filteredReports.map((report) => [
+        report.employeeName,
+        report.department,
+        report.presentDays,
+        report.absentDays,
+        report.leaveDays,
+        report.lateDays,
+        report.earlyLeaveDays,
+        report.avgHours.toFixed(2),
+        `${report.attendanceRate.toFixed(1)}%`,
+      ]),
+    ]
 
-      const blob = new Blob([csvContent], { type: "text/csv" })
-      const url = window.URL.createObjectURL(blob)
-      const a = document.createElement("a")
-      a.href = url
-      a.download = `attendance-report-${new Date().toISOString().split("T")[0]}.csv`
-      a.click()
-
-      toast.success("Report exported successfully!")
-    } catch (error) {
-      toast.error("Failed to export report")
-    }
+    const csv = rows.map((row) => row.join(",")).join("\n")
+    const blob = new Blob([csv], { type: "text/csv" })
+    const url = URL.createObjectURL(blob)
+    const anchor = document.createElement("a")
+    anchor.href = url
+    anchor.download = `attendance-report-${new Date().toISOString().split("T")[0]}.csv`
+    anchor.click()
+    URL.revokeObjectURL(url)
+    toast.success("Report exported")
   }
 
-  if (isLoading) {
-    return <div>Loading attendance reports...</div>
-  }
-
-  const totalEmployees = reports.length
-  const avgAttendanceRate = reports.reduce((sum, r) => sum + r.attendanceRate, 0) / totalEmployees || 0
-  const totalLateEmployees = reports.filter((r) => r.lateDays > 0).length
+  const avgAttendanceRate = reports.length
+    ? (reports.reduce((sum, report) => sum + report.attendanceRate, 0) / reports.length).toFixed(1)
+    : "0.0"
+  const avgHours = reports.length ? (reports.reduce((sum, report) => sum + report.avgHours, 0) / reports.length).toFixed(1) : "0.0"
 
   return (
     <div className="space-y-6">
-      {/* Summary Cards */}
-      <div className="grid md:grid-cols-4 gap-4">
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center space-x-2">
-              <Users className="h-5 w-5 text-blue-600" />
-              <div>
-                <p className="text-sm text-gray-600">Total Employees</p>
-                <p className="text-2xl font-bold">{totalEmployees}</p>
-              </div>
-            </div>
+      <div className="grid gap-4 md:grid-cols-4">
+        <Card className="rounded-3xl shadow-sm">
+          <CardContent className="p-5">
+            <p className="text-sm text-slate-500">Employees</p>
+            <p className="text-2xl font-bold">{reports.length}</p>
           </CardContent>
         </Card>
-
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center space-x-2">
-              <BarChart className="h-5 w-5 text-green-600" />
-              <div>
-                <p className="text-sm text-gray-600">Avg Attendance</p>
-                <p className="text-2xl font-bold">{avgAttendanceRate.toFixed(1)}%</p>
-              </div>
-            </div>
+        <Card className="rounded-3xl shadow-sm">
+          <CardContent className="p-5">
+            <p className="text-sm text-slate-500">Avg Attendance</p>
+            <p className="text-2xl font-bold">{avgAttendanceRate}%</p>
           </CardContent>
         </Card>
-
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center space-x-2">
-              <AlertCircle className="h-5 w-5 text-red-600" />
-              <div>
-                <p className="text-sm text-gray-600">Late Employees</p>
-                <p className="text-2xl font-bold">{totalLateEmployees}</p>
-              </div>
-            </div>
+        <Card className="rounded-3xl shadow-sm">
+          <CardContent className="p-5">
+            <p className="text-sm text-slate-500">Late Employees</p>
+            <p className="text-2xl font-bold">{reports.filter((report) => report.lateDays > 0).length}</p>
           </CardContent>
         </Card>
-
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center space-x-2">
-              <Clock className="h-5 w-5 text-purple-600" />
-              <div>
-                <p className="text-sm text-gray-600">Avg Hours</p>
-                <p className="text-2xl font-bold">
-                  {(reports.reduce((sum, r) => sum + r.avgHours, 0) / totalEmployees || 0).toFixed(1)}
-                </p>
-              </div>
-            </div>
+        <Card className="rounded-3xl shadow-sm">
+          <CardContent className="p-5">
+            <p className="text-sm text-slate-500">Avg Hours</p>
+            <p className="text-2xl font-bold">{avgHours}</p>
           </CardContent>
         </Card>
       </div>
 
-      {/* Filters and Reports */}
-      <Card>
+      <Card className="rounded-3xl shadow-sm">
         <CardHeader>
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
             <div>
-              <CardTitle className="flex items-center space-x-2">
-                <BarChart className="h-6 w-6" />
-                <span>Attendance Reports</span>
+              <CardTitle className="flex items-center gap-2 text-2xl">
+                <BarChart3 className="h-5 w-5 text-emerald-600" />
+                Attendance Reports
               </CardTitle>
-              <CardDescription>Comprehensive attendance analysis for all employees</CardDescription>
+              <CardDescription>Use filters, review employee metrics, and export a CSV file.</CardDescription>
             </div>
-            <Button onClick={exportToCSV} className="bg-green-600 hover:bg-green-700 cursor-pointer">
-              <Download className="h-4 w-4 mr-2" />
+            <Button className="rounded-2xl bg-emerald-600 text-white hover:bg-emerald-700" onClick={exportToCSV}>
+              <Download className="mr-2 h-4 w-4" />
               Export CSV
             </Button>
           </div>
         </CardHeader>
-        <CardContent>
-          {/* Filters */}
-          <div className="flex flex-wrap gap-4 mb-6">
-            <div className="flex items-center space-x-2">
-              <Search className="h-4 w-4 text-gray-400" />
+        <CardContent className="space-y-4">
+          <div className="flex flex-col gap-4 md:flex-row">
+            <div className="relative flex-1">
+              <Search className="pointer-events-none absolute left-3 top-3.5 h-4 w-4 text-slate-400" />
               <Input
-                placeholder="Search employees..."
                 value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-64"
+                onChange={(event) => setSearchTerm(event.target.value)}
+                placeholder="Search employee..."
+                className="pl-10"
               />
             </div>
-
-            {/* <Select value={departmentFilter} onValueChange={setDepartmentFilter}>
-              <SelectTrigger className="w-48">
-                <SelectValue placeholder="Filter by department" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Departments</SelectItem>
-                <SelectItem value="IT">IT</SelectItem>
-                <SelectItem value="HR">HR</SelectItem>
-                <SelectItem value="Finance">Finance</SelectItem>
-                <SelectItem value="Marketing">Marketing</SelectItem>
-                <SelectItem value="Operations">Operations</SelectItem>
-              </SelectContent>
-            </Select> */}
-
             <Select value={dateRange} onValueChange={setDateRange}>
-              <SelectTrigger className="w-48">
-                <SelectValue placeholder="Select date range" />
+              <SelectTrigger className="w-full md:w-56">
+                <SelectValue placeholder="Choose range" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="thisWeek">This Week</SelectItem>
@@ -231,66 +170,59 @@ export default function AttendanceReports() {
             </Select>
           </div>
 
-          {/* Reports Table */}
-          <div className="space-y-4">
-            {filteredReports.length === 0 ? (
-              <div className="text-center py-8 text-gray-500">No attendance reports found.</div>
-            ) : (
-              filteredReports.map((report) => (
-                <div key={report.employeeId} className="border rounded-lg p-4">
-                  <div className="flex items-center justify-between mb-3">
-                    <div>
-                      <h3 className="font-semibold text-lg">{report.employeeName}</h3>
-                      <p className="text-sm text-gray-600">{report.department}</p>
+          {isLoading ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="h-8 w-8 animate-spin text-emerald-600" />
+            </div>
+          ) : filteredReports.length === 0 ? (
+            <div className="rounded-3xl border border-dashed border-slate-300 p-8 text-center text-slate-500">
+              No reports found.
+            </div>
+          ) : (
+            filteredReports.map((report) => (
+              <div key={report.employeeId} className="rounded-3xl border border-slate-200 p-5">
+                <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+                  <div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <h3 className="text-lg font-semibold text-slate-950">{report.employeeName}</h3>
+                      {getRateBadge(report.attendanceRate)}
                     </div>
-                    <div className="flex items-center space-x-2">
-                      {getAttendanceRateBadge(report.attendanceRate)}
-                      <span className="text-lg font-bold">{report.attendanceRate.toFixed(1)}%</span>
-                    </div>
+                    <p className="text-sm text-slate-500">{report.department}</p>
                   </div>
-
-                  <div className="grid md:grid-cols-7 gap-4 text-sm">
-                    <div className="text-center p-2 bg-blue-50 rounded">
-                      <div className="font-bold text-blue-600">{report.presentDays}</div>
-                      <div className="text-gray-600">Present Days</div>
+                  <div className="grid gap-3 text-center sm:grid-cols-4 xl:w-[620px] xl:grid-cols-7">
+                    <div className="rounded-2xl bg-slate-50 p-3">
+                      <p className="text-xl font-bold">{report.presentDays}</p>
+                      <p className="text-xs text-slate-500">Present</p>
                     </div>
-
-                    <div className="text-center p-2 bg-red-50 rounded">
-                      <div className="font-bold text-red-600">{report.absentDays || 0}</div>
-                      <div className="text-gray-600">Absent Days</div>
+                    <div className="rounded-2xl bg-slate-50 p-3">
+                      <p className="text-xl font-bold">{report.absentDays}</p>
+                      <p className="text-xs text-slate-500">Absent</p>
                     </div>
-
-                    <div className="text-center p-2 bg-yellow-50 rounded">
-                      <div className="font-bold text-yellow-600">{report.leaveDays || 0}</div>
-                      <div className="text-gray-600">Leave Days</div>
+                    <div className="rounded-2xl bg-slate-50 p-3">
+                      <p className="text-xl font-bold">{report.leaveDays}</p>
+                      <p className="text-xs text-slate-500">Leave</p>
                     </div>
-
-                    <div className="text-center p-2 bg-orange-50 rounded">
-                      <div className="font-bold text-orange-600">{report.lateDays}</div>
-                      <div className="text-gray-600">Late Days</div>
+                    <div className="rounded-2xl bg-slate-50 p-3">
+                      <p className="text-xl font-bold">{report.lateDays}</p>
+                      <p className="text-xs text-slate-500">Late</p>
                     </div>
-
-                    <div className="text-center p-2 bg-pink-50 rounded">
-                      <div className="font-bold text-pink-600">{report.earlyLeaveDays}</div>
-                      <div className="text-gray-600">Early Leaves</div>
+                    <div className="rounded-2xl bg-slate-50 p-3">
+                      <p className="text-xl font-bold">{report.earlyLeaveDays}</p>
+                      <p className="text-xs text-slate-500">Early</p>
                     </div>
-
-                    <div className="text-center p-2 bg-green-50 rounded">
-                      <div className="font-bold text-green-600">{report.avgHours.toFixed(1)}</div>
-                      <div className="text-gray-600">Avg Hours</div>
+                    <div className="rounded-2xl bg-slate-50 p-3">
+                      <p className="text-xl font-bold">{report.avgHours.toFixed(1)}</p>
+                      <p className="text-xs text-slate-500">Avg Hours</p>
                     </div>
-
-                    <div className="text-center p-2 bg-purple-50 rounded">
-                      <div className="font-bold text-purple-600">
-                        {report.attendanceRate.toFixed(0)}%
-                      </div>
-                      <div className="text-gray-600">Attendance Rate</div>
+                    <div className="rounded-2xl bg-slate-950 p-3 text-white">
+                      <p className="text-xl font-bold">{report.attendanceRate.toFixed(0)}%</p>
+                      <p className="text-xs text-slate-300">Rate</p>
                     </div>
                   </div>
                 </div>
-              ))
-            )}
-          </div>
+              </div>
+            ))
+          )}
         </CardContent>
       </Card>
     </div>

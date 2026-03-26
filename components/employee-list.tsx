@@ -1,14 +1,14 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { AlertDialog, AlertDialogTrigger, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from "@/components/ui/alert-dialog"
-import { Badge } from "@/components/ui/badge"
-import { Input } from "@/components/ui/input"
-import { Users, Search, Edit, Trash2, Eye } from "lucide-react"
+import { useEffect, useMemo, useState } from "react"
+import { Loader2, Pencil, Search, ToggleLeft, Trash2, UsersRound } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
+import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Input } from "@/components/ui/input"
+import { authFetch } from "@/lib/client-session"
 
 interface Employee {
   id: string
@@ -22,295 +22,199 @@ interface Employee {
 }
 
 export default function EmployeeList() {
+  const router = useRouter()
   const [employees, setEmployees] = useState<Employee[]>([])
-  const [filteredEmployees, setFilteredEmployees] = useState<Employee[]>([])
   const [searchTerm, setSearchTerm] = useState("")
   const [isLoading, setIsLoading] = useState(true)
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
-  const [employeeToDelete, setEmployeeToDelete] = useState<Employee | null>(null)
-  const router = useRouter()
+  const [busyId, setBusyId] = useState<string | null>(null)
 
-  useEffect(() => {
-    fetchEmployees()
-  }, [])
-
-  useEffect(() => {
-    if (searchTerm) {
-      const filtered = employees.filter(
-        (employee) =>
-          employee.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          employee.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          employee.department.toLowerCase().includes(searchTerm.toLowerCase()),
-      )
-      setFilteredEmployees(filtered)
-    } else {
-      setFilteredEmployees(employees)
+  const fetchEmployees = async (withLoader = false) => {
+    if (withLoader) {
+      setIsLoading(true)
     }
-  }, [searchTerm, employees])
 
-  const fetchEmployees = async () => {
     try {
-      const response = await fetch("/api/employees")
-      if (response.ok) {
-        const data = await response.json()
-        setEmployees(data)
-        setFilteredEmployees(data)
+      const response = await authFetch("/api/employees")
+      const data = await response.json()
+
+      if (!response.ok) {
+        toast.error("Unable to load employees", { description: data.error || "Please try again." })
+        return
       }
-    } catch (error) {
-      console.error("Error fetching employees:", error)
+
+      setEmployees(data)
+    } catch {
+      toast.error("Unable to load employees")
     } finally {
       setIsLoading(false)
     }
   }
 
-  const handleDeleteEmployee = async (employeeId: string) => {
-    try {
-      const response = await fetch(`/api/employees/${employeeId}`, {
-        method: "DELETE",
-      })
+  useEffect(() => {
+    fetchEmployees(true)
+    const interval = setInterval(() => fetchEmployees(false), 20000)
+    return () => clearInterval(interval)
+  }, [])
 
-      if (response.ok) {
-        fetchEmployees()
-        toast.success("Employee deleted successfully!")
-      } else {
-        const error = await response.json()
-        toast.error(error.error || "Delete failed")
-      }
-    } catch (error) {
-      toast.error("Delete failed")
-    } finally {
-      setDeleteDialogOpen(false)
-      setEmployeeToDelete(null)
-    }
-  }
-
-  const handleToggleStatus = async (employeeId: string, currentStatus: string) => {
-    try {
-      const response = await fetch(`/api/employees/${employeeId}/status`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          status: currentStatus === "active" ? "inactive" : "active",
-        }),
-      })
-
-      if (response.ok) {
-        fetchEmployees()
-        toast.success(`Employee ${currentStatus === "active" ? "deactivated" : "activated"} successfully!`)
-      } else {
-        const error = await response.json()
-        toast.error(error.error || "Status update failed")
-      }
-    } catch (error) {
-      toast.error("Status update failed")
-    }
-  }
-
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString("en-US", {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-      hour12: true,
-    })
-  }
-
-  const getShiftBadge = (shift: string) => {
-    const shiftColors = {
-      morning: "bg-green-100 text-green-800",
-      evening: "bg-blue-100 text-blue-800",
-      night: "bg-purple-100 text-purple-800",
-      flexible: "bg-gray-100 text-gray-800",
-    }
-
-    return (
-      <Badge className={shiftColors[shift as keyof typeof shiftColors] || "bg-gray-100 text-gray-800"}>
-        {shift.charAt(0).toUpperCase() + shift.slice(1)}
-      </Badge>
+  const filteredEmployees = useMemo(() => {
+    return employees.filter((employee) =>
+      [employee.name, employee.email, employee.department, employee.position]
+        .join(" ")
+        .toLowerCase()
+        .includes(searchTerm.toLowerCase()),
     )
+  }, [employees, searchTerm])
+
+  const handleToggleStatus = async (employee: Employee) => {
+    setBusyId(employee.id)
+    try {
+      const nextStatus = employee.status === "active" ? "inactive" : "active"
+      const response = await authFetch(`/api/employees/${employee.id}/status`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: nextStatus }),
+      })
+      const data = await response.json()
+
+      if (!response.ok) {
+        toast.error("Unable to update employee", { description: data.error || "Please try again." })
+        return
+      }
+
+      toast.success(`Employee ${nextStatus === "active" ? "activated" : "deactivated"}`)
+      await fetchEmployees(false)
+    } catch {
+      toast.error("Unable to update employee")
+    } finally {
+      setBusyId(null)
+    }
   }
 
-  if (isLoading) {
-    return <div>Loading employees...</div>
+  const handleDelete = async (employee: Employee) => {
+    setBusyId(employee.id)
+    try {
+      const response = await authFetch(`/api/employees/${employee.id}`, { method: "DELETE" })
+      const data = await response.json()
+
+      if (!response.ok) {
+        toast.error("Unable to delete employee", { description: data.error || "Please try again." })
+        return
+      }
+
+      toast.success("Employee deleted")
+      await fetchEmployees(false)
+    } catch {
+      toast.error("Unable to delete employee")
+    } finally {
+      setBusyId(null)
+    }
   }
 
   return (
     <div className="space-y-6">
-      {/* Summary Stats */}
-      <div className="grid md:grid-cols-4 gap-4">
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center space-x-2">
-              <Users className="h-5 w-5 text-blue-600" />
-              <div>
-                <p className="text-sm text-gray-600">Total Employees</p>
-                <p className="text-2xl font-bold">{employees.length}</p>
-              </div>
+      <div className="grid gap-4 md:grid-cols-4">
+        <Card className="rounded-3xl shadow-sm">
+          <CardContent className="flex items-center gap-4 p-5">
+            <UsersRound className="h-10 w-10 rounded-2xl bg-sky-100 p-2 text-sky-700" />
+            <div>
+              <p className="text-sm text-slate-500">Total Employees</p>
+              <p className="text-2xl font-bold">{employees.length}</p>
             </div>
           </CardContent>
         </Card>
-
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center space-x-2">
-              <Users className="h-5 w-5 text-green-600" />
-              <div>
-                <p className="text-sm text-gray-600">Active</p>
-                <p className="text-2xl font-bold">{employees.filter((e) => e.status === "active").length}</p>
-              </div>
-            </div>
+        <Card className="rounded-3xl shadow-sm">
+          <CardContent className="p-5">
+            <p className="text-sm text-slate-500">Active</p>
+            <p className="text-2xl font-bold">{employees.filter((employee) => employee.status === "active").length}</p>
           </CardContent>
         </Card>
-
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center space-x-2">
-              <Users className="h-5 w-5 text-red-600" />
-              <div>
-                <p className="text-sm text-gray-600">Inactive</p>
-                <p className="text-2xl font-bold">{employees.filter((e) => e.status === "inactive").length}</p>
-              </div>
-            </div>
+        <Card className="rounded-3xl shadow-sm">
+          <CardContent className="p-5">
+            <p className="text-sm text-slate-500">Inactive</p>
+            <p className="text-2xl font-bold">{employees.filter((employee) => employee.status === "inactive").length}</p>
           </CardContent>
         </Card>
-
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center space-x-2">
-              <Users className="h-5 w-5 text-purple-600" />
-              <div>
-                <p className="text-sm text-gray-600">Departments</p>
-                <p className="text-2xl font-bold">{new Set(employees.map((e) => e.department)).size}</p>
-              </div>
-            </div>
+        <Card className="rounded-3xl shadow-sm">
+          <CardContent className="p-5">
+            <p className="text-sm text-slate-500">Departments</p>
+            <p className="text-2xl font-bold">{new Set(employees.map((employee) => employee.department)).size}</p>
           </CardContent>
         </Card>
       </div>
 
-      {/* Employee List */}
-      <Card>
+      <Card className="rounded-3xl shadow-sm">
         <CardHeader>
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div>
-              <CardTitle className="flex items-center space-x-2">
-                <Users className="h-6 w-6" />
-                <span>All Employees</span>
-              </CardTitle>
-              <CardDescription>Manage and view all employees in the system</CardDescription>
+              <CardTitle className="text-2xl">Employees Directory</CardTitle>
+              <CardDescription>Search, review, and manage employees from one place.</CardDescription>
             </div>
-            <div className="flex items-center space-x-2">
-              <div className="relative">
-                <Search className="h-4 w-4 absolute left-3 top-3 text-gray-400" />
-                <Input
-                  placeholder="Search employees..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10 w-64"
-                />
-              </div>
+            <div className="relative w-full md:w-72">
+              <Search className="pointer-events-none absolute left-3 top-3.5 h-4 w-4 text-slate-400" />
+              <Input
+                value={searchTerm}
+                onChange={(event) => setSearchTerm(event.target.value)}
+                placeholder="Search employees..."
+                className="pl-10"
+              />
             </div>
           </div>
         </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {filteredEmployees.length === 0 ? (
-              <div className="text-center py-8 text-gray-500">No employees found.</div>
-            ) : (
-              filteredEmployees.map((employee) => (
-                <div key={employee.id} className="border rounded-lg p-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-center space-x-3 mb-2">
-                        <h3 className="font-semibold text-lg">{employee.name}</h3>
-                        <Badge variant={employee.status === "active" ? "default" : "secondary"}>
-                          {employee.status}
-                        </Badge>
-                        {getShiftBadge(employee.shift)}
-                      </div>
-
-                      <div className="grid md:grid-cols-2 gap-4 text-sm text-gray-600">
-                        <div>
-                          <p>
-                            <strong>Email:</strong> {employee.email}
-                          </p>
-                          <p>
-                            <strong>Department:</strong> {employee.department}
-                          </p>
-                        </div>
-                        <div>
-                          <p>
-                            <strong>Position:</strong> {employee.position}
-                          </p>
-                          <p>
-                            <strong>Join Date:</strong> {formatDate(employee.joinDate)}
-                          </p>
-                        </div>
-                      </div>
+        <CardContent className="space-y-4">
+          {isLoading ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="h-8 w-8 animate-spin text-emerald-600" />
+            </div>
+          ) : filteredEmployees.length === 0 ? (
+            <div className="rounded-3xl border border-dashed border-slate-300 p-8 text-center text-slate-500">
+              No employees found.
+            </div>
+          ) : (
+            filteredEmployees.map((employee) => (
+              <div key={employee.id} className="rounded-3xl border border-slate-200 p-5">
+                <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+                  <div className="space-y-2">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <h3 className="text-lg font-semibold text-slate-950">{employee.name}</h3>
+                      <Badge className={employee.status === "active" ? "bg-emerald-100 text-emerald-900" : "bg-slate-200 text-slate-700"}>
+                        {employee.status}
+                      </Badge>
                     </div>
-
-                    <div className="flex space-x-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => router.push(`/dashboard/employees/${employee.id}`)}
-                      >
-                        <Eye className="h-4 w-4" />
-                      </Button>
-
-                      {/* <Button variant="outline" size="sm" onClick={() => toast.info("Edit feature coming soon")}>
-                        <Edit className="h-4 w-4" />
-                      </Button> */}
-
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleToggleStatus(employee.id, employee.status)}
-                      >
-                        {employee.status === "active" ? "Deactivate" : "Activate"}
-                      </Button>
-
-                      <AlertDialog open={deleteDialogOpen && employeeToDelete?.id === employee.id} onOpenChange={setDeleteDialogOpen}>
-                        <AlertDialogTrigger asChild>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => {
-                              setEmployeeToDelete(employee)
-                              setDeleteDialogOpen(true)
-                            }}
-                            className="text-red-600 hover:text-red-700"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>Delete Employee</AlertDialogTitle>
-                            <AlertDialogDescription>
-                              Are you sure you want to delete <b>{employee.name}</b>? This action cannot be undone.
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel onClick={() => setDeleteDialogOpen(false)}>Cancel</AlertDialogCancel>
-                            <AlertDialogAction
-                              onClick={() => {
-                                if (employeeToDelete) handleDeleteEmployee(employeeToDelete.id)
-                              }}
-                              className="bg-red-600 hover:bg-red-700"
-                            >
-                              Delete
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
+                    <p className="text-sm text-slate-600">{employee.email}</p>
+                    <div className="flex flex-wrap gap-x-6 gap-y-1 text-sm text-slate-600">
+                      <span>Department: {employee.department}</span>
+                      <span>Position: {employee.position}</span>
+                      <span>Shift: {employee.shift || "Unassigned"}</span>
                     </div>
                   </div>
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      variant="outline"
+                      className="rounded-2xl"
+                      onClick={() => router.push(`/dashboard/employees/${employee.id}?mode=edit`)}
+                    >
+                      <Pencil className="mr-2 h-4 w-4" />
+                      Edit
+                    </Button>
+                    <Button variant="outline" className="rounded-2xl" disabled={busyId === employee.id} onClick={() => handleToggleStatus(employee)}>
+                      <ToggleLeft className="mr-2 h-4 w-4" />
+                      {employee.status === "active" ? "Deactivate" : "Activate"}
+                    </Button>
+                    <Button variant="outline" className="rounded-2xl text-rose-700" disabled={busyId === employee.id} onClick={() => handleDelete(employee)}>
+                      {busyId === employee.id ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <>
+                          <Trash2 className="mr-2 h-4 w-4" />
+                          Delete
+                        </>
+                      )}
+                    </Button>
+                  </div>
                 </div>
-              ))
-            )}
-          </div>
+              </div>
+            ))
+          )}
         </CardContent>
       </Card>
     </div>

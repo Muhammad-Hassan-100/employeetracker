@@ -2,14 +2,14 @@
 
 import { useEffect } from "react"
 import { useRouter } from "next/navigation"
+import { getStoredUser } from "@/lib/client-session"
 
 export default function Dashboard() {
   const router = useRouter()
 
   useEffect(() => {
-    const userData = localStorage.getItem("user")
-    if (userData) {
-      const user = JSON.parse(userData)
+    const user = getStoredUser()
+    if (user) {
       if (user.role === "admin") {
         router.replace("/dashboard/employees")
       } else {

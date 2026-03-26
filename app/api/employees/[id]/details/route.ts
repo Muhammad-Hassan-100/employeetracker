@@ -1,15 +1,22 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { getDatabase } from "@/lib/mongodb"
 import { ObjectId } from "mongodb"
+import { requireAdmin } from "@/lib/session"
 
 export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
   try {
+    const { session, response } = requireAdmin(request)
+    if (!session) {
+      return response
+    }
+
     const db = await getDatabase()
     const usersCollection = db.collection("users")
 
     const employee = await usersCollection.findOne({
       _id: new ObjectId(params.id),
       role: "employee",
+      companyId: session.companyId,
     })
 
     if (!employee) {

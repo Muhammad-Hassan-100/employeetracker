@@ -1,14 +1,17 @@
 "use client"
 
 import type React from "react"
+import { useEffect, useState } from "react"
+import { Loader2, UserPlus2 } from "lucide-react"
 import { toast } from "sonner"
-import { useState, useEffect } from "react"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { UserPlus, User, Clock, Loader2 } from "lucide-react"
+import { authFetch, getStoredUser } from "@/lib/client-session"
+import { buildPreviewEmail } from "@/lib/company-utils"
+import { formatTimeString12Hour } from "@/lib/time"
 
 interface Shift {
   id: string
@@ -17,265 +20,207 @@ interface Shift {
   endTime: string
 }
 
+const departments = [
+  "HR",
+  "IT",
+  "Finance",
+  "Marketing",
+  "Operations",
+  "Admin",
+  "Sales",
+  "Support",
+  "Engineering",
+  "Design",
+]
+
 export default function EmployeeManagement() {
+  const companyDomain = getStoredUser()?.companyDomain || ""
   const [shifts, setShifts] = useState<Shift[]>([])
-  const [isLoading, setIsLoading] = useState(false)
   const [isLoadingShifts, setIsLoadingShifts] = useState(true)
-  const [formData, setFormData] = useState({
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [form, setForm] = useState({
     name: "",
-    email: "",
     password: "",
     shift: "",
     department: "",
     position: "",
+    checkInBeforeMinutes: "5",
+    lateGraceMinutes: "0",
   })
-
-  useEffect(() => {
-    fetchShifts()
-  }, [])
 
   const fetchShifts = async () => {
     try {
-      const response = await fetch("/api/shifts")
-      if (response.ok) {
-        const data = await response.json()
-        setShifts(data)
+      const response = await authFetch("/api/shifts")
+      const data = await response.json()
+
+      if (!response.ok) {
+        toast.error("Unable to load shifts", { description: data.error || "Please create a shift first." })
+        return
       }
-    } catch (error) {
-      console.error("Error fetching shifts:", error)
+
+      setShifts(data)
+    } catch {
+      toast.error("Unable to load shifts")
     } finally {
       setIsLoadingShifts(false)
     }
   }
 
-  const handleInputChange = (field: string, value: string) => {
-    setFormData((prev) => ({
-      ...prev,
-      [field]: value,
-    }))
-  }
+  useEffect(() => {
+    fetchShifts()
+  }, [])
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setIsLoading(true)
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault()
+    setIsSubmitting(true)
 
     try {
-      // TEMP: Inspect what is being sent (remove after debugging)
-      console.log("[EmployeeManagement] Payload to /api/employees/create:", formData)
-
-      const response = await fetch("/api/employees/create", {
+      const response = await authFetch("/api/employees/create", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(formData),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(form),
       })
 
-      if (response.ok) {
-        const data = await response.json()
-        toast.success("Employee registered successfully!", {
-          description: `${data.employee.name} has been added to the system`,
+      const data = await response.json()
+      if (!response.ok) {
+        toast.error("Unable to add employee", {
+          description: data.error || "Please review the form and try again.",
         })
-        setFormData({
-          name: "",
-          email: "",
-          password: "",
-          shift: "",
-          department: "",
-          position: "",
-        })
-      } else {
-        const error = await response.json()
-        toast.error("Registration failed", {
-          description: error.error || "Please check the details and try again",
-        })
+        return
       }
-    } catch (error) {
-      toast.error("Connection error", {
-        description: "Unable to register employee. Please try again.",
+
+      toast.success("Employee added", {
+        description: `${data.employee.name} added as ${data.employee.email}.`,
       })
+      setForm({
+        name: "",
+        password: "",
+        shift: "",
+        department: "",
+        position: "",
+        checkInBeforeMinutes: "5",
+        lateGraceMinutes: "0",
+      })
+    } catch {
+      toast.error("Unable to add employee")
     } finally {
-      setIsLoading(false)
+      setIsSubmitting(false)
     }
   }
 
   if (isLoadingShifts) {
     return (
-      <div className="flex items-center justify-center py-12">
-        <div className="text-center">
-          <Loader2 className="h-8 w-8 animate-spin text-blue-600 mx-auto mb-4" />
-          <p className="text-gray-600">Loading employee management...</p>
-        </div>
+      <div className="flex items-center justify-center py-16">
+        <Loader2 className="h-8 w-8 animate-spin text-emerald-600" />
       </div>
     )
   }
 
-  const formatTime12Hour = (timeString: string) => {
-    const [hours, minutes] = timeString.split(":").map(Number)
-    const date = new Date()
-    date.setHours(hours, minutes, 0, 0)
-    return date.toLocaleTimeString("en-US", {
-      hour12: true,
-      hour: "numeric",
-      minute: "2-digit",
-    })
-  }
-
   return (
-    <Card className="shadow-sm">
+    <Card className="rounded-3xl shadow-sm">
       <CardHeader>
-        <CardTitle className="flex items-center space-x-2">
-          <UserPlus className="h-6 w-6 text-blue-600" />
-          <span>Register New Employee</span>
+        <CardTitle className="flex items-center gap-2 text-2xl">
+          <UserPlus2 className="h-6 w-6 text-emerald-600" />
+          Add New Employee
         </CardTitle>
-        <CardDescription>Add a new employee to the system and assign them a shift</CardDescription>
+        <CardDescription>Create an employee profile and assign a shift immediately.</CardDescription>
       </CardHeader>
-      <CardContent className="p-6">
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Personal Information */}
-            <div className="space-y-4">
-              <div className="flex items-center space-x-2 mb-4">
-                <User className="h-5 w-5 text-blue-600" />
-                <h3 className="text-lg font-semibold">Personal Information</h3>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="name">Full Name</Label>
-                <Input
-                  id="name"
-                  placeholder="Enter employee name"
-                  value={formData.name}
-                  onChange={(e) => handleInputChange("name", e.target.value)}
-                  required
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="email">Email Address</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="Enter email address"
-                  value={formData.email}
-                  onChange={(e) => handleInputChange("email", e.target.value)}
-                  required
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="password">Password</Label>
-                <Input
-                  id="password"
-                  type="password"
-                  placeholder="Set password"
-                  value={formData.password}
-                  onChange={(e) => handleInputChange("password", e.target.value)}
-                  required
-                />
-              </div>
-            </div>
-
-            {/* Work Information */}
-            <div className="space-y-4">
-              <div className="flex items-center space-x-2 mb-4">
-                <Clock className="h-5 w-5 text-green-600" />
-                <h3 className="text-lg font-semibold">Work Information</h3>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="department">Department</Label>
-                <Select value={formData.department} onValueChange={(value) => handleInputChange("department", value)}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select department" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="HR">Human Resources</SelectItem>
-                    <SelectItem value="IT">Information Technology</SelectItem>
-                    <SelectItem value="Finance">Finance</SelectItem>
-                    <SelectItem value="Marketing">Marketing</SelectItem>
-                    <SelectItem value="Operations">Operations</SelectItem>
-                    <SelectItem value="Admin">Administration</SelectItem>
-                    <SelectItem value="Sales">Sales</SelectItem>
-                    <SelectItem value="Support">Support</SelectItem>
-                    <SelectItem value="Legal">Legal</SelectItem>
-                    <SelectItem value="Procurement">Procurement</SelectItem>
-                    <SelectItem value="Logistics">Logistics</SelectItem>
-                    <SelectItem value="R&D">Research & Development</SelectItem>
-                    <SelectItem value="QA">Quality Assurance</SelectItem>
-                    <SelectItem value="CustomerService">Customer Service</SelectItem>
-                    <SelectItem value="Security">Security</SelectItem>
-                    <SelectItem value="Engineering">Engineering</SelectItem>
-                    <SelectItem value="Design">Design</SelectItem>
-                    <SelectItem value="Product">Product Management</SelectItem>
-                    <SelectItem value="BusinessDevelopment">Business Development</SelectItem>
-                    <SelectItem value="PublicRelations">Public Relations</SelectItem>
-                    <SelectItem value="Compliance">Compliance</SelectItem>
-                    <SelectItem value="Medical">Medical</SelectItem>
-                    <SelectItem value="Education">Education</SelectItem>
-                    <SelectItem value="Training">Training</SelectItem>
-                    <SelectItem value="Facilities">Facilities</SelectItem>
-                    <SelectItem value="Maintenance">Maintenance</SelectItem>
-                    <SelectItem value="Transport">Transport</SelectItem>
-                    <SelectItem value="Purchasing">Purchasing</SelectItem>
-                    <SelectItem value="Planning">Planning</SelectItem>
-                    <SelectItem value="Strategy">Strategy</SelectItem>
-                    <SelectItem value="Analytics">Analytics</SelectItem>
-                    <SelectItem value="DataScience">Data Science</SelectItem>
-                    <SelectItem value="Content">Content</SelectItem>
-                    <SelectItem value="Media">Media</SelectItem>
-                    <SelectItem value="Event">Event Management</SelectItem>
-                    <SelectItem value="Executive">Executive</SelectItem>
-                    <SelectItem value="Board">Board of Directors</SelectItem>
-                    <SelectItem value="Interns">Interns</SelectItem>
-                    <SelectItem value="Volunteers">Volunteers</SelectItem>
-                    <SelectItem value="Other">Other</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="position">Position</Label>
-                <Input
-                  id="position"
-                  placeholder="Enter job position"
-                  value={formData.position}
-                  onChange={(e) => handleInputChange("position", e.target.value)}
-                  required
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="shift">Assign Shift</Label>
-                <Select value={formData.shift} onValueChange={(value) => handleInputChange("shift", value)}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select shift" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {shifts.map((shift) => (
-                      <SelectItem key={shift.id} value={shift.id.toLowerCase().replace(" ", "")}>
-                        {shift.name} ({formatTime12Hour(shift.startTime)} - {formatTime12Hour(shift.endTime)})
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
+      <CardContent>
+        <form onSubmit={handleSubmit} className="grid gap-4 md:grid-cols-2">
+          <div className="space-y-2">
+            <Label>Full Name</Label>
+            <Input value={form.name} onChange={(event) => setForm((prev) => ({ ...prev, name: event.target.value }))} required />
           </div>
-
-          <Button type="submit" className="w-full bg-blue-600 hover:bg-blue-700" disabled={isLoading}>
-            {isLoading ? (
-              <div className="flex items-center space-x-2">
-                <Loader2 className="h-4 w-4 animate-spin" />
-                <span>Registering Employee...</span>
-              </div>
-            ) : (
-              <div className="flex items-center space-x-2">
-                <UserPlus className="h-4 w-4" />
-                <span>Register Employee</span>
-              </div>
+          <div className="space-y-2">
+            <Label>Generated Email</Label>
+            <Input value={buildPreviewEmail(form.name, companyDomain) || `name@${companyDomain || "company.com"}`} readOnly />
+            <p className="text-xs text-slate-500">The employee email is generated automatically using your company domain.</p>
+          </div>
+          <div className="space-y-2">
+            <Label>Password</Label>
+            <Input
+              type="password"
+              minLength={6}
+              value={form.password}
+              onChange={(event) => setForm((prev) => ({ ...prev, password: event.target.value }))}
+              required
+            />
+          </div>
+          <div className="space-y-2">
+            <Label>Position</Label>
+            <Input value={form.position} onChange={(event) => setForm((prev) => ({ ...prev, position: event.target.value }))} required />
+          </div>
+          <div className="space-y-2">
+            <Label>Department</Label>
+            <Select value={form.department} onValueChange={(value) => setForm((prev) => ({ ...prev, department: value }))}>
+              <SelectTrigger>
+                <SelectValue placeholder="Choose department" />
+              </SelectTrigger>
+              <SelectContent>
+                {departments.map((department) => (
+                  <SelectItem key={department} value={department}>
+                    {department}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <Label>Assigned Shift</Label>
+            <Select value={form.shift} onValueChange={(value) => setForm((prev) => ({ ...prev, shift: value }))}>
+              <SelectTrigger>
+                <SelectValue placeholder={shifts.length ? "Choose shift" : "No shifts available"} />
+              </SelectTrigger>
+              <SelectContent>
+                {shifts.map((shift) => (
+                  <SelectItem key={shift.id} value={shift.id}>
+                    {shift.name} ({formatTimeString12Hour(shift.startTime)} to {formatTimeString12Hour(shift.endTime)})
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <Label>Check-In Before (minutes)</Label>
+            <Input
+              type="number"
+              min={0}
+              step={1}
+              value={form.checkInBeforeMinutes}
+              onChange={(event) => setForm((prev) => ({ ...prev, checkInBeforeMinutes: event.target.value }))}
+              required
+            />
+          </div>
+          <div className="space-y-2">
+            <Label>Late Relaxation (minutes)</Label>
+            <Input
+              type="number"
+              min={0}
+              step={1}
+              value={form.lateGraceMinutes}
+              onChange={(event) => setForm((prev) => ({ ...prev, lateGraceMinutes: event.target.value }))}
+              required
+            />
+          </div>
+          <div className="md:col-span-2">
+            <Button
+              type="submit"
+              disabled={isSubmitting || shifts.length === 0}
+              className="rounded-2xl bg-slate-950 text-white hover:bg-slate-800"
+            >
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Creating employee...
+                </>
+              ) : (
+                "Create Employee"
+              )}
+            </Button>
+            {shifts.length === 0 && (
+              <p className="mt-3 text-sm text-amber-700">Create at least one shift before adding employees.</p>
             )}
-          </Button>
+          </div>
         </form>
       </CardContent>
     </Card>

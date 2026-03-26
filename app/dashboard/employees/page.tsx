@@ -13,7 +13,6 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb"
 import EmployeeManagement from "@/components/employee-management"
-import SyncStatusPanel from "@/components/sync-status-panel"
 
 interface User {
   id: string
@@ -70,10 +69,6 @@ export default function EmployeesPage() {
             <h1 className="text-2xl md:text-3xl font-bold text-gray-900">Employee Management</h1>
             <p className="text-gray-600 mt-1">Register new employees and assign them to shifts</p>
           </div>
-          
-          {/* Sync Status Panel */}
-          {/* <SyncStatusPanel /> */}
-          
           {/* Employee Management */}
           <EmployeeManagement />
         </div>

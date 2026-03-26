@@ -1,13 +1,36 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { getDatabase } from "@/lib/mongodb"
 import type { CreateLeaveData } from "@/lib/models/Leave"
+import { ObjectId } from "mongodb"
+import { assertSelfOrAdmin, requireSession } from "@/lib/session"
 
 export async function POST(request: NextRequest) {
   try {
+    const { session, response } = requireSession(request)
+    if (!session) {
+      return response
+    }
+
     const leaveData: CreateLeaveData = await request.json()
+    const accessError = assertSelfOrAdmin(session, leaveData.userId)
+    if (accessError) {
+      return accessError
+    }
     
     const db = await getDatabase()
     const leavesCollection = db.collection("leaves")
+    const usersCollection = db.collection("users")
+
+    const employee = await usersCollection.findOne({
+      _id: new ObjectId(leaveData.userId),
+      companyId: session.companyId,
+      role: "employee",
+      status: "active",
+    })
+
+    if (!employee) {
+      return NextResponse.json({ error: "Employee not found" }, { status: 404 })
+    }
     
     // Validate date format
     const startDate = new Date(leaveData.startDate)
@@ -22,6 +45,7 @@ export async function POST(request: NextRequest) {
     
     // Check for overlapping leave applications
     const existingLeave = await leavesCollection.findOne({
+      companyId: session.companyId,
       userId: leaveData.userId,
       status: { $in: ["pending", "approved"] },
       $or: [
@@ -41,6 +65,8 @@ export async function POST(request: NextRequest) {
     
     const leave = {
       ...leaveData,
+      companyId: session.companyId,
+      companyName: session.companyName,
       status: "pending",
       appliedDate: new Date(),
       createdAt: new Date(),
@@ -64,6 +90,11 @@ export async function POST(request: NextRequest) {
 
 export async function GET(request: NextRequest) {
   try {
+    const { session, response } = requireSession(request)
+    if (!session) {
+      return response
+    }
+
     const { searchParams } = new URL(request.url)
     const userId = searchParams.get("userId")
     const status = searchParams.get("status")
@@ -71,10 +102,18 @@ export async function GET(request: NextRequest) {
     const db = await getDatabase()
     const leavesCollection = db.collection("leaves")
     
-    let query: any = {}
+    const query: Record<string, any> = {
+      companyId: session.companyId,
+    }
     
     if (userId) {
+      const accessError = assertSelfOrAdmin(session, userId)
+      if (accessError) {
+        return accessError
+      }
       query.userId = userId
+    } else if (session.role !== "admin") {
+      query.userId = session.userId
     }
     
     if (status) {

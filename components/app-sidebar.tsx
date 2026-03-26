@@ -1,6 +1,11 @@
 "use client"
 
-import { useRouter, usePathname } from "next/navigation"
+import Link from "next/link"
+import { usePathname, useRouter } from "next/navigation"
+import { BarChart3, CalendarClock, ClipboardList, Home, LogOut, Settings2, UserPlus2, UsersRound } from "lucide-react"
+import { toast } from "sonner"
+import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
 import {
   Sidebar,
   SidebarContent,
@@ -14,19 +19,11 @@ import {
   SidebarMenuItem,
   SidebarRail,
 } from "@/components/ui/sidebar"
-import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { Users, Clock, Calendar, UserPlus, History, LogOut, Home, BarChart3, FileText } from "lucide-react"
-import Link from "next/link"
-import { toast } from "sonner"
+import type { SessionUser } from "@/lib/session"
+import { clearStoredUser } from "@/lib/client-session"
 
 interface AppSidebarProps {
-  user: {
-    id: string
-    name: string
-    email: string
-    role: string
-  }
+  user: SessionUser
 }
 
 export function AppSidebar({ user }: AppSidebarProps) {
@@ -34,95 +31,57 @@ export function AppSidebar({ user }: AppSidebarProps) {
   const pathname = usePathname()
 
   const handleLogout = () => {
-    localStorage.removeItem("user")
-    toast.success("Logged out successfully!")
+    clearStoredUser()
+    toast.success("Signed out", {
+      description: "Your workspace session has been cleared.",
+    })
     router.push("/")
   }
 
-  const employeeMenuItems = [
-    {
-      title: "Attendance",
-      url: "/dashboard/attendance",
-      icon: Clock,
-    },
-    {
-      title: "Leave Management",
-      url: "/dashboard/leaves",
-      icon: FileText,
-    },
-    {
-      title: "My History",
-      url: "/dashboard/history",
-      icon: History,
-    },
-  ]
-
-  const adminMenuItems = [
-    {
-      title: "Add Employee",
-      url: "/dashboard/employees",
-      icon: UserPlus,
-    },
-    {
-      title: "Manage Shifts",
-      url: "/dashboard/shifts",
-      icon: Calendar,
-    },
-    {
-      title: "All Employees",
-      url: "/dashboard/employee-list",
-      icon: Users,
-    },
-    {
-      title: "Leave Management",
-      url: "/dashboard/leaves",
-      icon: FileText,
-    },
-    {
-      title: "Attendance Reports",
-      url: "/dashboard/reports",
-      icon: BarChart3,
-    },
-  ]
-
-  const menuItems = user.role === "admin" ? adminMenuItems : employeeMenuItems
+  const menuItems =
+    user.role === "admin"
+      ? [
+          { title: "Add Employee", url: "/dashboard/employees", icon: UserPlus2 },
+          { title: "Manage Shifts", url: "/dashboard/shifts", icon: CalendarClock },
+          { title: "Attendance Monitor", url: "/dashboard/attendance-monitor", icon: Home },
+          { title: "All Employees", url: "/dashboard/employee-list", icon: UsersRound },
+          { title: "Leave Queue", url: "/dashboard/leaves", icon: ClipboardList },
+          { title: "Reports", url: "/dashboard/reports", icon: BarChart3 },
+          { title: "Settings", url: "/dashboard/settings", icon: Settings2 },
+        ]
+      : [
+          { title: "Attendance", url: "/dashboard/attendance", icon: Home },
+          { title: "Leave Requests", url: "/dashboard/leaves", icon: ClipboardList },
+          { title: "My History", url: "/dashboard/history", icon: BarChart3 },
+        ]
 
   return (
-    <Sidebar>
-      <SidebarHeader className="border-b p-4">
-        <div className="flex items-center space-x-3">
-          <div className="bg-blue-600 p-2 rounded-lg">
-            <Users className="h-6 w-6 text-white" />
+    <Sidebar className="border-r border-slate-200 bg-white">
+      <SidebarHeader className="border-b border-slate-200 px-4 py-5">
+        <div className="rounded-3xl bg-slate-950 p-4 text-white">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <p className="text-xs uppercase tracking-[0.2em] text-emerald-300">Workspace</p>
+              <h1 className="mt-1 text-lg font-bold">{user.companyName}</h1>
+              <p className="mt-1 text-sm text-slate-300">{user.name}</p>
+            </div>
+            <Badge className={user.role === "admin" ? "bg-emerald-400 text-slate-950" : "bg-sky-400 text-slate-950"}>
+              {user.role === "admin" ? "Admin" : "Employee"}
+            </Badge>
           </div>
-          <div className="min-w-0 flex-1">
-            <h1 className="text-lg font-bold text-gray-900 truncate">EmployeeTracker</h1>
-            <p className="text-sm text-gray-600 truncate">Welcome, {user.name}</p>
-          </div>
-        </div>
-        <div className="mt-3">
-          <Badge variant={user.role === "admin" ? "default" : "secondary"} className="text-xs">
-            {user.role === "admin" ? "Administrator" : "Employee"}
-          </Badge>
         </div>
       </SidebarHeader>
 
-      <SidebarContent>
+      <SidebarContent className="px-3 py-4">
         <SidebarGroup>
-          <SidebarGroupLabel>Navigation</SidebarGroupLabel>
+          <SidebarGroupLabel className="px-2 text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
+            Navigation
+          </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {/* <SidebarMenuItem>
-                <SidebarMenuButton asChild isActive={pathname === "/"}>
-                  <Link href="/">
-                    <Home className="h-4 w-4" />
-                    <span>Home</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem> */}
-
               {menuItems.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild isActive={pathname === item.url}>
+                <SidebarMenuItem key={item.url}>
+                  <SidebarMenuButton asChild isActive={pathname === item.url} className="h-11 rounded-2xl px-3">
                     <Link href={item.url}>
                       <item.icon className="h-4 w-4" />
                       <span>{item.title}</span>
@@ -135,28 +94,12 @@ export function AppSidebar({ user }: AppSidebarProps) {
         </SidebarGroup>
       </SidebarContent>
 
-      <SidebarFooter className="border-t p-4">
-        <div className="space-y-3">
-          <div className="text-xs text-gray-600 space-y-1">
-            <p className="truncate">
-              <strong>Email:</strong> {user.email}
-            </p>
-            <p>
-              <strong>Role:</strong> {user.role}
-            </p>
-          </div>
-          <Button
-            variant="outline"
-            onClick={handleLogout}
-            className="w-full justify-start text-sm bg-transparent"
-            size="sm"
-          >
-            <LogOut className="h-4 w-4 mr-2" />
-            Logout
-          </Button>
-        </div>
+      <SidebarFooter className="border-t border-slate-200 p-4">
+        <Button variant="outline" className="w-full rounded-2xl border-slate-300" onClick={handleLogout}>
+          <LogOut className="mr-2 h-4 w-4" />
+          Sign Out
+        </Button>
       </SidebarFooter>
-
       <SidebarRail />
     </Sidebar>
   )

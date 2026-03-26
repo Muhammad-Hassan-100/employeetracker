@@ -1,12 +1,18 @@
-import { NextResponse } from "next/server"
+import { NextRequest, NextResponse } from "next/server"
 import { getDatabase } from "@/lib/mongodb"
+import { requireSession } from "@/lib/session"
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
+    const { session, response } = requireSession(request)
+    if (!session) {
+      return response
+    }
+
     const db = await getDatabase()
     const shiftsCollection = db.collection("shifts")
 
-    const shifts = await shiftsCollection.find({}).sort({ createdAt: -1 }).toArray()
+    const shifts = await shiftsCollection.find({ companyId: session.companyId }).sort({ createdAt: -1 }).toArray()
 
     const formattedShifts = shifts.map((shift) => ({
       id: shift._id.toString(),
@@ -14,6 +20,7 @@ export async function GET() {
       startTime: shift.startTime,
       endTime: shift.endTime,
       description: shift.description,
+      companyId: shift.companyId,
     }))
 
     return NextResponse.json(formattedShifts)

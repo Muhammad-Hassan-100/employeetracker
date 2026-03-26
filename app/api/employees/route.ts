@@ -1,12 +1,21 @@
-import { NextResponse } from "next/server"
+import { NextRequest, NextResponse } from "next/server"
 import { getDatabase } from "@/lib/mongodb"
+import { requireAdmin } from "@/lib/session"
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
+    const { session, response } = requireAdmin(request)
+    if (!session) {
+      return response
+    }
+
     const db = await getDatabase()
     const usersCollection = db.collection("users")
 
-    const employees = await usersCollection.find({ role: "employee" }).sort({ createdAt: -1 }).toArray()
+    const employees = await usersCollection
+      .find({ role: "employee", companyId: session.companyId })
+      .sort({ createdAt: -1 })
+      .toArray()
 
     const formattedEmployees = employees.map((employee) => ({
       id: employee._id.toString(),
@@ -17,6 +26,7 @@ export async function GET() {
       shift: employee.shiftId,
       joinDate: employee.joinDate,
       status: employee.status,
+      companyId: employee.companyId,
     }))
 
     return NextResponse.json(formattedEmployees)

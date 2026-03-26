@@ -59,8 +59,8 @@ export default function AttendancePage() {
       <main className="flex-1 p-4 md:p-6 bg-gray-50">
         <div className="max-w-7xl mx-auto">
           <div className="mb-6">
-            <h1 className="text-2xl md:text-3xl font-bold text-gray-900">Attendance Management</h1>
-            <p className="text-gray-600 mt-1">Mark your attendance and manage your work schedule</p>
+            <h1 className="text-2xl md:text-3xl font-bold text-gray-900">Attendance</h1>
+            <p className="mt-1 text-gray-600">Your next attendance action is always visible at the top of this page.</p>
           </div>
           <AttendanceTab user={user} />
         </div>

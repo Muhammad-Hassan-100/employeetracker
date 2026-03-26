@@ -2,12 +2,18 @@ import { type NextRequest, NextResponse } from "next/server"
 import { getDatabase } from "@/lib/mongodb"
 import { ObjectId } from "mongodb"
 import type { UpdateLeaveData } from "@/lib/models/Leave"
+import { requireAdmin } from "@/lib/session"
 
 export async function PUT(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
   try {
+    const { session, response } = requireAdmin(request)
+    if (!session) {
+      return response
+    }
+
     const { id } = params
     const updateData: UpdateLeaveData = await request.json()
     
@@ -15,14 +21,14 @@ export async function PUT(
     const leavesCollection = db.collection("leaves")
     const attendanceCollection = db.collection("attendance")
     
-    const leave = await leavesCollection.findOne({ _id: new ObjectId(id) })
+    const leave = await leavesCollection.findOne({ _id: new ObjectId(id), companyId: session.companyId })
     
     if (!leave) {
       return NextResponse.json({ error: "Leave application not found" }, { status: 404 })
     }
     
     const result = await leavesCollection.updateOne(
-      { _id: new ObjectId(id) },
+      { _id: new ObjectId(id), companyId: session.companyId },
       {
         $set: {
           ...updateData,
@@ -36,17 +42,13 @@ export async function PUT(
       return NextResponse.json({ error: "Leave application not found" }, { status: 404 })
     }
     
-    // If leave is approved, mark attendance as on_leave for the date range
     if (updateData.status === "approved") {
       const startDate = new Date(leave.startDate)
       const endDate = new Date(leave.endDate)
-      
-      // Generate dates between start and end date
       const dates = []
       const currentDate = new Date(startDate)
       
       while (currentDate <= endDate) {
-        // Skip weekends (optional - you can remove this if leaves should include weekends)
         if (currentDate.getDay() !== 0 && currentDate.getDay() !== 6) {
           dates.push(currentDate.toISOString().split("T")[0])
         }
@@ -57,11 +59,11 @@ export async function PUT(
       for (const date of dates) {
         const existingRecord = await attendanceCollection.findOne({
           userId: leave.userId,
+          companyId: session.companyId,
           date: date
         })
 
         if (existingRecord && existingRecord.checkInTime) {
-          // Employee already checked in, cannot approve leave
           return NextResponse.json({ 
             error: `Cannot approve leave for ${date}. Employee has already checked in.` 
           }, { status: 400 })
@@ -72,6 +74,7 @@ export async function PUT(
           {
             $set: {
               userId: leave.userId,
+              companyId: session.companyId,
               date: date,
               checkInTime: null,
               checkOutTime: null,
@@ -87,8 +90,6 @@ export async function PUT(
             },
             $unset: {
               pendingLeaveId: "",
-              rejectedLeaveId: "",
-              leaveRejectedAt: ""
             }
           },
           { upsert: true }
@@ -96,16 +97,10 @@ export async function PUT(
       }
     }
     
-    // If leave is rejected, update any existing attendance records back to absent (if they were on_leave due to this leave)
     if (updateData.status === "rejected") {
       const startDate = new Date(leave.startDate)
       const endDate = new Date(leave.endDate)
-      
-      // Check if this is a same-day leave
-      const isSameDayLeave = startDate.toISOString().split("T")[0] === endDate.toISOString().split("T")[0] && 
-                            startDate.toISOString().split("T")[0] === new Date().toISOString().split("T")[0]
-      
-      // Generate dates between start and end date
+      const today = new Date().toISOString().split("T")[0]
       const dates = []
       const currentDate = new Date(startDate)
       
@@ -120,13 +115,14 @@ export async function PUT(
       for (const date of dates) {
         const existingRecord = await attendanceCollection.findOne({
           userId: leave.userId,
+          companyId: session.companyId,
           date: date
         })
         
         if (existingRecord) {
-          // Check if there are any other approved leaves for this date
           const otherApprovedLeave = await db.collection("leaves").findOne({
             userId: leave.userId,
+            companyId: session.companyId,
             status: "approved",
             startDate: { $lte: date },
             endDate: { $gte: date },
@@ -145,40 +141,28 @@ export async function PUT(
               }
             )
           } else {
-            // No other approved leaves
-            if (isSameDayLeave) {
-              // For rejected same-day leaves, remove leave option but allow attendance
-              // Mark as "attendance_pending" to indicate employee can still check in
+            if (existingRecord.leaveId !== id || existingRecord.checkInTime) {
+              continue
+            }
+
+            if (date >= today) {
+              await attendanceCollection.deleteOne({
+                _id: existingRecord._id,
+                companyId: session.companyId,
+              })
+            } else {
               await attendanceCollection.updateOne(
-                { userId: leave.userId, date: date },
+                { _id: existingRecord._id, companyId: session.companyId },
                 {
                   $set: {
-                    status: "attendance_pending",
-                    rejectedLeaveId: id,
-                    leaveRejectedAt: new Date(),
+                    status: "absent",
                     updatedAt: new Date(),
                   },
                   $unset: {
-                    leaveId: ""
-                  }
-                }
+                    leaveId: "",
+                  },
+                },
               )
-            } else {
-              // For other leaves, mark as absent if no check-in record exists
-              if (!existingRecord.checkInTime) {
-                await attendanceCollection.updateOne(
-                  { userId: leave.userId, date: date },
-                  {
-                    $set: {
-                      status: "absent",
-                      updatedAt: new Date(),
-                    },
-                    $unset: {
-                      leaveId: ""
-                    }
-                  }
-                )
-              }
             }
           }
         }
@@ -197,12 +181,17 @@ export async function DELETE(
   { params }: { params: { id: string } }
 ) {
   try {
+    const { session, response } = requireAdmin(request)
+    if (!session) {
+      return response
+    }
+
     const { id } = params
     
     const db = await getDatabase()
     const leavesCollection = db.collection("leaves")
     
-    const result = await leavesCollection.deleteOne({ _id: new ObjectId(id) })
+    const result = await leavesCollection.deleteOne({ _id: new ObjectId(id), companyId: session.companyId })
     
     if (result.deletedCount === 0) {
       return NextResponse.json({ error: "Leave application not found" }, { status: 404 })

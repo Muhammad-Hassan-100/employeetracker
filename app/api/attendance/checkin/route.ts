@@ -1,10 +1,20 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { getDatabase } from "@/lib/mongodb"
 import { ObjectId } from "mongodb"
+import { assertSelfOrAdmin, requireSession } from "@/lib/session"
 
 export async function POST(request: NextRequest) {
   try {
+    const { session, response } = requireSession(request)
+    if (!session) {
+      return response
+    }
+
     const { userId, checkInTime, isLate, lateReason } = await request.json()
+    const accessError = assertSelfOrAdmin(session, userId)
+    if (accessError) {
+      return accessError
+    }
 
     const db = await getDatabase()
     const attendanceCollection = db.collection("attendance")
@@ -14,43 +24,48 @@ export async function POST(request: NextRequest) {
 
     const now = new Date(checkInTime)
     const today = new Date().toISOString().split("T")[0]
+    let computedIsLate = false
+    let employeeCheckInBeforeMinutes = 5
 
-    // Enforce: check-in allowed only from 5 minutes before shift start (if shift exists)
     try {
-      const user = await usersCollection.findOne({ _id: new ObjectId(userId) })
+      const user = await usersCollection.findOne({ _id: new ObjectId(userId), companyId: session.companyId })
       if (user?.shiftId) {
+        employeeCheckInBeforeMinutes = Number.isInteger(user.checkInBeforeMinutes) ? user.checkInBeforeMinutes : 5
+        const employeeLateGraceMinutes = Number.isInteger(user.lateGraceMinutes) ? user.lateGraceMinutes : 0
         let shift: any = null
-        // Try ObjectId first
         try {
-          shift = await shiftsCollection.findOne({ _id: new ObjectId(user.shiftId) })
+          shift = await shiftsCollection.findOne({ _id: new ObjectId(user.shiftId), companyId: session.companyId })
         } catch {}
-        // Try by name (case-insensitive)
         if (!shift) {
-          shift = await shiftsCollection.findOne({ name: { $regex: new RegExp(`^${user.shiftId}$`, "i") } })
-        }
-        // Try normalized name (remove spaces)
-        if (!shift) {
-          const normalizedShiftId = String(user.shiftId).toLowerCase().replace(/\s+/g, "")
-          const allShifts = await shiftsCollection.find({}).toArray()
-          shift = allShifts.find((s: any) => String(s.name).toLowerCase().replace(/\s+/g, "") === normalizedShiftId)
+          shift = await shiftsCollection.findOne({
+            companyId: session.companyId,
+            name: { $regex: new RegExp(`^${user.shiftId}$`, "i") },
+          })
         }
         if (shift?.startTime) {
           const [h, m] = String(shift.startTime).split(":").map(Number)
           const shiftStart = new Date()
           shiftStart.setHours(h, m ?? 0, 0, 0)
-          const earliestCheckIn = new Date(shiftStart.getTime() - 5 * 60 * 1000)
+          const earliestCheckIn = new Date(shiftStart.getTime() - employeeCheckInBeforeMinutes * 60 * 1000)
+          const lateCutoff = new Date(shiftStart.getTime() + employeeLateGraceMinutes * 60 * 1000)
           if (now < earliestCheckIn) {
             return NextResponse.json(
-              { error: "Check-in allowed only 5 minutes before shift start" },
+              { error: `Check-in allowed only ${employeeCheckInBeforeMinutes} minutes before shift start` },
               { status: 400 },
             )
           }
+          computedIsLate = now > lateCutoff
         }
       }
     } catch {}
 
+    if (computedIsLate && !lateReason) {
+      return NextResponse.json({ error: "Late reason is required for late check-in" }, { status: 400 })
+    }
+
     // Check if user already has an attendance record today
     const existingRecord = await attendanceCollection.findOne({
+      companyId: session.companyId,
       userId: userId,
       date: today,
     })
@@ -59,20 +74,13 @@ export async function POST(request: NextRequest) {
       if (existingRecord.status === "on_leave") {
         return NextResponse.json({ error: "Cannot check in while on approved leave" }, { status: 400 })
       }
-      if (existingRecord.status === "leave_pending") {
-        return NextResponse.json(
-          { error: "Cannot check in while leave application is pending. Wait for admin decision." },
-          { status: 400 },
-        )
-      }
       if (existingRecord.checkInTime) {
         return NextResponse.json({ error: "Already checked in today" }, { status: 400 })
       }
-      // Allow check-in if status is "attendance_pending" (leave was rejected)
     }
 
-    // Check if user has approved leave for today
     const hasLeave = await leavesCollection.findOne({
+      companyId: session.companyId,
       userId: userId,
       status: "approved",
       startDate: { $lte: today },
@@ -85,12 +93,13 @@ export async function POST(request: NextRequest) {
 
     const record = {
       userId,
+      companyId: session.companyId,
       date: today,
       checkInTime: new Date(checkInTime),
       checkOutTime: null,
-      isLate: isLate || false,
+      isLate: computedIsLate,
       isEarly: false,
-      lateReason: lateReason || null,
+      lateReason: computedIsLate ? lateReason || null : null,
       earlyReason: null,
       hoursWorked: 0,
       status: "present",
@@ -99,21 +108,15 @@ export async function POST(request: NextRequest) {
     }
 
     if (existingRecord) {
-      // Update existing record
       await attendanceCollection.updateOne(
-        { _id: existingRecord._id },
+        { _id: existingRecord._id, companyId: session.companyId },
         {
           $set: {
             checkInTime: new Date(checkInTime),
-            isLate: isLate || false,
-            lateReason: lateReason || null,
+            isLate: computedIsLate,
+            lateReason: computedIsLate ? lateReason || null : null,
             status: "present",
             updatedAt: new Date(),
-          },
-          $unset: {
-            rejectedLeaveId: "",
-            leaveRejectedAt: "",
-            pendingLeaveId: "",
           },
         },
       )
@@ -126,7 +129,6 @@ export async function POST(request: NextRequest) {
         },
       })
     } else {
-      // Create new record
       const result = await attendanceCollection.insertOne(record)
 
       return NextResponse.json({

@@ -6,27 +6,22 @@ import { useRouter } from "next/navigation"
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar"
 import { AppSidebar } from "@/components/app-sidebar"
 import { Loader2 } from "lucide-react"
-
-interface User {
-  id: string
-  name: string
-  email: string
-  role: string
-}
+import { getStoredUser } from "@/lib/client-session"
+import type { SessionUser } from "@/lib/session"
 
 export default function DashboardLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
-  const [user, setUser] = useState<User | null>(null)
+  const [user, setUser] = useState<SessionUser | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const router = useRouter()
 
   useEffect(() => {
-    const userData = localStorage.getItem("user")
+    const userData = getStoredUser()
     if (userData) {
-      setUser(JSON.parse(userData))
+      setUser(userData)
     } else {
       router.push("/login")
     }

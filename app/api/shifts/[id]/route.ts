@@ -1,15 +1,32 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { getDatabase } from "@/lib/mongodb"
 import { ObjectId } from "mongodb"
+import { requireAdmin } from "@/lib/session"
 
 export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
   try {
+    const { session, response } = requireAdmin(request)
+    if (!session) {
+      return response
+    }
+
     const { name, startTime, endTime, description } = await request.json()
     const db = await getDatabase()
     const shiftsCollection = db.collection("shifts")
+    const usersCollection = db.collection("users")
+
+    const duplicate = await shiftsCollection.findOne({
+      _id: { $ne: new ObjectId(params.id) },
+      companyId: session.companyId,
+      name: { $regex: new RegExp(`^${String(name).trim()}$`, "i") },
+    })
+
+    if (duplicate) {
+      return NextResponse.json({ error: "Shift with this name already exists" }, { status: 400 })
+    }
 
     const updateResult = await shiftsCollection.updateOne(
-      { _id: new ObjectId(params.id) },
+      { _id: new ObjectId(params.id), companyId: session.companyId },
       {
         $set: {
           name,
@@ -25,7 +42,12 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
       return NextResponse.json({ error: "Shift not found" }, { status: 404 })
     }
 
-    const updatedShift = await shiftsCollection.findOne({ _id: new ObjectId(params.id) })
+    const updatedShift = await shiftsCollection.findOne({ _id: new ObjectId(params.id), companyId: session.companyId })
+
+    await usersCollection.updateMany(
+      { companyId: session.companyId, shiftId: params.id },
+      { $set: { updatedAt: new Date() } },
+    )
 
     return NextResponse.json({
       message: "Shift updated successfully",
@@ -45,11 +67,31 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
 
 export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
   try {
+    const { session, response } = requireAdmin(request)
+    if (!session) {
+      return response
+    }
+
     const db = await getDatabase()
     const shiftsCollection = db.collection("shifts")
+    const usersCollection = db.collection("users")
+
+    const assignedEmployees = await usersCollection.countDocuments({
+      companyId: session.companyId,
+      role: "employee",
+      shiftId: params.id,
+    })
+
+    if (assignedEmployees > 0) {
+      return NextResponse.json(
+        { error: "Unassign employees from this shift before deleting it" },
+        { status: 400 },
+      )
+    }
 
     const deleteResult = await shiftsCollection.deleteOne({
       _id: new ObjectId(params.id),
+      companyId: session.companyId,
     })
 
     if (deleteResult.deletedCount === 0) {

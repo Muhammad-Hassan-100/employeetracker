@@ -7,9 +7,13 @@ export interface User {
   email: string
   password: string
   role: "admin" | "employee"
+  companyId: string
+  companyName?: string
   department?: string
   position?: string
   shiftId?: string
+  checkInBeforeMinutes?: number
+  lateGraceMinutes?: number
   joinDate: Date
   status: "active" | "inactive"
   createdAt: Date
@@ -21,7 +25,11 @@ export interface CreateUserData {
   email: string
   password: string
   role: "admin" | "employee"
+  companyId: string
+  companyName?: string
   department?: string
   position?: string
   shiftId?: string
+  checkInBeforeMinutes?: number
+  lateGraceMinutes?: number
 }

@@ -1,9 +1,19 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { getDatabase } from "@/lib/mongodb"
+import { assertSelfOrAdmin, requireSession } from "@/lib/session"
 
 export async function POST(request: NextRequest) {
   try {
+    const { session, response } = requireSession(request)
+    if (!session) {
+      return response
+    }
+
     const { userId, checkOutTime, isEarly, earlyReason } = await request.json()
+    const accessError = assertSelfOrAdmin(session, userId)
+    if (accessError) {
+      return accessError
+    }
 
     const db = await getDatabase()
     const attendanceCollection = db.collection("attendance")
@@ -12,6 +22,7 @@ export async function POST(request: NextRequest) {
 
     // Find today's check-in record
     const record = await attendanceCollection.findOne({
+      companyId: session.companyId,
       userId: userId,
       date: today,
     })
@@ -29,7 +40,7 @@ export async function POST(request: NextRequest) {
     const hoursWorked = Math.max(0, (checkOutTimeDate.getTime() - checkInTime.getTime()) / (1000 * 60 * 60))
 
     const updateResult = await attendanceCollection.updateOne(
-      { userId: userId, date: today },
+      { userId: userId, companyId: session.companyId, date: today },
       {
         $set: {
           checkOutTime: checkOutTimeDate,

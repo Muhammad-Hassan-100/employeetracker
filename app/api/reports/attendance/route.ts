@@ -1,8 +1,14 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { getDatabase } from "@/lib/mongodb"
+import { requireAdmin } from "@/lib/session"
 
 export async function GET(request: NextRequest) {
   try {
+    const { session, response } = requireAdmin(request)
+    if (!session) {
+      return response
+    }
+
     const { searchParams } = new URL(request.url)
     const range = searchParams.get("range") || "thisMonth"
 
@@ -33,13 +39,16 @@ export async function GET(request: NextRequest) {
     }
 
     // Get all employees
-    const employees = await usersCollection.find({ role: "employee", status: "active" }).toArray()
+    const employees = await usersCollection
+      .find({ role: "employee", status: "active", companyId: session.companyId })
+      .toArray()
 
     const reports = await Promise.all(
       employees.map(async (employee) => {
         // Get attendance records for the date range
         const attendanceRecords = await attendanceCollection
           .find({
+            companyId: session.companyId,
             userId: employee._id.toString(),
             date: {
               $gte: startDate.toISOString().split("T")[0],

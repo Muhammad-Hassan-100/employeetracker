@@ -1,321 +1,266 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { Textarea } from "@/components/ui/textarea"
-import { Label } from "@/components/ui/label"
-import { Clock, CheckCircle, XCircle, AlertCircle, Loader2, FileText } from "lucide-react"
+import { useEffect, useMemo, useState } from "react"
+import { AlertCircle, CheckCircle2, Clock3, Loader2, LogOut, Siren } from "lucide-react"
 import { toast } from "sonner"
-
-interface User {
-  id: string
-  name: string
-  email: string
-  role: string
-  shiftId?: string
-}
+import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
+import { authFetch } from "@/lib/client-session"
+import type { SessionUser } from "@/lib/session"
+import { formatTimeString12Hour } from "@/lib/time"
 
 interface Shift {
   id: string
   name: string
   startTime: string
   endTime: string
-  description: string
+  description?: string
+}
+
+interface AttendanceRecord {
+  id: string
+  status: "present" | "absent" | "on_leave"
+  checkInTime: string | null
+  checkOutTime: string | null
+  isLate: boolean
+  isEarly: boolean
+  lateReason?: string | null
+  earlyReason?: string | null
+  hoursWorked?: number
 }
 
 interface AttendanceTabProps {
-  user: User
+  user: SessionUser
+}
+
+interface AttendanceRules {
+  checkInBeforeMinutes: number
+  lateGraceMinutes: number
+}
+
+function parseShiftTime(time: string) {
+  const [hours, minutes] = time.split(":").map(Number)
+  const date = new Date()
+  date.setHours(hours, minutes, 0, 0)
+  return date
+}
+
+function formatClock(date: Date) {
+  return date.toLocaleTimeString("en-US", {
+    hour: "numeric",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: true,
+  })
+}
+
+function formatDate(date: Date) {
+  return date.toLocaleDateString("en-US", {
+    weekday: "long",
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+  })
+}
+
+function formatTime(time?: string | null) {
+  if (!time) {
+    return "Not recorded"
+  }
+
+  return new Date(time).toLocaleTimeString("en-US", {
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+  })
 }
 
 export default function AttendanceTab({ user }: AttendanceTabProps) {
-
-
-  const [isCheckedIn, setIsCheckedIn] = useState(false)
   const [currentTime, setCurrentTime] = useState(new Date())
-  const [userShift, setUserShift] = useState<Shift | null>(null)
+  const [shift, setShift] = useState<Shift | null>(null)
+  const [record, setRecord] = useState<AttendanceRecord | null>(null)
+  const [attendanceRules, setAttendanceRules] = useState<AttendanceRules>({
+    checkInBeforeMinutes: 5,
+    lateGraceMinutes: 0,
+  })
   const [lateReason, setLateReason] = useState("")
   const [earlyReason, setEarlyReason] = useState("")
-  const [showLateForm, setShowLateForm] = useState(false)
-  const [showEarlyForm, setShowEarlyForm] = useState(false)
+  const [showLateReason, setShowLateReason] = useState(false)
+  const [showEarlyReason, setShowEarlyReason] = useState(false)
+  const [isLoading, setIsLoading] = useState(true)
   const [isCheckingIn, setIsCheckingIn] = useState(false)
   const [isCheckingOut, setIsCheckingOut] = useState(false)
-  const [isLoading, setIsLoading] = useState(true)
-  const [todayStatus, setTodayStatus] = useState<"present" | "absent" | "on_leave" | "leave_pending" | "attendance_pending" | null>(null)
-  const [showSameDayLeaveForm, setShowSameDayLeaveForm] = useState(false)
-  const [sameDayLeaveReason, setSameDayLeaveReason] = useState("")
-  const [isApplyingLeave, setIsApplyingLeave] = useState(false)
-  const [statusMessage, setStatusMessage] = useState("")
-  const [canCheckIn, setCanCheckIn] = useState(false)
-  const [canApplyLeave, setCanApplyLeave] = useState(false)
-  const [employeeOptions, setEmployeeOptions] = useState<any>(null)
-  const [canCheckOut, setCanCheckOut] = useState(false)
 
-  const parseTime = (timeString: string) => {
-    const [hours, minutes] = timeString.split(":").map(Number)
-    const date = new Date()
-    date.setHours(hours, minutes, 0, 0)
-    return date
-  }
-
-  // Helper: can check in only if within 5 min before shift start or later
-  const canCheckInNow = (() => {
-    if (!userShift) return true
-    const workStartTime = parseTime(userShift.startTime)
-    const earliestCheckIn = new Date(workStartTime.getTime() - 5 * 60 * 1000)
-    return currentTime >= earliestCheckIn
-  })()
-
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setCurrentTime(new Date())
-    }, 1000)
-
-    checkTodayAttendance()
-    fetchUserShift()
-
-    return () => clearInterval(timer)
-  }, [])
-
-  const fetchUserShift = async () => {
+  const refreshAttendance = async () => {
     try {
-      const response = await fetch(`/api/employees/shift?userId=${user.id}`)
-      if (response.ok) {
-        const data = await response.json()
-        setUserShift(data.shift) // This will be null if no shift is assigned
-      }
-    } catch (error) {
-      console.error("Error fetching user shift:", error)
-    }
-  }
+      const [shiftResponse, todayResponse] = await Promise.all([
+        authFetch(`/api/employees/shift?userId=${user.id}`),
+        authFetch(`/api/attendance/today?userId=${user.id}`),
+      ])
 
-  const checkTodayAttendance = async () => {
-    try {
-      // Check employee options (what actions are available)
-      const optionsResponse = await fetch(`/api/employees/options?userId=${user.id}`)
-      if (optionsResponse.ok) {
-        const optionsData = await optionsResponse.json()
-        setEmployeeOptions(optionsData)
-        setCanApplyLeave(optionsData.canApplyLeave)
-        setCanCheckIn(optionsData.canCheckIn)
-        setStatusMessage(optionsData.message)
-        
-        if (optionsData.attendanceRecord) {
-          setIsCheckedIn(!!optionsData.attendanceRecord.checkInTime && !optionsData.attendanceRecord.checkOutTime)
-          setCanCheckOut(!!optionsData.attendanceRecord.checkInTime && !optionsData.attendanceRecord.checkOutTime)
-          setTodayStatus(optionsData.attendanceRecord.status)
-        } else {
-          setIsCheckedIn(false)
-          setCanCheckOut(false)
-        }
+      if (shiftResponse.ok) {
+        const shiftData = await shiftResponse.json()
+        setShift(shiftData.shift)
+        setAttendanceRules({
+          checkInBeforeMinutes: shiftData.attendanceRules?.checkInBeforeMinutes ?? 5,
+          lateGraceMinutes: shiftData.attendanceRules?.lateGraceMinutes ?? 0,
+        })
       }
 
-      // Also check today's attendance for additional details
-      const response = await fetch(`/api/attendance/today?userId=${user.id}`)
-      if (response.ok) {
-        const data = await response.json()
-        if (data.record) {
-          setIsCheckedIn(data.isCheckedIn)
-          setCanCheckOut(data.isCheckedIn)
-        }
+      if (todayResponse.ok) {
+        const todayData = await todayResponse.json()
+        setRecord(todayData.record)
       }
-    } catch (error) {
-      console.error("Error checking today's attendance:", error)
+    } catch {
+      toast.error("Unable to load attendance", {
+        description: "Please check your connection and try again.",
+      })
     } finally {
       setIsLoading(false)
     }
   }
 
-  const handleCheckIn = async () => {
-    const now = new Date()
-    let isLate = false
+  useEffect(() => {
+    setCurrentTime(new Date())
+    refreshAttendance()
 
-    if (userShift) {
-      const workStartTime = parseTime(userShift.startTime)
-      isLate = now > workStartTime
+    const clockTimer = setInterval(() => setCurrentTime(new Date()), 1000)
+    const refreshTimer = setInterval(() => {
+      refreshAttendance()
+    }, 15000)
+
+    return () => {
+      clearInterval(clockTimer)
+      clearInterval(refreshTimer)
     }
+  }, [user.id])
 
-    if (isLate && !lateReason) {
-      setShowLateForm(true)
+  const shiftStart = useMemo(() => (shift ? parseShiftTime(shift.startTime) : null), [shift])
+  const shiftEnd = useMemo(() => (shift ? parseShiftTime(shift.endTime) : null), [shift])
+  const earliestCheckIn = useMemo(
+    () => (shiftStart ? new Date(shiftStart.getTime() - attendanceRules.checkInBeforeMinutes * 60 * 1000) : null),
+    [attendanceRules.checkInBeforeMinutes, shiftStart],
+  )
+  const lateCutoff = useMemo(
+    () => (shiftStart ? new Date(shiftStart.getTime() + attendanceRules.lateGraceMinutes * 60 * 1000) : null),
+    [attendanceRules.lateGraceMinutes, shiftStart],
+  )
+  const isCheckedIn = Boolean(record?.checkInTime && !record?.checkOutTime)
+  const isAlreadyCompleted = Boolean(record?.checkInTime && record?.checkOutTime)
+  const isOnLeave = record?.status === "on_leave"
+  const canCheckInWindow = !earliestCheckIn || currentTime >= earliestCheckIn
+  const isLate = Boolean(lateCutoff && currentTime > lateCutoff)
+  const isEarly = Boolean(shiftEnd && currentTime < shiftEnd)
+  const earliestCheckInLabel = earliestCheckIn
+    ? earliestCheckIn.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true })
+    : null
+  const lateCutoffLabel = lateCutoff
+    ? lateCutoff.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true })
+    : null
+  const checkInDisabled = isCheckingIn || isCheckedIn || isAlreadyCompleted || isOnLeave || !canCheckInWindow
+  const checkOutDisabled = isCheckingOut || !isCheckedIn || isOnLeave
+
+  const statusMeta = isOnLeave
+    ? { label: "Approved Leave", tone: "bg-amber-100 text-amber-900" }
+    : isCheckedIn
+      ? { label: "Checked In", tone: "bg-emerald-100 text-emerald-900" }
+      : isAlreadyCompleted
+        ? { label: "Checked Out", tone: "bg-sky-100 text-sky-900" }
+        : { label: "Ready to Start", tone: "bg-slate-100 text-slate-900" }
+
+  const handleCheckIn = async () => {
+    if (isLate && !lateReason.trim()) {
+      setShowLateReason(true)
+      toast.error("Late reason required", {
+        description: "Please explain the late arrival before checking in.",
+      })
       return
     }
 
     setIsCheckingIn(true)
 
     try {
-      const response = await fetch("/api/attendance/checkin", {
+      const response = await authFetch("/api/attendance/checkin", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           userId: user.id,
-          checkInTime: now,
+          checkInTime: new Date().toISOString(),
           isLate,
-          lateReason: isLate ? lateReason : null,
+          lateReason: isLate ? lateReason.trim() : null,
         }),
       })
 
-      if (response.ok) {
-        setIsCheckedIn(true)
-        setTodayStatus("present")
-        setShowLateForm(false)
-        setLateReason("")
-        checkTodayAttendance() // Refresh the status
-        toast.success("Check-in successful!", {
-          description: `Welcome to work, ${user.name}!`,
-        })
-      } else {
-        const error = await response.json()
-        toast.error("Check-in failed", {
-          description: error.error || "Please try again",
-        })
+      const data = await response.json()
+      if (!response.ok) {
+        toast.error("Check-in failed", { description: data.error || "Please try again." })
+        return
       }
-    } catch (error) {
-      toast.error("Connection error", {
-        description: "Unable to process check-in",
+
+      setLateReason("")
+      setShowLateReason(false)
+      toast.success("Checked in successfully", {
+        description: shift ? `Your active shift is ${shift.name}.` : "Attendance marked for today.",
       })
+      await refreshAttendance()
+    } catch {
+      toast.error("Check-in failed", { description: "Unable to complete the request." })
     } finally {
       setIsCheckingIn(false)
     }
   }
 
   const handleCheckOut = async () => {
-    const now = new Date()
-    let isEarly = false
-
-    if (userShift) {
-      const workEndTime = parseTime(userShift.endTime)
-      isEarly = now < workEndTime
-    }
-
-    if (isEarly && !earlyReason) {
-      setShowEarlyForm(true)
+    if (isEarly && !earlyReason.trim()) {
+      setShowEarlyReason(true)
+      toast.error("Early checkout reason required", {
+        description: "Please explain why you are leaving before shift end.",
+      })
       return
     }
 
     setIsCheckingOut(true)
 
     try {
-      const response = await fetch("/api/attendance/checkout", {
+      const response = await authFetch("/api/attendance/checkout", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           userId: user.id,
-          checkOutTime: now,
+          checkOutTime: new Date().toISOString(),
           isEarly,
-          earlyReason: isEarly ? earlyReason : null,
+          earlyReason: isEarly ? earlyReason.trim() : null,
         }),
       })
 
-      if (response.ok) {
-        const data = await response.json()
-        setIsCheckedIn(false)
-        setShowEarlyForm(false)
-        setEarlyReason("")
-        checkTodayAttendance() // Refresh the status
-        toast.success("Check-out successful!", {
-          description: `Hours worked: ${data.hoursWorked}. Have a great day!`,
-        })
-      } else {
-        const error = await response.json()
-        toast.error("Check-out failed", {
-          description: error.error || "Please try again",
-        })
+      const data = await response.json()
+      if (!response.ok) {
+        toast.error("Check-out failed", { description: data.error || "Please try again." })
+        return
       }
-    } catch (error) {
-      toast.error("Connection error", {
-        description: "Unable to process check-out",
+
+      setEarlyReason("")
+      setShowEarlyReason(false)
+      toast.success("Checked out successfully", {
+        description: `Total hours worked today: ${data.hoursWorked}.`,
       })
+      await refreshAttendance()
+    } catch {
+      toast.error("Check-out failed", { description: "Unable to complete the request." })
     } finally {
       setIsCheckingOut(false)
     }
   }
 
-  const handleSameDayLeave = async () => {
-    if (!sameDayLeaveReason.trim()) {
-      toast.error("Please provide a reason for same-day leave")
-      return
-    }
-
-    setIsApplyingLeave(true)
-    const today = new Date().toISOString().split("T")[0]
-
-    try {
-      const response = await fetch("/api/leaves/same-day", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          userId: user.id,
-          employeeName: user.name,
-          reason: sameDayLeaveReason,
-          date: today,
-        }),
-      })
-
-      if (response.ok) {
-        const result = await response.json()
-        toast.success("Same-day leave applied successfully!", {
-          description: result.note || "Your leave application has been submitted for admin approval.",
-        })
-        setShowSameDayLeaveForm(false)
-        setSameDayLeaveReason("")
-        checkTodayAttendance() // Refresh the status
-      } else {
-        const error = await response.json()
-        toast.error("Failed to apply leave", {
-          description: error.error || "Please try again",
-        })
-      }
-    } catch (error) {
-      toast.error("Connection error", {
-        description: "Unable to apply for leave",
-      })
-    } finally {
-      setIsApplyingLeave(false)
-    }
-  }
-
-  const formatTime12Hour = (date: Date) => {
-    return date.toLocaleTimeString("en-US", {
-      hour12: true,
-      hour: "numeric",
-      minute: "2-digit",
-      second: "2-digit",
-    })
-  }
-
-  const formatTimeOnly12Hour = (timeString: string) => {
-    const [hours, minutes] = timeString.split(":").map(Number)
-    const date = new Date()
-    date.setHours(hours, minutes, 0, 0)
-    return date.toLocaleTimeString("en-US", {
-      hour12: true,
-      hour: "numeric",
-      minute: "2-digit",
-    })
-  }
-
-  const formatDate = (date: Date) => {
-    return date.toLocaleDateString("en-US", {
-      weekday: "long",
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-    })
-  }
-
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center py-12">
+      <div className="flex items-center justify-center py-16">
         <div className="text-center">
-          <Loader2 className="h-8 w-8 animate-spin text-blue-600 mx-auto mb-4" />
-          <p className="text-gray-600">Loading attendance data...</p>
+          <Loader2 className="mx-auto mb-3 h-8 w-8 animate-spin text-emerald-600" />
+          <p className="text-sm text-slate-600">Loading attendance workspace...</p>
         </div>
       </div>
     )
@@ -323,303 +268,222 @@ export default function AttendanceTab({ user }: AttendanceTabProps) {
 
   return (
     <div className="space-y-6">
-      {/* Status Message Card */}
-      {statusMessage && (
-        <Card className="shadow-sm border-l-4 border-l-blue-500">
-          <CardContent className="pt-6">
-            <div className="flex items-center space-x-2">
-              <AlertCircle className="h-5 w-5 text-blue-600" />
-              <p className="text-sm font-medium text-blue-800">{statusMessage}</p>
+      <div className="grid gap-6 xl:grid-cols-[1.08fr_0.92fr]">
+        <Card className="rounded-3xl border-0 bg-slate-950 text-white shadow-xl">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-2xl">
+              <Clock3 className="h-6 w-6 text-emerald-300" />
+              Live Shift Clock
+            </CardTitle>
+            <CardDescription className="text-slate-300">{formatDate(currentTime)}</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-5">
+            <div className="text-5xl font-extrabold tracking-tight">{formatClock(currentTime)}</div>
+            <div className="flex flex-wrap gap-3">
+              <Badge className={`${statusMeta.tone} border-0 px-3 py-1.5 text-sm`}>{statusMeta.label}</Badge>
+              {shift && <Badge className="border-0 bg-white/10 px-3 py-1.5 text-sm text-white">{shift.name}</Badge>}
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="rounded-2xl bg-white/5 p-4">
+                <p className="text-sm text-slate-400">Shift Window</p>
+                <p className="mt-1 text-lg font-semibold">
+                  {shift
+                    ? `${formatTimeString12Hour(shift.startTime)} to ${formatTimeString12Hour(shift.endTime)}`
+                    : "No shift assigned yet"}
+                </p>
+                {shift && (
+                  <p className="mt-2 text-xs text-slate-300">
+                    Check-in before: {attendanceRules.checkInBeforeMinutes} min | Late grace: {attendanceRules.lateGraceMinutes} min
+                  </p>
+                )}
+              </div>
+              <div className="rounded-2xl bg-white/5 p-4">
+                <p className="text-sm text-slate-400">Today</p>
+                <p className="mt-1 text-lg font-semibold">
+                  {record?.checkInTime ? `${formatTime(record.checkInTime)} check-in` : "Waiting for attendance"}
+                </p>
+                <p className="mt-2 text-xs text-slate-300">
+                  {isCheckedIn
+                    ? "You are currently clocked in."
+                    : isAlreadyCompleted
+                      ? "Your attendance is complete for today."
+                      : isOnLeave
+                        ? "Your approved leave is active today."
+                        : "Use the action cards to start or end your shift."}
+                </p>
+              </div>
             </div>
           </CardContent>
         </Card>
-      )}
 
-      {/* Current Status Card */}
-      {employeeOptions && (
-        <Card className="shadow-sm">
-          <CardHeader>
-            <CardTitle>Today's Status</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center justify-between">
-              <div>
-                <Badge 
-                  variant={
-                    employeeOptions.currentStatus === "checked_in" ? "default" :
-                    employeeOptions.currentStatus === "on_leave" ? "secondary" :
-                    employeeOptions.currentStatus === "leave_pending" ? "outline" :
-                    employeeOptions.currentStatus === "attendance_only" ? "destructive" :
-                    "secondary"
-                  }
-                  className="text-sm"
-                >
-                  {employeeOptions.currentStatus === "checked_in" && "✅ Checked In"}
-                  {employeeOptions.currentStatus === "on_leave" && "🏖️ On Leave"}
-                  {employeeOptions.currentStatus === "leave_pending" && "⏳ Leave Pending"}
-                  {employeeOptions.currentStatus === "attendance_only" && "⚠️ Attendance Only"}
-                  {employeeOptions.currentStatus === "available" && "📅 Available"}
-                </Badge>
-              </div>
-              {employeeOptions.pendingLeave && (
-                <div className="text-right">
-                  <p className="text-sm text-gray-600">Pending: {employeeOptions.pendingLeave.leaveType}</p>
-                  <p className="text-xs text-gray-500">{employeeOptions.pendingLeave.reason}</p>
-                </div>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Current Time Card */}
-      <Card className="shadow-sm">
-        <CardHeader className="text-center">
-          <CardTitle className="flex items-center justify-center space-x-2">
-            <Clock className="h-6 w-6 text-blue-600" />
-            <span>Current Time</span>
-          </CardTitle>
-          <CardDescription>{formatDate(currentTime)}</CardDescription>
-        </CardHeader>
-        <CardContent className="text-center">
-          <div className="text-4xl font-bold text-blue-600 mb-4 font-mono">{formatTime12Hour(currentTime)}</div>
-          <Badge variant={isCheckedIn ? "default" : "secondary"} className="text-lg px-4 py-2">
-            {isCheckedIn ? "✅ Checked In" : "⏰ Not Checked In"}
-          </Badge>
-        </CardContent>
-      </Card>
-
-      {/* Attendance Actions */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Check In Card */}
-        <Card className="shadow-sm">
-          <CardHeader>
-            <CardTitle className="flex items-center space-x-2 text-green-700">
-              <CheckCircle className="h-5 w-5" />
-              <span>Check In</span>
-            </CardTitle>
-            <CardDescription>Mark your arrival for today</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {showLateForm && (
-              <div className="space-y-2">
-                <Label htmlFor="late-reason">You're checking in late. Please provide a reason:</Label>
-                <Textarea
-                  id="late-reason"
-                  placeholder="Reason for being late..."
-                  value={lateReason}
-                  onChange={(e) => setLateReason(e.target.value)}
-                  className="min-h-[80px]"
-                />
-              </div>
-            )}
-            <Button
-              onClick={handleCheckIn}
-              disabled={!canCheckIn || !canCheckInNow || isCheckingIn}
-              className="w-full bg-green-600 hover:bg-green-700"
-            >
-              {isCheckingIn ? (
-                <div className="flex items-center space-x-2">
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  <span>Checking In...</span>
-                </div>
-              ) : !canCheckIn ? (
-                employeeOptions?.currentStatus === "on_leave" ? "On Leave Today" :
-                employeeOptions?.currentStatus === "leave_pending" ? "Leave Pending Approval" :
-                employeeOptions?.currentStatus === "checked_in" ? "Already Checked In" :
-                "Cannot Check In"
-              ) : !canCheckInNow ? (
-                "Check In (Available 5 min before shift)"
-              ) : (
-                "Check In"
-              )}
-            </Button>
-          </CardContent>
-        </Card>
-
-        {/* Check Out Card */}
-        <Card className="shadow-sm">
-          <CardHeader>
-            <CardTitle className="flex items-center space-x-2 text-red-700">
-              <XCircle className="h-5 w-5" />
-              <span>Check Out</span>
-            </CardTitle>
-            <CardDescription>Mark your departure for today</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {showEarlyForm && (
-              <div className="space-y-2">
-                <Label htmlFor="early-reason">You're checking out early. Please provide a reason:</Label>
-                <Textarea
-                  id="early-reason"
-                  placeholder="Reason for leaving early..."
-                  value={earlyReason}
-                  onChange={(e) => setEarlyReason(e.target.value)}
-                  className="min-h-[80px]"
-                />
-              </div>
-            )}
-            <Button
-              onClick={handleCheckOut}
-              disabled={!canCheckOut || isCheckingOut}
-              variant="destructive"
-              className="w-full"
-            >
-              {isCheckingOut ? (
-                <div className="flex items-center space-x-2">
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  <span>Checking Out...</span>
-                </div>
-              ) : !canCheckOut ? (
-                todayStatus === "on_leave" ? "On Leave Today" :
-                !isCheckedIn ? "Not Checked In" : "Cannot Check Out"
-              ) : (
-                "Check Out"
-              )}
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Today's Status */}
-      {todayStatus && (
-        <Card className="shadow-sm">
-          <CardHeader>
-            <CardTitle className="flex items-center space-x-2">
-              <AlertCircle className="h-5 w-5" />
-              <span>Today's Status</span>
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex flex-col items-center space-y-2">
-              <Badge 
-                variant={
-                  todayStatus === "on_leave" ? "default" : 
-                  todayStatus === "present" || isCheckedIn ? "default" : 
-                  "destructive"
-                }
-                className="text-lg px-4 py-2"
-              >
-                {todayStatus === "on_leave" ? "🏠 On Leave" : 
-                 todayStatus === "present" || isCheckedIn ? "✅ Checked In" :
-                 todayStatus === "absent" ? "❌ Absent" :
-                 "⏰ Available"}
-              </Badge>
-              {statusMessage && (
-                <p className="text-sm text-gray-600 text-center">{statusMessage}</p>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Same Day Leave Application */}
-      {canApplyLeave && (
-        <Card className="shadow-sm border-orange-200">
-          <CardHeader>
-            <CardTitle className="flex items-center space-x-2 text-orange-700">
-              <FileText className="h-5 w-5" />
-              <span>Same-Day Leave</span>
-            </CardTitle>
-            <CardDescription>
-              Can't come to work today? Apply for same-day emergency leave
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {!showSameDayLeaveForm ? (
+        <div className="grid gap-4">
+          <Card className="rounded-3xl border-emerald-200 bg-gradient-to-br from-emerald-50 to-white shadow-sm">
+            <CardHeader className="pb-4">
+              <CardTitle className="flex items-center gap-2 text-emerald-700">
+                <CheckCircle2 className="h-5 w-5" />
+                Check In
+              </CardTitle>
+              <CardDescription>
+                {isOnLeave
+                  ? "Check-in is disabled because your leave is approved for today."
+                  : isAlreadyCompleted
+                    ? "You already completed today's attendance."
+                    : isCheckedIn
+                      ? "You are already checked in for this shift."
+                      : canCheckInWindow
+                        ? "Your shift is ready to start."
+                        : `Check-in opens at ${earliestCheckInLabel}.`}
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
               <Button
-                onClick={() => setShowSameDayLeaveForm(true)}
-                variant="outline"
-                className="w-full border-orange-300 text-orange-700 hover:bg-orange-50"
+                onClick={handleCheckIn}
+                disabled={checkInDisabled}
+                className="h-16 w-full rounded-[22px] bg-emerald-600 text-lg font-semibold shadow-lg shadow-emerald-200 hover:bg-emerald-700"
               >
-                <FileText className="h-4 w-4 mr-2" />
-                Apply for Same-Day Leave
+                {isCheckingIn ? (
+                  <>
+                    <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                    Checking in...
+                  </>
+                ) : (
+                  "Check In"
+                )}
               </Button>
-            ) : (
-              <div className="space-y-4">
+
+              {showLateReason && (
                 <div className="space-y-2">
-                  <Label htmlFor="same-day-reason">Reason for emergency leave:</Label>
+                  <Label htmlFor="late-reason">Late arrival reason</Label>
                   <Textarea
-                    id="same-day-reason"
-                    placeholder="Please provide a reason for your emergency leave today..."
-                    value={sameDayLeaveReason}
-                    onChange={(e) => setSameDayLeaveReason(e.target.value)}
-                    className="min-h-[100px]"
+                    id="late-reason"
+                    value={lateReason}
+                    onChange={(event) => setLateReason(event.target.value)}
+                    placeholder="Explain why you are checking in late..."
+                    className="min-h-[110px]"
                   />
                 </div>
-                <div className="flex gap-2">
-                  <Button
-                    onClick={handleSameDayLeave}
-                    disabled={isApplyingLeave || !sameDayLeaveReason.trim()}
-                    className="bg-orange-600 hover:bg-orange-700"
-                  >
-                    {isApplyingLeave ? (
-                      <div className="flex items-center space-x-2">
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                        <span>Applying...</span>
-                      </div>
-                    ) : (
-                      "Submit Leave Application"
-                    )}
-                  </Button>
-                  <Button
-                    onClick={() => {
-                      setShowSameDayLeaveForm(false)
-                      setSameDayLeaveReason("")
-                    }}
-                    variant="outline"
-                  >
-                    Cancel
-                  </Button>
+              )}
+
+              {!canCheckInWindow && !isCheckedIn && !isAlreadyCompleted && shift && (
+                <div className="flex items-start gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-amber-900">
+                  <AlertCircle className="mt-0.5 h-5 w-5 shrink-0" />
+                  <p className="text-sm">
+                    Check-in becomes available {attendanceRules.checkInBeforeMinutes} minutes before your shift starts.
+                    Earliest time: {earliestCheckInLabel}
+                  </p>
                 </div>
-                <div className="text-sm text-gray-600 p-3 bg-blue-50 rounded">
-                  <strong>Note:</strong> Same-day emergency leave requires admin approval. 
-                  You will not be able to check in while your application is pending. 
-                  If rejected, you can then check in normally.
+              )}
+
+              {isLate && !isCheckedIn && !isAlreadyCompleted && (
+                <div className="flex items-start gap-3 rounded-2xl border border-rose-200 bg-rose-50 p-4 text-rose-900">
+                  <Siren className="mt-0.5 h-5 w-5 shrink-0" />
+                  <p className="text-sm">You are past the late grace window, so a late arrival reason is required before check-in.</p>
                 </div>
-              </div>
-            )}
+              )}
+            </CardContent>
+          </Card>
+
+          <Card className="rounded-3xl border-rose-200 bg-gradient-to-br from-rose-50 to-white shadow-sm">
+            <CardHeader className="pb-4">
+              <CardTitle className="flex items-center gap-2 text-rose-700">
+                <LogOut className="h-5 w-5" />
+                Check Out
+              </CardTitle>
+              <CardDescription>
+                {isOnLeave
+                  ? "Check-out is disabled because your leave is approved for today."
+                  : isAlreadyCompleted
+                    ? "You already checked out for today."
+                    : isCheckedIn
+                      ? "End your shift here when you are ready to leave."
+                      : "Check-out becomes available after you check in."}
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <Button
+                onClick={handleCheckOut}
+                disabled={checkOutDisabled}
+                className="h-16 w-full rounded-[22px] bg-rose-600 text-lg font-semibold shadow-lg shadow-rose-200 hover:bg-rose-700"
+              >
+                {isCheckingOut ? (
+                  <>
+                    <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                    Checking out...
+                  </>
+                ) : (
+                  "Check Out"
+                )}
+              </Button>
+
+              {showEarlyReason && (
+                <div className="space-y-2">
+                  <Label htmlFor="early-reason">Early checkout reason</Label>
+                  <Textarea
+                    id="early-reason"
+                    value={earlyReason}
+                    onChange={(event) => setEarlyReason(event.target.value)}
+                    placeholder="Explain why you are checking out early..."
+                    className="min-h-[110px]"
+                  />
+                </div>
+              )}
+
+              {isEarly && isCheckedIn && (
+                <div className="flex items-start gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-amber-900">
+                  <Siren className="mt-0.5 h-5 w-5 shrink-0" />
+                  <p className="text-sm">You are checking out before shift end, so an early checkout reason is required.</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+
+      <Card className="rounded-3xl border-slate-200 shadow-sm">
+        <CardHeader>
+          <CardTitle>Attendance Summary</CardTitle>
+          <CardDescription>Today's attendance details are shown here.</CardDescription>
+        </CardHeader>
+        <CardContent className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+          <div className="rounded-2xl bg-slate-50 p-4">
+            <p className="text-sm text-slate-500">Check In</p>
+            <p className="mt-1 text-lg font-semibold text-slate-950">{formatTime(record?.checkInTime)}</p>
+          </div>
+          <div className="rounded-2xl bg-slate-50 p-4">
+            <p className="text-sm text-slate-500">Check Out</p>
+            <p className="mt-1 text-lg font-semibold text-slate-950">{formatTime(record?.checkOutTime)}</p>
+          </div>
+          <div className="rounded-2xl bg-slate-50 p-4">
+            <p className="text-sm text-slate-500">Hours Worked</p>
+            <p className="mt-1 text-lg font-semibold text-slate-950">{record?.hoursWorked?.toFixed?.(2) ?? "0.00"}</p>
+          </div>
+          <div className="rounded-2xl bg-slate-50 p-4">
+            <p className="text-sm text-slate-500">Earliest Check In</p>
+            <p className="mt-1 text-lg font-semibold text-slate-950">{earliestCheckInLabel ?? "Available now"}</p>
+          </div>
+          <div className="rounded-2xl bg-slate-50 p-4">
+            <p className="text-sm text-slate-500">Late Cutoff</p>
+            <p className="mt-1 text-lg font-semibold text-slate-950">{lateCutoffLabel ?? "Not configured"}</p>
+          </div>
+        </CardContent>
+      </Card>
+
+      {(isLate || isEarly || isOnLeave) && (
+        <Card className="rounded-3xl border-slate-200 shadow-sm">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Siren className="h-5 w-5 text-amber-600" />
+              Attendance Notes
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2 text-sm text-slate-600">
+            {isLate && <p>You are currently past shift start time, so a late reason is required for check-in.</p>}
+            {lateCutoff && shift && <p>Late mark cutoff: {lateCutoffLabel}</p>}
+            {isEarly && isCheckedIn && <p>You are checking out before shift end, so an early checkout reason is required.</p>}
+            {isOnLeave && <p>Your leave has been approved for today, so attendance actions remain disabled.</p>}
           </CardContent>
         </Card>
       )}
-
-      {/* Dynamic Work Schedule */}
-      <Card className="shadow-sm">
-        <CardHeader>
-          <CardTitle className="flex items-center space-x-2 text-yellow-700">
-            <AlertCircle className="h-5 w-5" />
-            <span>Your Work Schedule</span>
-          </CardTitle>
-          <CardDescription>
-            {userShift ? `${userShift.name} - ${userShift.description}` : "No shift assigned to this employee"}
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {userShift ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="text-center p-4 bg-green-50 rounded-lg">
-                <div className="text-2xl font-bold text-green-600">{formatTimeOnly12Hour(userShift.startTime)}</div>
-                <div className="text-sm text-gray-600">Start Time</div>
-              </div>
-              <div className="text-center p-4 bg-red-50 rounded-lg">
-                <div className="text-2xl font-bold text-red-600">{formatTimeOnly12Hour(userShift.endTime)}</div>
-                <div className="text-sm text-gray-600">End Time</div>
-              </div>
-            </div>
-          ) : (
-            <div className="text-center py-8">
-              <AlertCircle className="h-12 w-12 text-orange-400 mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">No Shift Assigned</h3>
-              <p className="text-gray-500 mb-4">
-                Please contact your administrator to assign a work shift to your account.
-              </p>
-              <div className="text-sm text-gray-400">
-                Without a shift assignment, late/early notifications will not be available.
-              </div>
-            </div>
-          )}
-        </CardContent>
-      </Card>
     </div>
   )
 }

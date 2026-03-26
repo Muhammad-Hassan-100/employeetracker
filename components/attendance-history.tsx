@@ -1,11 +1,13 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { useEffect, useMemo, useState } from "react"
+import { CalendarDays, Clock3, History, Loader2 } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
-import { History, Calendar, Clock, AlertCircle } from "lucide-react"
+import { authFetch } from "@/lib/client-session"
+import type { SessionUser } from "@/lib/session"
 
 interface AttendanceRecord {
   id: string
@@ -18,219 +20,170 @@ interface AttendanceRecord {
   earlyReason: string | null
   hoursWorked: number
   status: "present" | "absent" | "on_leave"
-  leaveId?: string
-}
-
-interface User {
-  id: string
-  name: string
-  email: string
-  role: string
 }
 
 interface AttendanceHistoryProps {
-  user: User
+  user: SessionUser
+}
+
+function formatTime(value: string | null) {
+  if (!value) {
+    return "Not recorded"
+  }
+
+  return new Date(value).toLocaleTimeString("en-US", {
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+  })
+}
+
+function formatDate(value: string) {
+  return new Date(value).toLocaleDateString("en-US", {
+    weekday: "long",
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+  })
 }
 
 export default function AttendanceHistory({ user }: AttendanceHistoryProps) {
   const [records, setRecords] = useState<AttendanceRecord[]>([])
-  const [filteredRecords, setFilteredRecords] = useState<AttendanceRecord[]>([])
   const [dateFilter, setDateFilter] = useState("")
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
-    fetchAttendanceHistory()
+    const loadRecords = async () => {
+      try {
+        const response = await authFetch(`/api/attendance/history?userId=${user.id}`)
+        const data = await response.json()
+        if (response.ok) {
+          setRecords(data)
+        }
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    loadRecords()
+    const interval = setInterval(loadRecords, 20000)
+    return () => clearInterval(interval)
   }, [user.id])
 
-  useEffect(() => {
-    if (dateFilter) {
-      const filtered = records.filter((record) => record.date.includes(dateFilter))
-      setFilteredRecords(filtered)
-    } else {
-      setFilteredRecords(records)
-    }
-  }, [dateFilter, records])
+  const filteredRecords = useMemo(() => {
+    return dateFilter ? records.filter((record) => record.date.includes(dateFilter)) : records
+  }, [records, dateFilter])
 
-  const fetchAttendanceHistory = async () => {
-    try {
-      const response = await fetch(`/api/attendance/history?userId=${user.id}`)
-      if (response.ok) {
-        const data = await response.json()
-        setRecords(data)
-        setFilteredRecords(data)
-      }
-    } catch (error) {
-      console.error("Error fetching attendance history:", error)
-    } finally {
-      setIsLoading(false)
-    }
-  }
-
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString("en-US", {
-      weekday: "long",
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-    })
-  }
-
-  const formatTime12Hour = (timeString: string) => {
-    return new Date(timeString).toLocaleTimeString("en-US", {
-      hour12: true,
-      hour: "numeric",
-      minute: "2-digit",
-    })
-  }
-
-  const getStatusBadge = (record: AttendanceRecord) => {
-    if (record.status === "absent") {
-      return <Badge variant="destructive">Absent</Badge>
-    } else if (record.status === "on_leave") {
-      return <Badge variant="outline">On Leave</Badge>
-    } else if (record.isLate && record.isEarly) {
-      return <Badge variant="destructive">Late & Early Leave</Badge>
-    } else if (record.isLate) {
-      return <Badge variant="destructive">Late Arrival</Badge>
-    } else if (record.isEarly) {
-      return <Badge variant="secondary">Early Leave</Badge>
-    } else {
-      return <Badge variant="default">On Time</Badge>
-    }
-  }
-
-  if (isLoading) {
-    return <div>Loading attendance history...</div>
-  }
+  const onTimeCount = records.filter((record) => record.status === "present" && !record.isLate && !record.isEarly).length
+  const avgHours = records.length ? (records.reduce((sum, record) => sum + record.hoursWorked, 0) / records.length).toFixed(1) : "0.0"
 
   return (
     <div className="space-y-6">
-      {/* Summary Cards */}
-      <div className="grid md:grid-cols-4 gap-4">
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center space-x-2">
-              <Calendar className="h-5 w-5 text-blue-600" />
-              <div>
-                <p className="text-sm text-gray-600">Total Days</p>
-                <p className="text-2xl font-bold">{records.length}</p>
-              </div>
-            </div>
+      <div className="grid gap-4 md:grid-cols-4">
+        <Card className="rounded-3xl shadow-sm">
+          <CardContent className="p-5">
+            <p className="text-sm text-slate-500">Total Records</p>
+            <p className="text-2xl font-bold">{records.length}</p>
           </CardContent>
         </Card>
-
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center space-x-2">
-              <Clock className="h-5 w-5 text-green-600" />
-              <div>
-                <p className="text-sm text-gray-600">On Time</p>
-                <p className="text-2xl font-bold">{records.filter((r) => !r.isLate && !r.isEarly).length}</p>
-              </div>
-            </div>
+        <Card className="rounded-3xl shadow-sm">
+          <CardContent className="p-5">
+            <p className="text-sm text-slate-500">On Time</p>
+            <p className="text-2xl font-bold">{onTimeCount}</p>
           </CardContent>
         </Card>
-
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center space-x-2">
-              <AlertCircle className="h-5 w-5 text-red-600" />
-              <div>
-                <p className="text-sm text-gray-600">Late Arrivals</p>
-                <p className="text-2xl font-bold">{records.filter((r) => r.isLate).length}</p>
-              </div>
-            </div>
+        <Card className="rounded-3xl shadow-sm">
+          <CardContent className="p-5">
+            <p className="text-sm text-slate-500">Late Days</p>
+            <p className="text-2xl font-bold">{records.filter((record) => record.isLate).length}</p>
           </CardContent>
         </Card>
-
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center space-x-2">
-              <History className="h-5 w-5 text-yellow-600" />
-              <div>
-                <p className="text-sm text-gray-600">Avg Hours</p>
-                <p className="text-2xl font-bold">
-                  {records.length > 0
-                    ? (records.reduce((sum, r) => sum + r.hoursWorked, 0) / records.length).toFixed(1)
-                    : "0"}
-                </p>
-              </div>
-            </div>
+        <Card className="rounded-3xl shadow-sm">
+          <CardContent className="p-5">
+            <p className="text-sm text-slate-500">Avg Hours</p>
+            <p className="text-2xl font-bold">{avgHours}</p>
           </CardContent>
         </Card>
       </div>
 
-      {/* Attendance History */}
-      <Card>
+      <Card className="rounded-3xl shadow-sm">
         <CardHeader>
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div>
-              <CardTitle className="flex items-center space-x-2">
-                <History className="h-6 w-6" />
-                <span>Attendance History</span>
+              <CardTitle className="flex items-center gap-2 text-2xl">
+                <History className="h-5 w-5 text-sky-600" />
+                Attendance History
               </CardTitle>
-              <CardDescription>View your complete attendance record</CardDescription>
+              <CardDescription>Review your past attendance records by date.</CardDescription>
             </div>
-            <div className="flex items-center space-x-2">
-              <Input
-                type="date"
-                value={dateFilter}
-                onChange={(e) => setDateFilter(e.target.value)}
-                className="w-auto"
-              />
-              <Button variant="outline" onClick={() => setDateFilter("")}>
-                Clear Filter
+            <div className="flex gap-2">
+              <Input type="date" value={dateFilter} onChange={(event) => setDateFilter(event.target.value)} className="w-full md:w-auto" />
+              <Button variant="outline" className="rounded-2xl" onClick={() => setDateFilter("")}>
+                Clear
               </Button>
             </div>
           </div>
         </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {filteredRecords.length === 0 ? (
-              <div className="text-center py-8 text-gray-500">No attendance records found.</div>
-            ) : (
-              filteredRecords.map((record) => (
-                <div key={record.id} className="border rounded-lg p-4">
-                  <div className="flex items-center justify-between mb-2">
-                    <div>
-                      <h3 className="font-semibold">{formatDate(record.date)}</h3>
-                      {record.status === "absent" ? (
-                        <div className="text-sm text-gray-600">
-                          <span>Status: Absent</span>
-                        </div>
-                      ) : record.status === "on_leave" ? (
-                        <div className="text-sm text-gray-600">
-                          <span>Status: On Leave</span>
-                        </div>
-                      ) : (
-                        <div className="flex items-center space-x-4 text-sm text-gray-600">
-                          <span>In: {record.checkInTime ? formatTime12Hour(record.checkInTime) : "N/A"}</span>
-                          {record.checkOutTime && <span>Out: {formatTime12Hour(record.checkOutTime)}</span>}
-                          <span>Hours: {record.hoursWorked.toFixed(1)}</span>
-                        </div>
-                      )}
+        <CardContent className="space-y-4">
+          {isLoading ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="h-8 w-8 animate-spin text-emerald-600" />
+            </div>
+          ) : filteredRecords.length === 0 ? (
+            <div className="rounded-3xl border border-dashed border-slate-300 p-8 text-center text-slate-500">
+              No attendance records found.
+            </div>
+          ) : (
+            filteredRecords.map((record) => (
+              <div key={record.id} className="rounded-3xl border border-slate-200 p-5">
+                <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <CalendarDays className="h-4 w-4 text-slate-500" />
+                      <h3 className="font-semibold text-slate-950">{formatDate(record.date)}</h3>
                     </div>
-                    {getStatusBadge(record)}
+                    <div className="flex flex-wrap gap-x-6 gap-y-1 text-sm text-slate-600">
+                      <span className="flex items-center gap-1">
+                        <Clock3 className="h-4 w-4" />
+                        In: {formatTime(record.checkInTime)}
+                      </span>
+                      <span>Out: {formatTime(record.checkOutTime)}</span>
+                      <span>Hours: {record.hoursWorked.toFixed(2)}</span>
+                    </div>
+                    {(record.lateReason || record.earlyReason) && (
+                      <div className="rounded-2xl bg-slate-50 p-3 text-sm text-slate-700">
+                        {record.lateReason && <p><span className="font-semibold">Late:</span> {record.lateReason}</p>}
+                        {record.earlyReason && <p><span className="font-semibold">Early:</span> {record.earlyReason}</p>}
+                      </div>
+                    )}
                   </div>
-
-                  {(record.lateReason || record.earlyReason) && (
-                    <div className="mt-2 p-2 bg-gray-50 rounded text-sm">
-                      {record.lateReason && (
-                        <p>
-                          <strong>Late Reason:</strong> {record.lateReason}
-                        </p>
-                      )}
-                      {record.earlyReason && (
-                        <p>
-                          <strong>Early Leave Reason:</strong> {record.earlyReason}
-                        </p>
-                      )}
-                    </div>
-                  )}
+                  <Badge
+                    className={
+                      record.status === "on_leave"
+                        ? "bg-amber-100 text-amber-900"
+                        : record.status === "absent"
+                          ? "bg-rose-100 text-rose-900"
+                          : record.isLate
+                            ? "bg-orange-100 text-orange-900"
+                            : record.isEarly
+                              ? "bg-sky-100 text-sky-900"
+                              : "bg-emerald-100 text-emerald-900"
+                    }
+                  >
+                    {record.status === "on_leave"
+                      ? "On Leave"
+                      : record.status === "absent"
+                        ? "Absent"
+                        : record.isLate
+                          ? "Late"
+                          : record.isEarly
+                            ? "Early Exit"
+                            : "On Time"}
+                  </Badge>
                 </div>
-              ))
-            )}
-          </div>
+              </div>
+            ))
+          )}
         </CardContent>
       </Card>
     </div>
