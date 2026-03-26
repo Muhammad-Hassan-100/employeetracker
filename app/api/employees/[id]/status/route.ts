@@ -3,19 +3,24 @@ import { getDatabase } from "@/lib/mongodb"
 import { ObjectId } from "mongodb"
 import { requireAdmin } from "@/lib/session"
 
-export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
+type RouteContext = {
+  params: Promise<{ id: string }>
+}
+
+export async function PUT(request: NextRequest, { params }: RouteContext) {
   try {
     const { session, response } = requireAdmin(request)
     if (!session) {
       return response
     }
+    const { id } = await params
 
     const { status } = await request.json()
     const db = await getDatabase()
     const usersCollection = db.collection("users")
 
     const updateResult = await usersCollection.updateOne(
-      { _id: new ObjectId(params.id), companyId: session.companyId, role: "employee" },
+      { _id: new ObjectId(id), companyId: session.companyId, role: "employee" },
       {
         $set: {
           status: status,
@@ -28,7 +33,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
       return NextResponse.json({ error: "Employee not found" }, { status: 404 })
     }
 
-    const updatedEmployee = await usersCollection.findOne({ _id: new ObjectId(params.id) })
+    const updatedEmployee = await usersCollection.findOne({ _id: new ObjectId(id) })
 
     return NextResponse.json({
       message: "Employee status updated successfully",

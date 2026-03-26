@@ -3,18 +3,23 @@ import { getDatabase } from "@/lib/mongodb"
 import { ObjectId } from "mongodb"
 import { requireAdmin } from "@/lib/session"
 
-export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
+type RouteContext = {
+  params: Promise<{ id: string }>
+}
+
+export async function GET(request: NextRequest, { params }: RouteContext) {
   try {
     const { session, response } = requireAdmin(request)
     if (!session) {
       return response
     }
+    const { id } = await params
 
     const db = await getDatabase()
     const usersCollection = db.collection("users")
 
     const employee = await usersCollection.findOne({
-      _id: new ObjectId(params.id),
+      _id: new ObjectId(id),
       role: "employee",
       companyId: session.companyId,
     })

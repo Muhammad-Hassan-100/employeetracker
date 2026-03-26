@@ -3,12 +3,17 @@ import { getDatabase } from "@/lib/mongodb"
 import { ObjectId } from "mongodb"
 import { requireAdmin } from "@/lib/session"
 
-export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
+type RouteContext = {
+  params: Promise<{ id: string }>
+}
+
+export async function PUT(request: NextRequest, { params }: RouteContext) {
   try {
     const { session, response } = requireAdmin(request)
     if (!session) {
       return response
     }
+    const { id } = await params
 
     const { name, startTime, endTime, description } = await request.json()
     const db = await getDatabase()
@@ -16,7 +21,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
     const usersCollection = db.collection("users")
 
     const duplicate = await shiftsCollection.findOne({
-      _id: { $ne: new ObjectId(params.id) },
+      _id: { $ne: new ObjectId(id) },
       companyId: session.companyId,
       name: { $regex: new RegExp(`^${String(name).trim()}$`, "i") },
     })
@@ -26,7 +31,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
     }
 
     const updateResult = await shiftsCollection.updateOne(
-      { _id: new ObjectId(params.id), companyId: session.companyId },
+      { _id: new ObjectId(id), companyId: session.companyId },
       {
         $set: {
           name,
@@ -42,10 +47,10 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
       return NextResponse.json({ error: "Shift not found" }, { status: 404 })
     }
 
-    const updatedShift = await shiftsCollection.findOne({ _id: new ObjectId(params.id), companyId: session.companyId })
+    const updatedShift = await shiftsCollection.findOne({ _id: new ObjectId(id), companyId: session.companyId })
 
     await usersCollection.updateMany(
-      { companyId: session.companyId, shiftId: params.id },
+      { companyId: session.companyId, shiftId: id },
       { $set: { updatedAt: new Date() } },
     )
 
@@ -65,12 +70,13 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
   }
 }
 
-export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(request: NextRequest, { params }: RouteContext) {
   try {
     const { session, response } = requireAdmin(request)
     if (!session) {
       return response
     }
+    const { id } = await params
 
     const db = await getDatabase()
     const shiftsCollection = db.collection("shifts")
@@ -79,7 +85,7 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
     const assignedEmployees = await usersCollection.countDocuments({
       companyId: session.companyId,
       role: "employee",
-      shiftId: params.id,
+      shiftId: id,
     })
 
     if (assignedEmployees > 0) {
@@ -90,7 +96,7 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
     }
 
     const deleteResult = await shiftsCollection.deleteOne({
-      _id: new ObjectId(params.id),
+      _id: new ObjectId(id),
       companyId: session.companyId,
     })
 

@@ -4,18 +4,23 @@ import { ObjectId } from "mongodb"
 import { requireAdmin } from "@/lib/session"
 import { extractEmailDomain } from "@/lib/company-utils"
 
-export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
+type RouteContext = {
+  params: Promise<{ id: string }>
+}
+
+export async function GET(request: NextRequest, { params }: RouteContext) {
   try {
     const { session, response } = requireAdmin(request)
     if (!session) {
       return response
     }
+    const { id } = await params
 
     const db = await getDatabase()
     const usersCollection = db.collection("users")
 
     const employee = await usersCollection.findOne({
-      _id: new ObjectId(params.id),
+      _id: new ObjectId(id),
       role: "employee",
       companyId: session.companyId,
     })
@@ -44,12 +49,13 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
   }
 }
 
-export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(request: NextRequest, { params }: RouteContext) {
   try {
     const { session, response } = requireAdmin(request)
     if (!session) {
       return response
     }
+    const { id } = await params
 
     const db = await getDatabase()
     const usersCollection = db.collection("users")
@@ -57,7 +63,7 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
     const leavesCollection = db.collection("leaves")
 
     const deleteResult = await usersCollection.deleteOne({
-      _id: new ObjectId(params.id),
+      _id: new ObjectId(id),
       companyId: session.companyId,
     })
 
@@ -66,12 +72,12 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
     }
 
     await attendanceCollection.deleteMany({
-      userId: params.id,
+      userId: id,
       companyId: session.companyId,
     })
 
     await leavesCollection.deleteMany({
-      userId: params.id,
+      userId: id,
       companyId: session.companyId,
     })
 
@@ -84,12 +90,13 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
   }
 }
 
-export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
+export async function PUT(request: NextRequest, { params }: RouteContext) {
   try {
     const { session, response } = requireAdmin(request)
     if (!session) {
       return response
     }
+    const { id } = await params
 
     const updateData = await request.json()
     const db = await getDatabase()
@@ -130,7 +137,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
       }
 
       const duplicateUser = await usersCollection.findOne({
-        _id: { $ne: new ObjectId(params.id) },
+        _id: { $ne: new ObjectId(id) },
         email: normalizedEmail,
       })
 
@@ -153,7 +160,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
     }
 
     const updateResult = await usersCollection.updateOne(
-      { _id: new ObjectId(params.id), companyId: session.companyId, role: "employee" },
+      { _id: new ObjectId(id), companyId: session.companyId, role: "employee" },
       {
         $set: {
           ...updateData,
