@@ -52,7 +52,11 @@ interface AttendanceRecord {
   status: "present" | "absent" | "on_leave"
 }
 
-function formatDate(value: string) {
+function formatDate(value?: string | null) {
+  if (!value) {
+    return "Unknown date"
+  }
+
   return new Date(value).toLocaleDateString("en-US", {
     weekday: "long",
     month: "long",
@@ -74,9 +78,76 @@ function formatHoursWorked(value?: number | null) {
   return Number.isFinite(value) ? Number(value).toFixed(2) : "0.00"
 }
 
+function normalizeEmployeePayload(value: any): Employee | null {
+  if (!value || typeof value !== "object") {
+    return null
+  }
+
+  return {
+    id: String(value.id || ""),
+    name: String(value.name || "Employee"),
+    email: String(value.email || ""),
+    department: String(value.department || "N/A"),
+    position: String(value.position || "N/A"),
+    shift: String(value.shift || ""),
+    checkInBeforeMinutes: Number(value.checkInBeforeMinutes) || 0,
+    lateGraceMinutes: Number(value.lateGraceMinutes) || 0,
+    joinDate: String(value.joinDate || ""),
+    status: value.status === "inactive" ? "inactive" : "active",
+    password: value.password ? String(value.password) : undefined,
+  }
+}
+
+function normalizeAttendanceRecords(value: unknown): AttendanceRecord[] {
+  if (!Array.isArray(value)) {
+    return []
+  }
+
+  return value
+    .filter((entry) => entry && typeof entry === "object")
+    .map((entry: any) => ({
+      id: String(entry.id || ""),
+      date: String(entry.date || ""),
+      checkInTime: entry.checkInTime ? String(entry.checkInTime) : null,
+      checkOutTime: entry.checkOutTime ? String(entry.checkOutTime) : null,
+      isLate: Boolean(entry.isLate),
+      isEarly: Boolean(entry.isEarly),
+      lateReason: entry.lateReason ? String(entry.lateReason) : null,
+      earlyReason: entry.earlyReason ? String(entry.earlyReason) : null,
+      leaveReason: entry.leaveReason ? String(entry.leaveReason) : null,
+      leaveType: entry.leaveType ? String(entry.leaveType) : null,
+      hoursWorked: Number.isFinite(Number(entry.hoursWorked)) ? Number(entry.hoursWorked) : 0,
+      status: entry.status === "on_leave" || entry.status === "absent" ? entry.status : "present",
+    }))
+}
+
+function normalizeShifts(value: unknown): Shift[] {
+  if (!Array.isArray(value)) {
+    return []
+  }
+
+  return value
+    .filter((entry) => entry && typeof entry === "object")
+    .map((entry: any) => ({
+      id: String(entry.id || ""),
+      name: String(entry.name || "Shift"),
+      startTime: String(entry.startTime || "00:00"),
+      endTime: String(entry.endTime || "00:00"),
+    }))
+}
+
+function normalizeDepartments(value: unknown): string[] {
+  if (!Array.isArray(value)) {
+    return []
+  }
+
+  return value.map((entry) => String(entry)).filter(Boolean)
+}
+
 export default function EmployeeDetailPage() {
   const params = useParams<{ id: string }>()
   const router = useRouter()
+  const employeeId = Array.isArray(params.id) ? params.id[0] : params.id
   const [user, setUser] = useState<SessionUser | null>(null)
   const [pageMode, setPageMode] = useState<"view" | "edit">("view")
   const [employee, setEmployee] = useState<Employee | null>(null)
@@ -92,9 +163,15 @@ export default function EmployeeDetailPage() {
 
   const loadData = async () => {
     try {
+      if (!employeeId) {
+        toast.error("Employee record could not be opened.")
+        router.push("/dashboard/attendance-monitor")
+        return
+      }
+
       const [employeeRes, attendanceRes, shiftsRes, settingsRes] = await Promise.all([
-        authFetch(`/api/employees/${params.id}`),
-        authFetch(`/api/attendance/history?userId=${params.id}`),
+        authFetch(`/api/employees/${employeeId}`),
+        authFetch(`/api/attendance/history?userId=${employeeId}`),
         authFetch("/api/shifts"),
         authFetch("/api/company/settings"),
       ])
@@ -112,17 +189,29 @@ export default function EmployeeDetailPage() {
         return
       }
 
-      setEmployee(employeeData)
-      setEditForm(employeeData)
+      const normalizedEmployee = normalizeEmployeePayload(employeeData)
+      if (!normalizedEmployee) {
+        toast.error("Employee data is not available right now.")
+        router.push("/dashboard/attendance-monitor")
+        return
+      }
+
+      setEmployee(normalizedEmployee)
+      setEditForm(normalizedEmployee)
       if (attendanceRes.ok) {
-        setAttendance(Array.isArray(attendanceData) ? attendanceData : [])
+        setAttendance(normalizeAttendanceRecords(attendanceData))
       }
       if (shiftsRes.ok) {
-        setShifts(shiftsData)
+        setShifts(normalizeShifts(shiftsData))
       }
       if (settingsRes.ok) {
-        setDepartments(settingsData.settings.departments)
+        setDepartments(normalizeDepartments(settingsData?.settings?.departments))
       }
+    } catch {
+      toast.error("Unable to load employee detail", {
+        description: "Please refresh the page and try again.",
+      })
+      router.push("/dashboard/attendance-monitor")
     } finally {
       setIsLoading(false)
     }
@@ -151,7 +240,7 @@ export default function EmployeeDetailPage() {
 
     setUser(storedUser)
     loadData()
-  }, [params.id, router])
+  }, [employeeId, router])
 
   const handleSave = async () => {
     setIsSaving(true)
@@ -159,7 +248,7 @@ export default function EmployeeDetailPage() {
       const payload = { ...editForm, shiftId: editForm.shift }
       delete payload.shift
 
-      const response = await authFetch(`/api/employees/${params.id}`, {
+      const response = await authFetch(`/api/employees/${employeeId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
