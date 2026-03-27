@@ -293,7 +293,11 @@ export default function AttendanceTab({ user }: AttendanceTabProps) {
   }
 
   const handleCheckOut = async () => {
-    if (isEarly && !earlyReason.trim()) {
+    const actionTime = new Date()
+    const actionTimeMinutes = getLocalTimeMinutes(actionTime)
+    const isEarlyAtAction = shiftEndMinutes !== null && actionTimeMinutes < shiftEndMinutes
+
+    if (isEarlyAtAction && !earlyReason.trim()) {
       setShowEarlyReason(true)
       toast.error("Early checkout reason required", {
         description: "Please explain why you are leaving before shift end.",
@@ -304,7 +308,6 @@ export default function AttendanceTab({ user }: AttendanceTabProps) {
     setIsCheckingOut(true)
 
     try {
-      const actionTime = new Date()
       const clientPublicIp = attendancePolicy.requiresApprovedNetwork ? await getClientPublicIp() : undefined
       let locationPayload: { latitude?: number; longitude?: number } = {}
       if (attendancePolicy.requiresLocation) {
@@ -337,8 +340,8 @@ export default function AttendanceTab({ user }: AttendanceTabProps) {
           checkOutTime: actionTime.toISOString(),
           localDate: formatLocalDateInput(actionTime),
           localTimeMinutes: getLocalTimeMinutes(actionTime),
-          isEarly,
-          earlyReason: isEarly ? earlyReason.trim() : null,
+          isEarly: isEarlyAtAction,
+          earlyReason: isEarlyAtAction ? earlyReason.trim() : null,
           ...(clientPublicIp ? { clientPublicIp } : {}),
           ...locationPayload,
         }),
