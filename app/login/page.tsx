@@ -99,11 +99,17 @@ export default function LoginPage() {
         return
       }
 
-      setStoredUser(data.user)
-      toast.success("Workspace created", {
-        description: `${data.user.companyName} is ready for setup.`,
+      toast.success("Signup request submitted", {
+        description: "Wait for super admin approval before signing in.",
       })
-      router.push("/dashboard")
+      setSignupForm({
+        companyName: "",
+        companyDomain: "",
+        adminName: "",
+        email: "",
+        password: "",
+      })
+      setMode("login")
     } catch {
       toast.error("Connection error", { description: "Unable to create the workspace right now." })
     } finally {

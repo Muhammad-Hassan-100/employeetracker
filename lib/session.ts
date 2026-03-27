@@ -2,7 +2,8 @@ import { ObjectId } from "mongodb"
 import { NextRequest, NextResponse } from "next/server"
 import { extractEmailDomain } from "@/lib/company-utils"
 
-export type UserRole = "admin" | "employee"
+export type UserRole = "super_admin" | "admin" | "employee"
+export type ApprovalStatus = "pending" | "approved" | "rejected"
 
 export interface SessionUser {
   id: string
@@ -16,6 +17,7 @@ export interface SessionUser {
   position?: string
   shiftId?: string
   status?: "active" | "inactive"
+  approvalStatus?: ApprovalStatus
 }
 
 export interface RequestSession {
@@ -26,21 +28,26 @@ export interface RequestSession {
   role: UserRole
   name: string
   email: string
+  approvalStatus?: ApprovalStatus
 }
 
 export function buildSessionUser(user: any, companyName?: string, companyDomain?: string): SessionUser {
+  const fallbackCompanyName = user.role === "super_admin" ? "Platform Control" : "Workspace"
+  const fallbackCompanyDomain = user.role === "super_admin" ? "hassan.com" : extractEmailDomain(user.email)
+
   return {
     id: user._id.toString(),
     name: user.name,
     email: user.email,
     role: user.role,
-    companyId: user.companyId,
-    companyName: companyName || user.companyName || "Workspace",
-    companyDomain: companyDomain || user.companyDomain || extractEmailDomain(user.email),
+    companyId: user.companyId || "platform",
+    companyName: companyName || user.companyName || fallbackCompanyName,
+    companyDomain: companyDomain || user.companyDomain || fallbackCompanyDomain,
     department: user.department,
     position: user.position,
     shiftId: user.shiftId,
     status: user.status,
+    approvalStatus: user.approvalStatus,
   }
 }
 
@@ -57,7 +64,9 @@ export function readRequestSession(request: NextRequest): RequestSession | null 
     return null
   }
 
-  return { userId, companyId, companyName, companyDomain, role, name, email }
+  const approvalStatus = request.headers.get("x-approval-status") as ApprovalStatus | null
+
+  return { userId, companyId, companyName, companyDomain, role, name, email, approvalStatus: approvalStatus || undefined }
 }
 
 export function unauthorized(message = "Authentication required") {
@@ -90,8 +99,21 @@ export function requireAdmin(request: NextRequest) {
   return { response: null, session }
 }
 
+export function requireSuperAdmin(request: NextRequest) {
+  const { session, response } = requireSession(request)
+  if (!session) {
+    return { response, session: null }
+  }
+
+  if (session.role !== "super_admin") {
+    return { response: forbidden("Super admin access required"), session: null }
+  }
+
+  return { response: null, session }
+}
+
 export function assertSelfOrAdmin(session: RequestSession, targetUserId: string) {
-  if (session.role === "admin") {
+  if (session.role === "admin" || session.role === "super_admin") {
     return null
   }
 

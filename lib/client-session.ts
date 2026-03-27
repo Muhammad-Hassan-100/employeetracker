@@ -46,6 +46,9 @@ export async function authFetch(input: RequestInfo | URL, init: RequestInit = {}
     headers.set("x-user-role", user.role)
     headers.set("x-user-name", user.name)
     headers.set("x-user-email", user.email)
+    if (user.approvalStatus) {
+      headers.set("x-approval-status", user.approvalStatus)
+    }
   }
 
   return fetch(input, {

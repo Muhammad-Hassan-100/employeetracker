@@ -10,7 +10,9 @@ export default function Dashboard() {
   useEffect(() => {
     const user = getStoredUser()
     if (user) {
-      if (user.role === "admin") {
+      if (user.role === "super_admin") {
+        router.replace("/dashboard/platform/requests")
+      } else if (user.role === "admin") {
         router.replace("/dashboard/employees")
       } else {
         router.replace("/dashboard/attendance")

@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
-import { BarChart3, CalendarClock, ClipboardList, Home, LogOut, Settings2, UserPlus2, UsersRound } from "lucide-react"
+import { BarChart3, Building2, CalendarClock, ClipboardList, Home, LogOut, Settings2, ShieldCheck, UserPlus2, UsersRound } from "lucide-react"
 import { toast } from "sonner"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -39,7 +39,13 @@ export function AppSidebar({ user }: AppSidebarProps) {
   }
 
   const menuItems =
-    user.role === "admin"
+    user.role === "super_admin"
+      ? [
+          { title: "Approval Requests", url: "/dashboard/platform/requests", icon: ShieldCheck },
+          { title: "Companies", url: "/dashboard/platform/companies", icon: Building2 },
+          { title: "Employees", url: "/dashboard/platform/employees", icon: UsersRound },
+        ]
+      : user.role === "admin"
       ? [
           { title: "Add Employee", url: "/dashboard/employees", icon: UserPlus2 },
           { title: "Manage Shifts", url: "/dashboard/shifts", icon: CalendarClock },
@@ -61,12 +67,22 @@ export function AppSidebar({ user }: AppSidebarProps) {
         <div className="rounded-3xl bg-slate-950 p-4 text-white">
           <div className="flex items-start justify-between gap-3">
             <div>
-              <p className="text-xs uppercase tracking-[0.2em] text-emerald-300">Workspace</p>
+              <p className="text-xs uppercase tracking-[0.2em] text-emerald-300">
+                {user.role === "super_admin" ? "Platform" : "Workspace"}
+              </p>
               <h1 className="mt-1 text-lg font-bold">{user.companyName}</h1>
               <p className="mt-1 text-sm text-slate-300">{user.name}</p>
             </div>
-            <Badge className={user.role === "admin" ? "bg-emerald-400 text-slate-950" : "bg-sky-400 text-slate-950"}>
-              {user.role === "admin" ? "Admin" : "Employee"}
+            <Badge
+              className={
+                user.role === "super_admin"
+                  ? "bg-amber-300 text-slate-950"
+                  : user.role === "admin"
+                    ? "bg-emerald-400 text-slate-950"
+                    : "bg-sky-400 text-slate-950"
+              }
+            >
+              {user.role === "super_admin" ? "Super Admin" : user.role === "admin" ? "Admin" : "Employee"}
             </Badge>
           </div>
         </div>

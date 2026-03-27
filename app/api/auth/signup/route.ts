@@ -64,6 +64,7 @@ export async function POST(request: NextRequest) {
       companyId,
       name: trimmedCompany,
       domain: normalizedDomain,
+      approvalStatus: "pending" as const,
       createdAt: new Date(),
       updatedAt: new Date(),
     }
@@ -79,16 +80,16 @@ export async function POST(request: NextRequest) {
       companyName: trimmedCompany,
       companyDomain: normalizedDomain,
       joinDate: new Date(),
-      status: "active" as const,
+      status: "inactive" as const,
+      approvalStatus: "pending" as const,
       createdAt: new Date(),
       updatedAt: new Date(),
     }
 
-    const result = await usersCollection.insertOne(adminUser)
+    await usersCollection.insertOne(adminUser)
 
     return NextResponse.json({
-      message: "Company workspace created successfully",
-      user: buildSessionUser({ ...adminUser, _id: result.insertedId }, trimmedCompany, normalizedDomain),
+      message: "Signup request submitted successfully",
     })
   } catch (error) {
     console.error("Signup error:", error)
