@@ -1,6 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { getDatabase } from "@/lib/mongodb"
 import { getCompanyAttendancePolicy, validateAttendanceActionAccess } from "@/lib/attendance-policy"
+import { formatLocalDateInput } from "@/lib/attendance-time"
 import { assertSelfOrAdmin, requireSession } from "@/lib/session"
 
 export async function POST(request: NextRequest) {
@@ -10,7 +11,8 @@ export async function POST(request: NextRequest) {
       return response
     }
 
-    const { userId, checkOutTime, isEarly, earlyReason, latitude, longitude, clientPublicIp } = await request.json()
+    const { userId, checkOutTime, isEarly, earlyReason, latitude, longitude, clientPublicIp, localDate } =
+      await request.json()
     const accessError = assertSelfOrAdmin(session, userId)
     if (accessError) {
       return accessError
@@ -34,8 +36,9 @@ export async function POST(request: NextRequest) {
     if (attendanceAccessError) {
       return NextResponse.json({ error: attendanceAccessError }, { status: 400 })
     }
-
-    const today = new Date().toISOString().split("T")[0]
+    const checkOutMoment = new Date(checkOutTime)
+    const today =
+      typeof localDate === "string" && /^\d{4}-\d{2}-\d{2}$/.test(localDate) ? localDate : formatLocalDateInput(checkOutMoment)
 
     // Find today's check-in record
     const record = await attendanceCollection.findOne({
@@ -53,7 +56,7 @@ export async function POST(request: NextRequest) {
     }
 
     const checkInTime = new Date(record.checkInTime)
-    const checkOutTimeDate = new Date(checkOutTime)
+    const checkOutTimeDate = checkOutMoment
     const hoursWorked = Math.max(0, (checkOutTimeDate.getTime() - checkInTime.getTime()) / (1000 * 60 * 60))
 
     const updateResult = await attendanceCollection.updateOne(

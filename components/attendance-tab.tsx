@@ -9,6 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { authFetch } from "@/lib/client-session"
+import { formatLocalDateInput, getLocalTimeMinutes } from "@/lib/attendance-time"
 import type { SessionUser } from "@/lib/session"
 import { formatTimeString12Hour } from "@/lib/time"
 
@@ -236,6 +237,7 @@ export default function AttendanceTab({ user }: AttendanceTabProps) {
     setIsCheckingIn(true)
 
     try {
+      const actionTime = new Date()
       const clientPublicIp = attendancePolicy.requiresApprovedNetwork ? await getClientPublicIp() : undefined
       let locationPayload: { latitude?: number; longitude?: number } = {}
       if (attendancePolicy.requiresLocation) {
@@ -265,7 +267,9 @@ export default function AttendanceTab({ user }: AttendanceTabProps) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           userId: user.id,
-          checkInTime: new Date().toISOString(),
+          checkInTime: actionTime.toISOString(),
+          localDate: formatLocalDateInput(actionTime),
+          localTimeMinutes: getLocalTimeMinutes(actionTime),
           isLate,
           lateReason: isLate ? lateReason.trim() : null,
           ...(clientPublicIp ? { clientPublicIp } : {}),
@@ -306,6 +310,7 @@ export default function AttendanceTab({ user }: AttendanceTabProps) {
     setIsCheckingOut(true)
 
     try {
+      const actionTime = new Date()
       const clientPublicIp = attendancePolicy.requiresApprovedNetwork ? await getClientPublicIp() : undefined
       let locationPayload: { latitude?: number; longitude?: number } = {}
       if (attendancePolicy.requiresLocation) {
@@ -335,7 +340,8 @@ export default function AttendanceTab({ user }: AttendanceTabProps) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           userId: user.id,
-          checkOutTime: new Date().toISOString(),
+          checkOutTime: actionTime.toISOString(),
+          localDate: formatLocalDateInput(actionTime),
           isEarly,
           earlyReason: isEarly ? earlyReason.trim() : null,
           ...(clientPublicIp ? { clientPublicIp } : {}),

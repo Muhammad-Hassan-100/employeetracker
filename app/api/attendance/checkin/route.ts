@@ -2,6 +2,7 @@ import { type NextRequest, NextResponse } from "next/server"
 import { getDatabase } from "@/lib/mongodb"
 import { ObjectId } from "mongodb"
 import { getCompanyAttendancePolicy, validateAttendanceActionAccess } from "@/lib/attendance-policy"
+import { formatLocalDateInput, getLocalTimeMinutes, getTimeStringMinutes } from "@/lib/attendance-time"
 import { assertSelfOrAdmin, requireSession } from "@/lib/session"
 
 export async function POST(request: NextRequest) {
@@ -11,7 +12,8 @@ export async function POST(request: NextRequest) {
       return response
     }
 
-    const { userId, checkInTime, isLate, lateReason, latitude, longitude, clientPublicIp } = await request.json()
+    const { userId, checkInTime, isLate, lateReason, latitude, longitude, clientPublicIp, localDate, localTimeMinutes } =
+      await request.json()
     const accessError = assertSelfOrAdmin(session, userId)
     if (accessError) {
       return accessError
@@ -40,7 +42,8 @@ export async function POST(request: NextRequest) {
     }
 
     const now = new Date(checkInTime)
-    const today = new Date().toISOString().split("T")[0]
+    const today = typeof localDate === "string" && /^\d{4}-\d{2}-\d{2}$/.test(localDate) ? localDate : formatLocalDateInput(now)
+    const actionTimeMinutes = Number.isFinite(Number(localTimeMinutes)) ? Number(localTimeMinutes) : getLocalTimeMinutes(now)
     let computedIsLate = false
     let employeeCheckInBeforeMinutes = 5
 
@@ -60,18 +63,16 @@ export async function POST(request: NextRequest) {
           })
         }
         if (shift?.startTime) {
-          const [h, m] = String(shift.startTime).split(":").map(Number)
-          const shiftStart = new Date()
-          shiftStart.setHours(h, m ?? 0, 0, 0)
-          const earliestCheckIn = new Date(shiftStart.getTime() - employeeCheckInBeforeMinutes * 60 * 1000)
-          const lateCutoff = new Date(shiftStart.getTime() + employeeLateGraceMinutes * 60 * 1000)
-          if (now < earliestCheckIn) {
+          const shiftStartMinutes = getTimeStringMinutes(shift.startTime)
+          const earliestCheckInMinutes = shiftStartMinutes - employeeCheckInBeforeMinutes
+          const lateCutoffMinutes = shiftStartMinutes + employeeLateGraceMinutes
+          if (actionTimeMinutes < earliestCheckInMinutes) {
             return NextResponse.json(
               { error: `Check-in allowed only ${employeeCheckInBeforeMinutes} minutes before shift start` },
               { status: 400 },
             )
           }
-          computedIsLate = now > lateCutoff
+          computedIsLate = actionTimeMinutes > lateCutoffMinutes
         }
       }
     } catch {}
