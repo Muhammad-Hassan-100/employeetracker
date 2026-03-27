@@ -12,6 +12,7 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
 import { authFetch } from "@/lib/client-session"
+import { WEEKDAY_OPTIONS } from "@/lib/company-settings"
 import { formatTimeString12Hour } from "@/lib/time"
 
 interface Shift {
@@ -53,8 +54,13 @@ function buildTimeValue(parts: ReturnType<typeof getTimeParts>) {
 
 export default function ShiftManagement() {
   const [shifts, setShifts] = useState<Shift[]>([])
+  const [companyRules, setCompanyRules] = useState({
+    workingDays: [1, 2, 3, 4, 5],
+    departmentsInput: "",
+  })
   const [isLoading, setIsLoading] = useState(true)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [isSavingRules, setIsSavingRules] = useState(false)
   const [editingShiftId, setEditingShiftId] = useState<string | null>(null)
   const [form, setForm] = useState({
     name: "",
@@ -69,19 +75,28 @@ export default function ShiftManagement() {
     }
 
     try {
-      const response = await authFetch("/api/shifts")
-      const data = await response.json()
+      const [shiftsResponse, settingsResponse] = await Promise.all([
+        authFetch("/api/shifts"),
+        authFetch("/api/company/settings"),
+      ])
+      const [shiftsData, settingsData] = await Promise.all([shiftsResponse.json(), settingsResponse.json()])
 
-      if (!response.ok) {
+      if (!shiftsResponse.ok) {
         toast.error("Unable to load shifts", {
-          description: data.error || "Please try again.",
+          description: shiftsData.error || "Please try again.",
         })
         return
       }
 
-      setShifts(data)
+      setShifts(shiftsData)
+      if (settingsResponse.ok) {
+        setCompanyRules({
+          workingDays: settingsData.settings.workingDays,
+          departmentsInput: settingsData.settings.departments.join(", "),
+        })
+      }
     } catch {
-      toast.error("Unable to load shifts")
+      toast.error("Unable to load shifts and company rules")
     } finally {
       setIsLoading(false)
     }
@@ -173,190 +188,296 @@ export default function ShiftManagement() {
     }
   }
 
+  const toggleWorkingDay = (day: number) => {
+    setCompanyRules((prev) => ({
+      ...prev,
+      workingDays: prev.workingDays.includes(day)
+        ? prev.workingDays.filter((entry) => entry !== day)
+        : [...prev.workingDays, day].sort((left, right) => left - right),
+    }))
+  }
+
+  const handleRulesSave = async () => {
+    setIsSavingRules(true)
+
+    try {
+      const departments = companyRules.departmentsInput
+        .split(",")
+        .map((entry) => entry.trim())
+        .filter(Boolean)
+
+      const response = await authFetch("/api/company/settings", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          workingDays: companyRules.workingDays,
+          departments,
+        }),
+      })
+      const data = await response.json()
+
+      if (!response.ok) {
+        toast.error("Unable to save company rules", {
+          description: data.error || "Please review the rules and try again.",
+        })
+        return
+      }
+
+      setCompanyRules({
+        workingDays: data.settings.workingDays,
+        departmentsInput: data.settings.departments.join(", "),
+      })
+      toast.success("Company rules updated")
+    } catch {
+      toast.error("Unable to save company rules")
+    } finally {
+      setIsSavingRules(false)
+    }
+  }
+
   return (
-    <div className="grid gap-6 xl:grid-cols-[0.95fr_1.05fr]">
-      <Card className="rounded-3xl shadow-sm">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-2xl">
-            <Plus className="h-5 w-5 text-emerald-600" />
-            {editingShiftId ? "Edit Shift" : "Create Shift"}
-          </CardTitle>
-          <CardDescription>Keep shift timing accurate so attendance rules work correctly.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-2">
-              <Label>Shift Name</Label>
-              <Input value={form.name} onChange={(event) => setForm((prev) => ({ ...prev, name: event.target.value }))} required />
-            </div>
-            <div className="grid gap-4 sm:grid-cols-2">
+    <div className="space-y-6">
+      <div className="grid gap-6 xl:grid-cols-[0.95fr_1.05fr]">
+        <Card className="rounded-3xl shadow-sm">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-2xl">
+              <Plus className="h-5 w-5 text-emerald-600" />
+              {editingShiftId ? "Edit Shift" : "Create Shift"}
+            </CardTitle>
+            <CardDescription>Keep shift timing accurate so attendance rules work correctly.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
-                <Label>Start Time</Label>
-                <div className="grid grid-cols-3 gap-2">
-                  <Select value={getTimeParts(form.startTime).hour} onValueChange={(value) => handleTimePartChange("startTime", "hour", value)}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Hour" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {hourOptions.map((hour) => (
-                        <SelectItem key={hour} value={hour}>
-                          {hour}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <Select
-                    value={getTimeParts(form.startTime).minute}
-                    onValueChange={(value) => handleTimePartChange("startTime", "minute", value)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Minute" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {minuteOptions.map((minute) => (
-                        <SelectItem key={minute} value={minute}>
-                          {minute}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <Select
-                    value={getTimeParts(form.startTime).period}
-                    onValueChange={(value) => handleTimePartChange("startTime", "period", value)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="AM/PM" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="AM">AM</SelectItem>
-                      <SelectItem value="PM">PM</SelectItem>
-                    </SelectContent>
-                  </Select>
+                <Label>Shift Name</Label>
+                <Input value={form.name} onChange={(event) => setForm((prev) => ({ ...prev, name: event.target.value }))} required />
+              </div>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label>Start Time</Label>
+                  <div className="grid grid-cols-3 gap-2">
+                    <Select value={getTimeParts(form.startTime).hour} onValueChange={(value) => handleTimePartChange("startTime", "hour", value)}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Hour" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {hourOptions.map((hour) => (
+                          <SelectItem key={hour} value={hour}>
+                            {hour}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Select
+                      value={getTimeParts(form.startTime).minute}
+                      onValueChange={(value) => handleTimePartChange("startTime", "minute", value)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Minute" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {minuteOptions.map((minute) => (
+                          <SelectItem key={minute} value={minute}>
+                            {minute}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Select
+                      value={getTimeParts(form.startTime).period}
+                      onValueChange={(value) => handleTimePartChange("startTime", "period", value)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="AM/PM" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="AM">AM</SelectItem>
+                        <SelectItem value="PM">PM</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <p className="text-xs text-slate-500">Selected time: {formatTimeString12Hour(form.startTime)}</p>
                 </div>
-                <p className="text-xs text-slate-500">Selected time: {formatTimeString12Hour(form.startTime)}</p>
+                <div className="space-y-2">
+                  <Label>End Time</Label>
+                  <div className="grid grid-cols-3 gap-2">
+                    <Select value={getTimeParts(form.endTime).hour} onValueChange={(value) => handleTimePartChange("endTime", "hour", value)}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Hour" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {hourOptions.map((hour) => (
+                          <SelectItem key={hour} value={hour}>
+                            {hour}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Select
+                      value={getTimeParts(form.endTime).minute}
+                      onValueChange={(value) => handleTimePartChange("endTime", "minute", value)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Minute" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {minuteOptions.map((minute) => (
+                          <SelectItem key={minute} value={minute}>
+                            {minute}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Select
+                      value={getTimeParts(form.endTime).period}
+                      onValueChange={(value) => handleTimePartChange("endTime", "period", value)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="AM/PM" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="AM">AM</SelectItem>
+                        <SelectItem value="PM">PM</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <p className="text-xs text-slate-500">Selected time: {formatTimeString12Hour(form.endTime)}</p>
+                </div>
               </div>
               <div className="space-y-2">
-                <Label>End Time</Label>
-                <div className="grid grid-cols-3 gap-2">
-                  <Select value={getTimeParts(form.endTime).hour} onValueChange={(value) => handleTimePartChange("endTime", "hour", value)}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Hour" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {hourOptions.map((hour) => (
-                        <SelectItem key={hour} value={hour}>
-                          {hour}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <Select
-                    value={getTimeParts(form.endTime).minute}
-                    onValueChange={(value) => handleTimePartChange("endTime", "minute", value)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Minute" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {minuteOptions.map((minute) => (
-                        <SelectItem key={minute} value={minute}>
-                          {minute}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <Select
-                    value={getTimeParts(form.endTime).period}
-                    onValueChange={(value) => handleTimePartChange("endTime", "period", value)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="AM/PM" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="AM">AM</SelectItem>
-                      <SelectItem value="PM">PM</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <p className="text-xs text-slate-500">Selected time: {formatTimeString12Hour(form.endTime)}</p>
+                <Label>Description</Label>
+                <Textarea
+                  rows={4}
+                  placeholder="Optional notes about this shift..."
+                  value={form.description}
+                  onChange={(event) => setForm((prev) => ({ ...prev, description: event.target.value }))}
+                />
               </div>
-            </div>
-            <div className="space-y-2">
-              <Label>Description</Label>
-              <Textarea
-                rows={4}
-                placeholder="Optional notes about this shift..."
-                value={form.description}
-                onChange={(event) => setForm((prev) => ({ ...prev, description: event.target.value }))}
-              />
-            </div>
-            <div className="flex gap-3">
-              <Button type="submit" disabled={isSubmitting} className="rounded-2xl bg-slate-950 text-white hover:bg-slate-800">
-                {isSubmitting ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Saving...
-                  </>
-                ) : editingShiftId ? (
-                  "Update Shift"
-                ) : (
-                  "Create Shift"
-                )}
-              </Button>
-              {editingShiftId && (
-                <Button type="button" variant="outline" className="rounded-2xl" onClick={resetForm}>
-                  Cancel
+              <div className="flex gap-3">
+                <Button type="submit" disabled={isSubmitting} className="rounded-2xl bg-slate-950 text-white hover:bg-slate-800">
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Saving...
+                    </>
+                  ) : editingShiftId ? (
+                    "Update Shift"
+                  ) : (
+                    "Create Shift"
+                  )}
                 </Button>
-              )}
-            </div>
-          </form>
-        </CardContent>
-      </Card>
+                {editingShiftId && (
+                  <Button type="button" variant="outline" className="rounded-2xl" onClick={resetForm}>
+                    Cancel
+                  </Button>
+                )}
+              </div>
+            </form>
+          </CardContent>
+        </Card>
+
+        <Card className="rounded-3xl shadow-sm">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-2xl">
+              <CalendarClock className="h-5 w-5 text-sky-600" />
+              Shift Library
+            </CardTitle>
+            <CardDescription>All saved shifts appear here for quick review and editing.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {isLoading ? (
+              <div className="flex items-center justify-center py-12">
+                <Loader2 className="h-8 w-8 animate-spin text-emerald-600" />
+              </div>
+            ) : shifts.length === 0 ? (
+              <div className="rounded-3xl border border-dashed border-slate-300 p-8 text-center text-slate-500">
+                No shifts yet. Create your first shift to start assigning employees.
+              </div>
+            ) : (
+              shifts.map((shift) => (
+                <div key={shift.id} className="rounded-3xl border border-slate-200 p-5">
+                  <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                    <div>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <h3 className="text-lg font-semibold text-slate-950">{shift.name}</h3>
+                        <Badge variant="outline">
+                          {formatTimeString12Hour(shift.startTime)} to {formatTimeString12Hour(shift.endTime)}
+                        </Badge>
+                      </div>
+                      {shift.description && <p className="mt-3 text-sm text-slate-600">{shift.description}</p>}
+                    </div>
+                    <div className="flex gap-2">
+                      <Button variant="outline" className="rounded-2xl" onClick={() => handleEdit(shift)}>
+                        <Pencil className="mr-2 h-4 w-4" />
+                        Edit
+                      </Button>
+                      <Button variant="outline" className="rounded-2xl text-rose-700" onClick={() => handleDelete(shift.id)}>
+                        <Trash2 className="mr-2 h-4 w-4" />
+                        Delete
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              ))
+            )}
+          </CardContent>
+        </Card>
+      </div>
 
       <Card className="rounded-3xl shadow-sm">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-2xl">
-            <CalendarClock className="h-5 w-5 text-sky-600" />
-            Shift Library
-          </CardTitle>
-          <CardDescription>All saved shifts appear here for quick review and editing.</CardDescription>
+          <CardTitle className="text-2xl">Company Rules</CardTitle>
+          <CardDescription>Choose weekly working days and define the department options available in your company.</CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
-          {isLoading ? (
-            <div className="flex items-center justify-center py-12">
-              <Loader2 className="h-8 w-8 animate-spin text-emerald-600" />
+        <CardContent className="space-y-6">
+          <div className="space-y-3">
+            <Label>Working Days</Label>
+            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+              {WEEKDAY_OPTIONS.map((day) => {
+                const selected = companyRules.workingDays.includes(day.value)
+                return (
+                  <button
+                    key={day.value}
+                    type="button"
+                    onClick={() => toggleWorkingDay(day.value)}
+                    className={`rounded-2xl border px-4 py-3 text-left transition ${
+                      selected
+                        ? "border-emerald-300 bg-emerald-50 text-emerald-900"
+                        : "border-slate-200 bg-white text-slate-600"
+                    }`}
+                  >
+                    <div className="font-medium">{day.label}</div>
+                    <div className="text-xs">{selected ? "Working day" : "Off day"}</div>
+                  </button>
+                )
+              })}
             </div>
-          ) : shifts.length === 0 ? (
-            <div className="rounded-3xl border border-dashed border-slate-300 p-8 text-center text-slate-500">
-              No shifts yet. Create your first shift to start assigning employees.
-            </div>
-          ) : (
-            shifts.map((shift) => (
-              <div key={shift.id} className="rounded-3xl border border-slate-200 p-5">
-                <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-                  <div>
-                    <div className="flex flex-wrap items-center gap-2">
-                      <h3 className="text-lg font-semibold text-slate-950">{shift.name}</h3>
-                      <Badge variant="outline">
-                        {formatTimeString12Hour(shift.startTime)} to {formatTimeString12Hour(shift.endTime)}
-                      </Badge>
-                    </div>
-                    {shift.description && <p className="mt-3 text-sm text-slate-600">{shift.description}</p>}
-                  </div>
-                  <div className="flex gap-2">
-                    <Button variant="outline" className="rounded-2xl" onClick={() => handleEdit(shift)}>
-                      <Pencil className="mr-2 h-4 w-4" />
-                      Edit
-                    </Button>
-                    <Button variant="outline" className="rounded-2xl text-rose-700" onClick={() => handleDelete(shift.id)}>
-                      <Trash2 className="mr-2 h-4 w-4" />
-                      Delete
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            ))
-          )}
+          </div>
+
+          <div className="space-y-2">
+            <Label>Departments</Label>
+            <Input
+              value={companyRules.departmentsInput}
+              onChange={(event) => setCompanyRules((prev) => ({ ...prev, departmentsInput: event.target.value }))}
+              placeholder="HR, Finance, Sales, Engineering"
+            />
+            <p className="text-xs text-slate-500">Enter department names separated by commas. These options will appear in employee forms.</p>
+          </div>
+
+          <Button
+            onClick={handleRulesSave}
+            disabled={isSavingRules}
+            className="rounded-2xl bg-emerald-600 text-white hover:bg-emerald-700"
+          >
+            {isSavingRules ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Saving company rules...
+              </>
+            ) : (
+              "Save Company Rules"
+            )}
+          </Button>
         </CardContent>
       </Card>
     </div>

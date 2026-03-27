@@ -48,7 +48,7 @@ export function AppSidebar({ user }: AppSidebarProps) {
       : user.role === "admin"
       ? [
           { title: "Add Employee", url: "/dashboard/employees", icon: UserPlus2 },
-          { title: "Manage Shifts", url: "/dashboard/shifts", icon: CalendarClock },
+          { title: "Shifts & Rules", url: "/dashboard/shifts", icon: CalendarClock },
           { title: "Attendance Monitor", url: "/dashboard/attendance-monitor", icon: Home },
           { title: "All Employees", url: "/dashboard/employee-list", icon: UsersRound },
           { title: "Leave Queue", url: "/dashboard/leaves", icon: ClipboardList },

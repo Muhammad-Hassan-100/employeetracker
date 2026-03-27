@@ -8,7 +8,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { authFetch, setStoredUser } from "@/lib/client-session"
-import { WEEKDAY_OPTIONS } from "@/lib/company-settings"
 import type { SessionUser } from "@/lib/session"
 
 interface AdminSettingsProps {
@@ -19,7 +18,6 @@ interface AdminSettingsProps {
 export default function AdminSettings({ user, onUserUpdate }: AdminSettingsProps) {
   const [isLoading, setIsLoading] = useState(true)
   const [isSavingProfile, setIsSavingProfile] = useState(false)
-  const [isSavingCompany, setIsSavingCompany] = useState(false)
   const [form, setForm] = useState({
     name: user.name,
     email: user.email,
@@ -27,19 +25,12 @@ export default function AdminSettings({ user, onUserUpdate }: AdminSettingsProps
     companyName: user.companyName,
     companyDomain: user.companyDomain,
   })
-  const [companySettings, setCompanySettings] = useState({
-    workingDays: [1, 2, 3, 4, 5],
-    departmentsInput: "",
-  })
 
   useEffect(() => {
     const loadProfile = async () => {
       try {
-        const [profileResponse, companyResponse] = await Promise.all([
-          authFetch("/api/auth/profile"),
-          authFetch("/api/company/settings"),
-        ])
-        const [profileData, companyData] = await Promise.all([profileResponse.json(), companyResponse.json()])
+        const profileResponse = await authFetch("/api/auth/profile")
+        const profileData = await profileResponse.json()
 
         if (!profileResponse.ok) {
           toast.error("Unable to load settings", {
@@ -55,13 +46,6 @@ export default function AdminSettings({ user, onUserUpdate }: AdminSettingsProps
           companyName: profileData.profile.companyName,
           companyDomain: profileData.profile.companyDomain,
         })
-
-        if (companyResponse.ok) {
-          setCompanySettings({
-            workingDays: companyData.settings.workingDays,
-            departmentsInput: companyData.settings.departments.join(", "),
-          })
-        }
       } catch {
         toast.error("Unable to load settings")
       } finally {
@@ -104,55 +88,6 @@ export default function AdminSettings({ user, onUserUpdate }: AdminSettingsProps
       toast.error("Unable to update settings")
     } finally {
       setIsSavingProfile(false)
-    }
-  }
-
-  const toggleWorkingDay = (day: number) => {
-    setCompanySettings((prev) => ({
-      ...prev,
-      workingDays: prev.workingDays.includes(day)
-        ? prev.workingDays.filter((entry) => entry !== day)
-        : [...prev.workingDays, day].sort((left, right) => left - right),
-    }))
-  }
-
-  const handleCompanySave = async () => {
-    setIsSavingCompany(true)
-
-    try {
-      const departments = companySettings.departmentsInput
-        .split(",")
-        .map((entry) => entry.trim())
-        .filter(Boolean)
-
-      const response = await authFetch("/api/company/settings", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          workingDays: companySettings.workingDays,
-          departments,
-        }),
-      })
-
-      const data = await response.json()
-      if (!response.ok) {
-        toast.error("Unable to update company settings", {
-          description: data.error || "Please review the company settings and try again.",
-        })
-        return
-      }
-
-      setCompanySettings({
-        workingDays: data.settings.workingDays,
-        departmentsInput: data.settings.departments.join(", "),
-      })
-      toast.success("Company settings updated", {
-        description: "Working days and departments were saved successfully.",
-      })
-    } catch {
-      toast.error("Unable to update company settings")
-    } finally {
-      setIsSavingCompany(false)
     }
   }
 
@@ -235,63 +170,6 @@ export default function AdminSettings({ user, onUserUpdate }: AdminSettingsProps
               )}
             </Button>
           </div>
-        </CardContent>
-      </Card>
-
-      <Card className="rounded-3xl shadow-sm">
-        <CardHeader>
-          <CardTitle className="text-2xl">Company Rules</CardTitle>
-          <CardDescription>Choose the weekly working days and define the departments available in your company.</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <div className="space-y-3">
-            <Label>Working Days</Label>
-            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-              {WEEKDAY_OPTIONS.map((day) => {
-                const selected = companySettings.workingDays.includes(day.value)
-                return (
-                  <button
-                    key={day.value}
-                    type="button"
-                    onClick={() => toggleWorkingDay(day.value)}
-                    className={`rounded-2xl border px-4 py-3 text-left transition ${
-                      selected
-                        ? "border-emerald-300 bg-emerald-50 text-emerald-900"
-                        : "border-slate-200 bg-white text-slate-600"
-                    }`}
-                  >
-                    <div className="font-medium">{day.label}</div>
-                    <div className="text-xs">{selected ? "Working day" : "Off day"}</div>
-                  </button>
-                )
-              })}
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <Label>Departments</Label>
-            <Input
-              value={companySettings.departmentsInput}
-              onChange={(event) => setCompanySettings((prev) => ({ ...prev, departmentsInput: event.target.value }))}
-              placeholder="HR, Finance, Sales, Engineering"
-            />
-            <p className="text-xs text-slate-500">Enter department names separated by commas. These options will appear in employee forms.</p>
-          </div>
-
-          <Button
-            onClick={handleCompanySave}
-            disabled={isSavingCompany}
-            className="rounded-2xl bg-emerald-600 text-white hover:bg-emerald-700"
-          >
-            {isSavingCompany ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Saving company rules...
-              </>
-            ) : (
-              "Save Company Rules"
-            )}
-          </Button>
         </CardContent>
       </Card>
     </div>

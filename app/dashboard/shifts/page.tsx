@@ -58,7 +58,7 @@ export default function ShiftsPage() {
             </BreadcrumbItem>
             <BreadcrumbSeparator className="hidden md:block" />
             <BreadcrumbItem>
-              <BreadcrumbPage>Shift Management</BreadcrumbPage>
+              <BreadcrumbPage>Shifts & Rules</BreadcrumbPage>
             </BreadcrumbItem>
           </BreadcrumbList>
         </Breadcrumb>
@@ -66,8 +66,8 @@ export default function ShiftsPage() {
 
       <div className="flex flex-1 flex-col gap-4 p-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Shift Management</h1>
-          <p className="text-muted-foreground">Create, edit, and manage work shifts for employees</p>
+          <h1 className="text-3xl font-bold tracking-tight">Shifts & Rules</h1>
+          <p className="text-muted-foreground">Manage work shifts, company working days, and department options.</p>
         </div>
         <ShiftManagement />
       </div>
