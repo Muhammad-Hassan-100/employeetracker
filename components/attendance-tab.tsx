@@ -9,7 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { authFetch } from "@/lib/client-session"
-import { formatLocalDateInput, getLocalTimeMinutes, getTimeStringMinutes } from "@/lib/attendance-time"
+import { formatLocalDateInput, getLocalTimeMinutes, getTimeStringMinutes, isBeforeShiftEnd } from "@/lib/attendance-time"
 import type { SessionUser } from "@/lib/session"
 import { formatTimeString12Hour } from "@/lib/time"
 
@@ -200,7 +200,10 @@ export default function AttendanceTab({ user }: AttendanceTabProps) {
   const isOnLeave = record?.status === "on_leave"
   const canCheckInWindow = earliestCheckIn === null || currentTimeMinutes >= earliestCheckIn
   const isLate = lateCutoff !== null && currentTimeMinutes > lateCutoff
-  const isEarly = shiftEndMinutes !== null && currentTimeMinutes < shiftEndMinutes
+  const isEarly =
+    shiftStartMinutes !== null && shiftEndMinutes !== null
+      ? isBeforeShiftEnd(currentTimeMinutes, shiftStartMinutes, shiftEndMinutes)
+      : false
   const shouldRequireEarlyReason = isCheckedIn && isEarly
   const earliestCheckInLabel = earliestCheckIn !== null
     ? formatTimeString12Hour(`${String(Math.floor(earliestCheckIn / 60)).padStart(2, "0")}:${String(earliestCheckIn % 60).padStart(2, "0")}`)
@@ -296,7 +299,10 @@ export default function AttendanceTab({ user }: AttendanceTabProps) {
   const handleCheckOut = async () => {
     const actionTime = new Date()
     const actionTimeMinutes = getLocalTimeMinutes(actionTime)
-    const isEarlyAtAction = shiftEndMinutes !== null && actionTimeMinutes < shiftEndMinutes
+    const isEarlyAtAction =
+      shiftStartMinutes !== null && shiftEndMinutes !== null
+        ? isBeforeShiftEnd(actionTimeMinutes, shiftStartMinutes, shiftEndMinutes)
+        : false
 
     if (isEarlyAtAction && !earlyReason.trim()) {
       setShowEarlyReason(true)

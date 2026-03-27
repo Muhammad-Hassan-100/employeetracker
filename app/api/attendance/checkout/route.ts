@@ -2,7 +2,7 @@ import { type NextRequest, NextResponse } from "next/server"
 import { getDatabase } from "@/lib/mongodb"
 import { ObjectId } from "mongodb"
 import { getCompanyAttendancePolicy, validateAttendanceActionAccess } from "@/lib/attendance-policy"
-import { formatLocalDateInput, getLocalTimeMinutes, getTimeStringMinutes } from "@/lib/attendance-time"
+import { formatLocalDateInput, getLocalTimeMinutes, getTimeStringMinutes, isBeforeShiftEnd } from "@/lib/attendance-time"
 import { assertSelfOrAdmin, requireSession } from "@/lib/session"
 
 export async function POST(request: NextRequest) {
@@ -87,8 +87,9 @@ export async function POST(request: NextRequest) {
         }
 
         if (shift?.endTime) {
+          const shiftStartMinutes = getTimeStringMinutes(shift.startTime)
           const shiftEndMinutes = getTimeStringMinutes(shift.endTime)
-          computedIsEarly = actionTimeMinutes < shiftEndMinutes
+          computedIsEarly = isBeforeShiftEnd(actionTimeMinutes, shiftStartMinutes, shiftEndMinutes)
         }
       }
     } catch {}
