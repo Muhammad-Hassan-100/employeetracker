@@ -201,6 +201,7 @@ export default function AttendanceTab({ user }: AttendanceTabProps) {
   const canCheckInWindow = earliestCheckIn === null || currentTimeMinutes >= earliestCheckIn
   const isLate = lateCutoff !== null && currentTimeMinutes > lateCutoff
   const isEarly = shiftEndMinutes !== null && currentTimeMinutes < shiftEndMinutes
+  const shouldRequireEarlyReason = isCheckedIn && isEarly
   const earliestCheckInLabel = earliestCheckIn !== null
     ? formatTimeString12Hour(`${String(Math.floor(earliestCheckIn / 60)).padStart(2, "0")}:${String(earliestCheckIn % 60).padStart(2, "0")}`)
     : null
@@ -349,6 +350,9 @@ export default function AttendanceTab({ user }: AttendanceTabProps) {
 
       const data = await response.json()
       if (!response.ok) {
+        if (String(data.error || "").toLowerCase().includes("early checkout reason")) {
+          setShowEarlyReason(true)
+        }
         toast.error("Check-out failed", { description: data.error || "Please try again." })
         return
       }
@@ -541,7 +545,7 @@ export default function AttendanceTab({ user }: AttendanceTabProps) {
                 )}
               </Button>
 
-              {showEarlyReason && (
+              {(showEarlyReason || shouldRequireEarlyReason) && (
                 <div className="space-y-2">
                   <Label htmlFor="early-reason">Early checkout reason</Label>
                   <Textarea
@@ -554,7 +558,7 @@ export default function AttendanceTab({ user }: AttendanceTabProps) {
                 </div>
               )}
 
-              {isEarly && isCheckedIn && (
+              {shouldRequireEarlyReason && (
                 <div className="flex items-start gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-amber-900">
                   <Siren className="mt-0.5 h-5 w-5 shrink-0" />
                   <p className="text-sm">You are checking out before shift end, so an early checkout reason is required.</p>
