@@ -1,6 +1,7 @@
 "use client"
 
 import Link from "next/link"
+import { useEffect } from "react"
 import { usePathname, useRouter } from "next/navigation"
 import { BarChart3, Building2, CalendarClock, ClipboardList, Home, LogOut, Settings2, ShieldCheck, UserPlus2, UsersRound } from "lucide-react"
 import { toast } from "sonner"
@@ -18,6 +19,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarRail,
+  useSidebar,
 } from "@/components/ui/sidebar"
 import type { SessionUser } from "@/lib/session"
 import { clearStoredUser } from "@/lib/client-session"
@@ -29,6 +31,13 @@ interface AppSidebarProps {
 export function AppSidebar({ user }: AppSidebarProps) {
   const router = useRouter()
   const pathname = usePathname()
+  const { isMobile, setOpenMobile } = useSidebar()
+
+  useEffect(() => {
+    if (isMobile) {
+      setOpenMobile(false)
+    }
+  }, [isMobile, pathname, setOpenMobile])
 
   const handleLogout = () => {
     clearStoredUser()
@@ -91,7 +100,7 @@ export function AppSidebar({ user }: AppSidebarProps) {
       <SidebarContent className="px-3 py-4">
         <SidebarGroup>
           <SidebarGroupLabel className="px-2 text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
-            Navigation
+            Menu
           </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
