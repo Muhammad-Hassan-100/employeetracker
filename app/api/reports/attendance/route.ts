@@ -1,5 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { getDatabase } from "@/lib/mongodb"
+import { getCompanyWorkingDays } from "@/lib/company-settings"
 import { requireAdmin } from "@/lib/session"
 
 export async function GET(request: NextRequest) {
@@ -15,6 +16,7 @@ export async function GET(request: NextRequest) {
     const db = await getDatabase()
     const usersCollection = db.collection("users")
     const attendanceCollection = db.collection("attendance")
+    const companiesCollection = db.collection("companies")
 
     // Calculate date range
     const now = new Date()
@@ -39,9 +41,11 @@ export async function GET(request: NextRequest) {
     }
 
     // Get all employees
-    const employees = await usersCollection
-      .find({ role: "employee", status: "active", companyId: session.companyId })
-      .toArray()
+    const [employees, company] = await Promise.all([
+      usersCollection.find({ role: "employee", status: "active", companyId: session.companyId }).toArray(),
+      companiesCollection.findOne({ companyId: session.companyId }),
+    ])
+    const workingDays = getCompanyWorkingDays(company)
 
     const reports = await Promise.all(
       employees.map(async (employee) => {
@@ -59,7 +63,7 @@ export async function GET(request: NextRequest) {
 
         // Calculate working days in the range (excluding weekends) starting from join date
         const employeeStartDate = new Date(employee.joinDate) > startDate ? new Date(employee.joinDate) : startDate
-        const totalWorkingDays = getWorkingDaysCount(employeeStartDate, endDate)
+        const totalWorkingDays = getWorkingDaysCount(employeeStartDate, endDate, workingDays)
         
         // Count different types of attendance
         const presentDays = attendanceRecords.filter((record) => record.status === "present" || !record.status).length
@@ -97,14 +101,13 @@ export async function GET(request: NextRequest) {
   }
 }
 
-function getWorkingDaysCount(startDate: Date, endDate: Date): number {
+function getWorkingDaysCount(startDate: Date, endDate: Date, workingDays: number[]): number {
   let count = 0
   const current = new Date(startDate)
 
   while (current <= endDate) {
     const dayOfWeek = current.getDay()
-    if (dayOfWeek !== 0 && dayOfWeek !== 6) {
-      // Not Sunday (0) or Saturday (6)
+    if (workingDays.includes(dayOfWeek)) {
       count++
     }
     current.setDate(current.getDate() + 1)

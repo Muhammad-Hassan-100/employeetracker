@@ -7,6 +7,7 @@ import {
   isPublicEmailDomain,
   normalizeCompanyDomain,
 } from "@/lib/company-utils"
+import { DEFAULT_DEPARTMENTS, DEFAULT_WORKING_DAYS } from "@/lib/company-settings"
 
 export async function POST(request: NextRequest) {
   try {
@@ -65,6 +66,8 @@ export async function POST(request: NextRequest) {
       name: trimmedCompany,
       domain: normalizedDomain,
       approvalStatus: "pending" as const,
+      workingDays: DEFAULT_WORKING_DAYS,
+      departments: DEFAULT_DEPARTMENTS,
       createdAt: new Date(),
       updatedAt: new Date(),
     }

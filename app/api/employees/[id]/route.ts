@@ -1,5 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { getDatabase } from "@/lib/mongodb"
+import { getCompanyDepartments } from "@/lib/company-settings"
 import { ObjectId } from "mongodb"
 import { requireAdmin } from "@/lib/session"
 import { extractEmailDomain } from "@/lib/company-utils"
@@ -102,6 +103,7 @@ export async function PUT(request: NextRequest, { params }: RouteContext) {
     const db = await getDatabase()
     const usersCollection = db.collection("users")
     const shiftsCollection = db.collection("shifts")
+    const companiesCollection = db.collection("companies")
 
     if (updateData.checkInBeforeMinutes !== undefined) {
       const parsedCheckInBefore = Number(updateData.checkInBeforeMinutes)
@@ -156,6 +158,15 @@ export async function PUT(request: NextRequest, { params }: RouteContext) {
 
       if (!shift) {
         return NextResponse.json({ error: "Selected shift was not found in this workspace" }, { status: 400 })
+      }
+    }
+
+    if (updateData.department) {
+      const company = await companiesCollection.findOne({ companyId: session.companyId })
+      const availableDepartments = getCompanyDepartments(company)
+
+      if (!availableDepartments.includes(String(updateData.department))) {
+        return NextResponse.json({ error: "Choose a department from your company settings" }, { status: 400 })
       }
     }
 

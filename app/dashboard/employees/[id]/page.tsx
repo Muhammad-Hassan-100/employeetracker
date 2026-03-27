@@ -48,19 +48,6 @@ interface AttendanceRecord {
   status: "present" | "absent" | "on_leave"
 }
 
-const departments = [
-  "HR",
-  "IT",
-  "Finance",
-  "Marketing",
-  "Operations",
-  "Admin",
-  "Sales",
-  "Support",
-  "Engineering",
-  "Design",
-]
-
 function formatDate(value: string) {
   return new Date(value).toLocaleDateString("en-US", {
     weekday: "long",
@@ -87,6 +74,7 @@ export default function EmployeeDetailPage() {
   const [employee, setEmployee] = useState<Employee | null>(null)
   const [attendance, setAttendance] = useState<AttendanceRecord[]>([])
   const [shifts, setShifts] = useState<Shift[]>([])
+  const [departments, setDepartments] = useState<string[]>([])
   const [editForm, setEditForm] = useState<Partial<Employee>>({})
   const [isEditing, setIsEditing] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
@@ -96,16 +84,18 @@ export default function EmployeeDetailPage() {
 
   const loadData = async () => {
     try {
-      const [employeeRes, attendanceRes, shiftsRes] = await Promise.all([
+      const [employeeRes, attendanceRes, shiftsRes, settingsRes] = await Promise.all([
         authFetch(`/api/employees/${params.id}`),
         authFetch(`/api/attendance/history?userId=${params.id}`),
         authFetch("/api/shifts"),
+        authFetch("/api/company/settings"),
       ])
 
-      const [employeeData, attendanceData, shiftsData] = await Promise.all([
+      const [employeeData, attendanceData, shiftsData, settingsData] = await Promise.all([
         employeeRes.json(),
         attendanceRes.json(),
         shiftsRes.json(),
+        settingsRes.json(),
       ])
 
       if (!employeeRes.ok) {
@@ -121,6 +111,9 @@ export default function EmployeeDetailPage() {
       }
       if (shiftsRes.ok) {
         setShifts(shiftsData)
+      }
+      if (settingsRes.ok) {
+        setDepartments(settingsData.settings.departments)
       }
     } finally {
       setIsLoading(false)

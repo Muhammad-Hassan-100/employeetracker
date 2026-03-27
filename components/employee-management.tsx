@@ -20,22 +20,10 @@ interface Shift {
   endTime: string
 }
 
-const departments = [
-  "HR",
-  "IT",
-  "Finance",
-  "Marketing",
-  "Operations",
-  "Admin",
-  "Sales",
-  "Support",
-  "Engineering",
-  "Design",
-]
-
 export default function EmployeeManagement() {
   const companyDomain = getStoredUser()?.companyDomain || ""
   const [shifts, setShifts] = useState<Shift[]>([])
+  const [departments, setDepartments] = useState<string[]>([])
   const [isLoadingShifts, setIsLoadingShifts] = useState(true)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [form, setForm] = useState({
@@ -50,17 +38,23 @@ export default function EmployeeManagement() {
 
   const fetchShifts = async () => {
     try {
-      const response = await authFetch("/api/shifts")
-      const data = await response.json()
+      const [shiftsResponse, settingsResponse] = await Promise.all([
+        authFetch("/api/shifts"),
+        authFetch("/api/company/settings"),
+      ])
+      const [shiftsData, settingsData] = await Promise.all([shiftsResponse.json(), settingsResponse.json()])
 
-      if (!response.ok) {
-        toast.error("Unable to load shifts", { description: data.error || "Please create a shift first." })
+      if (!shiftsResponse.ok) {
+        toast.error("Unable to load shifts", { description: shiftsData.error || "Please create a shift first." })
         return
       }
 
-      setShifts(data)
+      setShifts(shiftsData)
+      if (settingsResponse.ok) {
+        setDepartments(settingsData.settings.departments)
+      }
     } catch {
-      toast.error("Unable to load shifts")
+      toast.error("Unable to load employee setup data")
     } finally {
       setIsLoadingShifts(false)
     }

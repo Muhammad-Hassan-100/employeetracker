@@ -1,5 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { getDatabase } from "@/lib/mongodb"
+import { getCompanyDepartments } from "@/lib/company-settings"
 import { ObjectId } from "mongodb"
 import { requireAdmin } from "@/lib/session"
 import { buildEmailLocalPart } from "@/lib/company-utils"
@@ -36,14 +37,23 @@ export async function POST(request: NextRequest) {
     const db = await getDatabase()
     const usersCollection = db.collection("users")
     const shiftsCollection = db.collection("shifts")
+    const companiesCollection = db.collection("companies")
 
-    const assignedShift = await shiftsCollection.findOne({
-      _id: new ObjectId(shift),
-      companyId: session.companyId,
-    })
+    const [assignedShift, company] = await Promise.all([
+      shiftsCollection.findOne({
+        _id: new ObjectId(shift),
+        companyId: session.companyId,
+      }),
+      companiesCollection.findOne({ companyId: session.companyId }),
+    ])
 
     if (!assignedShift) {
       return NextResponse.json({ error: "Selected shift was not found in this workspace" }, { status: 400 })
+    }
+
+    const availableDepartments = getCompanyDepartments(company)
+    if (!availableDepartments.includes(String(department))) {
+      return NextResponse.json({ error: "Choose a department from your company settings" }, { status: 400 })
     }
 
     const emailLocalPart = buildEmailLocalPart(String(name))

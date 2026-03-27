@@ -1,7 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { getDatabase } from "@/lib/mongodb"
-
 import { ObjectId } from "mongodb"
+import { getCompanyWorkingDays, isCompanyOffDay } from "@/lib/company-settings"
 
 export async function GET(request: NextRequest) {
   try {
@@ -17,6 +17,7 @@ export async function GET(request: NextRequest) {
     const attendanceCollection = db.collection("attendance")
     const leavesCollection = db.collection("leaves")
     const usersCollection = db.collection("users")
+    const companiesCollection = db.collection("companies")
 
     // Get user information
     const user = await usersCollection.findOne({ _id: new ObjectId(userId) })
@@ -36,9 +37,8 @@ export async function GET(request: NextRequest) {
       })
     }
 
-    // Check if it's a weekend
-    const dayOfWeek = new Date(date).getDay()
-    const isWeekend = dayOfWeek === 0 || dayOfWeek === 6
+    const company = await companiesCollection.findOne({ companyId: user.companyId })
+    const isWeekend = isCompanyOffDay(new Date(date), getCompanyWorkingDays(company))
 
     if (isWeekend) {
       return NextResponse.json({

@@ -1,11 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { getDatabase } from "@/lib/mongodb"
+import { getCompanyWorkingDays, isCompanyOffDay } from "@/lib/company-settings"
 import { requireAdmin } from "@/lib/session"
-
-function isWeekend(date: Date) {
-  const day = date.getDay()
-  return day === 0 || day === 6
-}
 
 function normalizeDateParam(value: string | null) {
   if (!value) {
@@ -39,8 +35,9 @@ export async function GET(request: NextRequest) {
     const attendanceCollection = db.collection("attendance")
     const leavesCollection = db.collection("leaves")
     const shiftsCollection = db.collection("shifts")
+    const companiesCollection = db.collection("companies")
 
-    const [employees, attendanceRecords, approvedLeaves, shifts] = await Promise.all([
+    const [employees, attendanceRecords, approvedLeaves, shifts, company] = await Promise.all([
       usersCollection
         .find({
           companyId: session.companyId,
@@ -63,13 +60,15 @@ export async function GET(request: NextRequest) {
         })
         .toArray(),
       shiftsCollection.find({ companyId: session.companyId }).toArray(),
+      companiesCollection.findOne({ companyId: session.companyId }),
     ])
 
     const attendanceByUserId = new Map(attendanceRecords.map((record) => [record.userId, record]))
     const leaveByUserId = new Map(approvedLeaves.map((leave) => [leave.userId, leave]))
     const shiftById = new Map(shifts.map((shift) => [shift._id.toString(), shift]))
     const selectedDateObject = new Date(`${selectedDate}T00:00:00`)
-    const weekend = isWeekend(selectedDateObject)
+    const workingDays = getCompanyWorkingDays(company)
+    const weekend = isCompanyOffDay(selectedDateObject, workingDays)
 
     const rows = employees.map((employee) => {
       const record = attendanceByUserId.get(employee._id.toString())
