@@ -12,6 +12,7 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
 import { authFetch } from "@/lib/client-session"
+import { ATTENDANCE_POLICY_OPTIONS, type AttendancePolicyMode } from "@/lib/attendance-policy"
 import { WEEKDAY_OPTIONS } from "@/lib/company-settings"
 import { formatTimeString12Hour } from "@/lib/time"
 
@@ -57,6 +58,11 @@ export default function ShiftManagement() {
   const [companyRules, setCompanyRules] = useState({
     workingDays: [1, 2, 3, 4, 5],
     departmentsInput: "",
+    attendancePolicyMode: "open" as AttendancePolicyMode,
+    allowedIPsInput: "",
+    officeLat: "",
+    officeLng: "",
+    radiusMeters: "150",
   })
   const [isLoading, setIsLoading] = useState(true)
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -90,9 +96,15 @@ export default function ShiftManagement() {
 
       setShifts(shiftsData)
       if (settingsResponse.ok) {
+        const attendancePolicy = settingsData.settings.attendancePolicy
         setCompanyRules({
           workingDays: settingsData.settings.workingDays,
           departmentsInput: settingsData.settings.departments.join(", "),
+          attendancePolicyMode: attendancePolicy?.mode ?? "open",
+          allowedIPsInput: attendancePolicy?.allowedIPs?.join(", ") ?? "",
+          officeLat: attendancePolicy?.officeLat?.toString?.() ?? "",
+          officeLng: attendancePolicy?.officeLng?.toString?.() ?? "",
+          radiusMeters: attendancePolicy?.radiusMeters?.toString?.() ?? "150",
         })
       }
     } catch {
@@ -205,6 +217,10 @@ export default function ShiftManagement() {
         .split(",")
         .map((entry) => entry.trim())
         .filter(Boolean)
+      const allowedIPs = companyRules.allowedIPsInput
+        .split(/[\n,]+/)
+        .map((entry) => entry.trim())
+        .filter(Boolean)
 
       const response = await authFetch("/api/company/settings", {
         method: "PUT",
@@ -212,6 +228,13 @@ export default function ShiftManagement() {
         body: JSON.stringify({
           workingDays: companyRules.workingDays,
           departments,
+          attendancePolicy: {
+            mode: companyRules.attendancePolicyMode,
+            allowedIPs,
+            officeLat: companyRules.officeLat.trim() ? Number(companyRules.officeLat) : null,
+            officeLng: companyRules.officeLng.trim() ? Number(companyRules.officeLng) : null,
+            radiusMeters: companyRules.radiusMeters.trim() ? Number(companyRules.radiusMeters) : 150,
+          },
         }),
       })
       const data = await response.json()
@@ -226,6 +249,11 @@ export default function ShiftManagement() {
       setCompanyRules({
         workingDays: data.settings.workingDays,
         departmentsInput: data.settings.departments.join(", "),
+        attendancePolicyMode: data.settings.attendancePolicy.mode,
+        allowedIPsInput: data.settings.attendancePolicy.allowedIPs.join(", "),
+        officeLat: data.settings.attendancePolicy.officeLat?.toString?.() ?? "",
+        officeLng: data.settings.attendancePolicy.officeLng?.toString?.() ?? "",
+        radiusMeters: data.settings.attendancePolicy.radiusMeters.toString(),
       })
       toast.success("Company rules updated")
     } catch {
@@ -234,6 +262,11 @@ export default function ShiftManagement() {
       setIsSavingRules(false)
     }
   }
+
+  const requiresOfficeIp =
+    companyRules.attendancePolicyMode === "office_ip" || companyRules.attendancePolicyMode === "hybrid"
+  const requiresOfficeLocation =
+    companyRules.attendancePolicyMode === "office_location" || companyRules.attendancePolicyMode === "hybrid"
 
   return (
     <div className="space-y-6">
@@ -426,8 +459,10 @@ export default function ShiftManagement() {
 
       <Card className="rounded-3xl shadow-sm">
         <CardHeader>
-          <CardTitle className="text-2xl">Company Rules</CardTitle>
-          <CardDescription>Choose weekly working days and define the department options available in your company.</CardDescription>
+          <CardTitle className="text-2xl">Work Rules and Attendance Access</CardTitle>
+          <CardDescription>
+            Choose weekly working days, define department options, and control where employees can check in and check out.
+          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
           <div className="space-y-3">
@@ -463,6 +498,81 @@ export default function ShiftManagement() {
             />
             <p className="text-xs text-slate-500">Enter department names separated by commas. These options will appear in employee forms.</p>
           </div>
+
+          <div className="space-y-3">
+            <Label>Attendance Access Policy</Label>
+            <div className="grid gap-3 xl:grid-cols-2">
+              {ATTENDANCE_POLICY_OPTIONS.map((option) => {
+                const selected = companyRules.attendancePolicyMode === option.value
+
+                return (
+                  <button
+                    key={option.value}
+                    type="button"
+                    onClick={() => setCompanyRules((prev) => ({ ...prev, attendancePolicyMode: option.value }))}
+                    className={`rounded-2xl border px-4 py-4 text-left transition ${
+                      selected
+                        ? "border-sky-300 bg-sky-50 text-sky-950"
+                        : "border-slate-200 bg-white text-slate-600"
+                    }`}
+                  >
+                    <div className="font-medium">{option.label}</div>
+                    <div className="mt-1 text-sm">{option.description}</div>
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+
+          {requiresOfficeIp && (
+            <div className="space-y-2">
+              <Label>Approved Office Public IPs</Label>
+              <Textarea
+                rows={4}
+                value={companyRules.allowedIPsInput}
+                onChange={(event) => setCompanyRules((prev) => ({ ...prev, allowedIPsInput: event.target.value }))}
+                placeholder="39.60.10.15, 39.60.10.16"
+              />
+              <p className="text-xs text-slate-500">
+                Add one or more office public IP addresses. Separate them with commas or line breaks.
+              </p>
+            </div>
+          )}
+
+          {requiresOfficeLocation && (
+            <div className="grid gap-4 md:grid-cols-3">
+              <div className="space-y-2">
+                <Label>Office Latitude</Label>
+                <Input
+                  type="number"
+                  step="any"
+                  value={companyRules.officeLat}
+                  onChange={(event) => setCompanyRules((prev) => ({ ...prev, officeLat: event.target.value }))}
+                  placeholder="24.8607"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Office Longitude</Label>
+                <Input
+                  type="number"
+                  step="any"
+                  value={companyRules.officeLng}
+                  onChange={(event) => setCompanyRules((prev) => ({ ...prev, officeLng: event.target.value }))}
+                  placeholder="67.0011"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Allowed Radius (meters)</Label>
+                <Input
+                  type="number"
+                  min="1"
+                  value={companyRules.radiusMeters}
+                  onChange={(event) => setCompanyRules((prev) => ({ ...prev, radiusMeters: event.target.value }))}
+                  placeholder="150"
+                />
+              </div>
+            </div>
+          )}
 
           <Button
             onClick={handleRulesSave}

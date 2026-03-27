@@ -1,5 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { getDatabase } from "@/lib/mongodb"
+import { DEFAULT_ATTENDANCE_POLICY } from "@/lib/attendance-policy"
 import { buildSessionUser, slugifyCompanyName } from "@/lib/session"
 import {
   extractEmailDomain,
@@ -68,6 +69,7 @@ export async function POST(request: NextRequest) {
       approvalStatus: "pending" as const,
       workingDays: DEFAULT_WORKING_DAYS,
       departments: DEFAULT_DEPARTMENTS,
+      attendancePolicy: DEFAULT_ATTENDANCE_POLICY,
       createdAt: new Date(),
       updatedAt: new Date(),
     }

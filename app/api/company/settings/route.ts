@@ -1,5 +1,10 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { getDatabase } from "@/lib/mongodb"
+import {
+  getCompanyAttendancePolicy,
+  normalizeAttendancePolicy,
+  validateAttendancePolicyConfiguration,
+} from "@/lib/attendance-policy"
 import { getCompanyDepartments, getCompanyWorkingDays, normalizeDepartments, normalizeWorkingDays } from "@/lib/company-settings"
 import { requireAdmin } from "@/lib/session"
 
@@ -20,12 +25,14 @@ export async function GET(request: NextRequest) {
 
     const workingDays = getCompanyWorkingDays(company)
     const departments = getCompanyDepartments(company)
+    const attendancePolicy = getCompanyAttendancePolicy(company)
 
     return NextResponse.json({
       settings: {
         workingDays,
         offDays: [0, 1, 2, 3, 4, 5, 6].filter((day) => !workingDays.includes(day)),
         departments,
+        attendancePolicy,
       },
     })
   } catch (error) {
@@ -41,9 +48,10 @@ export async function PUT(request: NextRequest) {
       return response
     }
 
-    const { workingDays, departments } = await request.json()
+    const { workingDays, departments, attendancePolicy } = await request.json()
     const normalizedWorkingDays = normalizeWorkingDays(workingDays)
     const normalizedDepartments = normalizeDepartments(departments)
+    const normalizedAttendancePolicy = normalizeAttendancePolicy(attendancePolicy)
 
     if (!normalizedWorkingDays.length) {
       return NextResponse.json({ error: "Select at least one working day" }, { status: 400 })
@@ -51,6 +59,11 @@ export async function PUT(request: NextRequest) {
 
     if (!normalizedDepartments.length) {
       return NextResponse.json({ error: "Add at least one department" }, { status: 400 })
+    }
+
+    const attendancePolicyError = validateAttendancePolicyConfiguration(normalizedAttendancePolicy)
+    if (attendancePolicyError) {
+      return NextResponse.json({ error: attendancePolicyError }, { status: 400 })
     }
 
     const db = await getDatabase()
@@ -62,6 +75,7 @@ export async function PUT(request: NextRequest) {
         $set: {
           workingDays: normalizedWorkingDays,
           departments: normalizedDepartments,
+          attendancePolicy: normalizedAttendancePolicy,
           updatedAt: new Date(),
         },
       },
@@ -77,6 +91,7 @@ export async function PUT(request: NextRequest) {
         workingDays: normalizedWorkingDays,
         offDays: [0, 1, 2, 3, 4, 5, 6].filter((day) => !normalizedWorkingDays.includes(day)),
         departments: normalizedDepartments,
+        attendancePolicy: normalizedAttendancePolicy,
       },
     })
   } catch (error) {

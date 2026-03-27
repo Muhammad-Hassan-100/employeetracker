@@ -1,6 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { getDatabase } from "@/lib/mongodb"
 import { ObjectId } from "mongodb"
+import { getCompanyAttendancePolicy, requiresAttendanceLocation, requiresAttendanceOfficeIp } from "@/lib/attendance-policy"
 import { assertSelfOrAdmin, requireSession } from "@/lib/session"
 
 export async function GET(request: NextRequest) {
@@ -25,6 +26,7 @@ export async function GET(request: NextRequest) {
     const db = await getDatabase()
     const usersCollection = db.collection("users")
     const shiftsCollection = db.collection("shifts")
+    const companiesCollection = db.collection("companies")
 
     const user = await usersCollection.findOne({
       _id: new ObjectId(userId),
@@ -34,6 +36,9 @@ export async function GET(request: NextRequest) {
     if (!user) {
       return NextResponse.json({ error: "User not found" }, { status: 404 })
     }
+
+    const company = await companiesCollection.findOne({ companyId: session.companyId })
+    const attendancePolicy = getCompanyAttendancePolicy(company)
 
     let shift = null
     if (user.shiftId) {
@@ -69,6 +74,13 @@ export async function GET(request: NextRequest) {
       attendanceRules: {
         checkInBeforeMinutes: user.checkInBeforeMinutes ?? 5,
         lateGraceMinutes: user.lateGraceMinutes ?? 0,
+      },
+      attendancePolicy: {
+        mode: attendancePolicy.mode,
+        isRestricted: attendancePolicy.mode !== "open",
+        requiresLocation: requiresAttendanceLocation(attendancePolicy),
+        requiresApprovedNetwork: requiresAttendanceOfficeIp(attendancePolicy),
+        radiusMeters: attendancePolicy.radiusMeters,
       },
     })
   } catch (error) {

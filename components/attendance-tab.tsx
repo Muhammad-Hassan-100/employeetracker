@@ -41,6 +41,14 @@ interface AttendanceRules {
   lateGraceMinutes: number
 }
 
+interface AttendancePolicySummary {
+  mode: "open" | "office_ip" | "office_location" | "hybrid"
+  isRestricted: boolean
+  requiresLocation: boolean
+  requiresApprovedNetwork: boolean
+  radiusMeters: number
+}
+
 function parseShiftTime(time: string) {
   const [hours, minutes] = time.split(":").map(Number)
   const date = new Date()
@@ -78,6 +86,36 @@ function formatTime(time?: string | null) {
   })
 }
 
+function getAttendanceAccessMessage(policy: AttendancePolicySummary) {
+  if (policy.mode === "office_ip") {
+    return "Check-in and check-out are allowed only from your approved office network."
+  }
+
+  if (policy.mode === "office_location") {
+    return `Check-in and check-out are allowed only within your office radius of ${policy.radiusMeters} meters.`
+  }
+
+  if (policy.mode === "hybrid") {
+    return `Check-in and check-out require both your approved office network and office location within ${policy.radiusMeters} meters.`
+  }
+
+  return ""
+}
+
+async function getClientPublicIp() {
+  try {
+    const response = await fetch("https://api.ipify.org?format=json", { cache: "no-store" })
+    if (!response.ok) {
+      return undefined
+    }
+
+    const data = await response.json()
+    return typeof data.ip === "string" ? data.ip : undefined
+  } catch {
+    return undefined
+  }
+}
+
 export default function AttendanceTab({ user }: AttendanceTabProps) {
   const [currentTime, setCurrentTime] = useState(new Date())
   const [shift, setShift] = useState<Shift | null>(null)
@@ -85,6 +123,13 @@ export default function AttendanceTab({ user }: AttendanceTabProps) {
   const [attendanceRules, setAttendanceRules] = useState<AttendanceRules>({
     checkInBeforeMinutes: 5,
     lateGraceMinutes: 0,
+  })
+  const [attendancePolicy, setAttendancePolicy] = useState<AttendancePolicySummary>({
+    mode: "open",
+    isRestricted: false,
+    requiresLocation: false,
+    requiresApprovedNetwork: false,
+    radiusMeters: 150,
   })
   const [lateReason, setLateReason] = useState("")
   const [earlyReason, setEarlyReason] = useState("")
@@ -107,6 +152,13 @@ export default function AttendanceTab({ user }: AttendanceTabProps) {
         setAttendanceRules({
           checkInBeforeMinutes: shiftData.attendanceRules?.checkInBeforeMinutes ?? 5,
           lateGraceMinutes: shiftData.attendanceRules?.lateGraceMinutes ?? 0,
+        })
+        setAttendancePolicy({
+          mode: shiftData.attendancePolicy?.mode ?? "open",
+          isRestricted: Boolean(shiftData.attendancePolicy?.isRestricted),
+          requiresLocation: Boolean(shiftData.attendancePolicy?.requiresLocation),
+          requiresApprovedNetwork: Boolean(shiftData.attendancePolicy?.requiresApprovedNetwork),
+          radiusMeters: shiftData.attendancePolicy?.radiusMeters ?? 150,
         })
       }
 
@@ -162,6 +214,7 @@ export default function AttendanceTab({ user }: AttendanceTabProps) {
     : null
   const checkInDisabled = isCheckingIn || isCheckedIn || isAlreadyCompleted || isOnLeave || !canCheckInWindow
   const checkOutDisabled = isCheckingOut || !isCheckedIn || isOnLeave
+  const attendanceAccessMessage = getAttendanceAccessMessage(attendancePolicy)
 
   const statusMeta = isOnLeave
     ? { label: "Approved Leave", tone: "bg-amber-100 text-amber-900" }
@@ -183,6 +236,30 @@ export default function AttendanceTab({ user }: AttendanceTabProps) {
     setIsCheckingIn(true)
 
     try {
+      const clientPublicIp = attendancePolicy.requiresApprovedNetwork ? await getClientPublicIp() : undefined
+      let locationPayload: { latitude?: number; longitude?: number } = {}
+      if (attendancePolicy.requiresLocation) {
+        if (typeof window === "undefined" || !window.navigator.geolocation) {
+          throw new Error("Location access is required for attendance on this company policy.")
+        }
+
+        locationPayload = await new Promise((resolve, reject) => {
+          window.navigator.geolocation.getCurrentPosition(
+            (position) =>
+              resolve({
+                latitude: position.coords.latitude,
+                longitude: position.coords.longitude,
+              }),
+            () => reject(new Error("Location access is required for attendance on this company policy.")),
+            {
+              enableHighAccuracy: true,
+              timeout: 10000,
+              maximumAge: 0,
+            },
+          )
+        })
+      }
+
       const response = await authFetch("/api/attendance/checkin", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -191,6 +268,8 @@ export default function AttendanceTab({ user }: AttendanceTabProps) {
           checkInTime: new Date().toISOString(),
           isLate,
           lateReason: isLate ? lateReason.trim() : null,
+          ...(clientPublicIp ? { clientPublicIp } : {}),
+          ...locationPayload,
         }),
       })
 
@@ -206,8 +285,10 @@ export default function AttendanceTab({ user }: AttendanceTabProps) {
         description: shift ? `Your active shift is ${shift.name}.` : "Attendance marked for today.",
       })
       await refreshAttendance()
-    } catch {
-      toast.error("Check-in failed", { description: "Unable to complete the request." })
+    } catch (error) {
+      toast.error("Check-in failed", {
+        description: error instanceof Error ? error.message : "Unable to complete the request.",
+      })
     } finally {
       setIsCheckingIn(false)
     }
@@ -225,6 +306,30 @@ export default function AttendanceTab({ user }: AttendanceTabProps) {
     setIsCheckingOut(true)
 
     try {
+      const clientPublicIp = attendancePolicy.requiresApprovedNetwork ? await getClientPublicIp() : undefined
+      let locationPayload: { latitude?: number; longitude?: number } = {}
+      if (attendancePolicy.requiresLocation) {
+        if (typeof window === "undefined" || !window.navigator.geolocation) {
+          throw new Error("Location access is required for attendance on this company policy.")
+        }
+
+        locationPayload = await new Promise((resolve, reject) => {
+          window.navigator.geolocation.getCurrentPosition(
+            (position) =>
+              resolve({
+                latitude: position.coords.latitude,
+                longitude: position.coords.longitude,
+              }),
+            () => reject(new Error("Location access is required for attendance on this company policy.")),
+            {
+              enableHighAccuracy: true,
+              timeout: 10000,
+              maximumAge: 0,
+            },
+          )
+        })
+      }
+
       const response = await authFetch("/api/attendance/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -233,6 +338,8 @@ export default function AttendanceTab({ user }: AttendanceTabProps) {
           checkOutTime: new Date().toISOString(),
           isEarly,
           earlyReason: isEarly ? earlyReason.trim() : null,
+          ...(clientPublicIp ? { clientPublicIp } : {}),
+          ...locationPayload,
         }),
       })
 
@@ -248,8 +355,10 @@ export default function AttendanceTab({ user }: AttendanceTabProps) {
         description: `Total hours worked today: ${data.hoursWorked}.`,
       })
       await refreshAttendance()
-    } catch {
-      toast.error("Check-out failed", { description: "Unable to complete the request." })
+    } catch (error) {
+      toast.error("Check-out failed", {
+        description: error instanceof Error ? error.message : "Unable to complete the request.",
+      })
     } finally {
       setIsCheckingOut(false)
     }
@@ -313,6 +422,15 @@ export default function AttendanceTab({ user }: AttendanceTabProps) {
                 </p>
               </div>
             </div>
+            {attendancePolicy.isRestricted && (
+              <div className="flex items-start gap-3 rounded-2xl border border-sky-400/30 bg-sky-400/10 p-4 text-sky-50">
+                <AlertCircle className="mt-0.5 h-5 w-5 shrink-0" />
+                <div className="space-y-1 text-sm">
+                  <p className="font-medium">Attendance access is restricted by your company.</p>
+                  <p className="text-sky-100">{attendanceAccessMessage}</p>
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
 
@@ -331,7 +449,9 @@ export default function AttendanceTab({ user }: AttendanceTabProps) {
                     : isCheckedIn
                       ? "You are already checked in for this shift."
                       : canCheckInWindow
-                        ? "Your shift is ready to start."
+                        ? attendancePolicy.requiresLocation
+                          ? "Your shift is ready to start. Location permission will be requested when you continue."
+                          : "Your shift is ready to start."
                         : `Check-in opens at ${earliestCheckInLabel}.`}
               </CardDescription>
             </CardHeader>
@@ -344,7 +464,7 @@ export default function AttendanceTab({ user }: AttendanceTabProps) {
                 {isCheckingIn ? (
                   <>
                     <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                    Checking in...
+                    Preparing check-in...
                   </>
                 ) : (
                   "Check In"
@@ -395,7 +515,9 @@ export default function AttendanceTab({ user }: AttendanceTabProps) {
                   : isAlreadyCompleted
                     ? "You already checked out for today."
                     : isCheckedIn
-                      ? "End your shift here when you are ready to leave."
+                      ? attendancePolicy.requiresLocation
+                        ? "End your shift here when you are ready to leave. Location permission will be requested first."
+                        : "End your shift here when you are ready to leave."
                       : "Check-out becomes available after you check in."}
               </CardDescription>
             </CardHeader>
@@ -408,7 +530,7 @@ export default function AttendanceTab({ user }: AttendanceTabProps) {
                 {isCheckingOut ? (
                   <>
                     <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                    Checking out...
+                    Preparing check-out...
                   </>
                 ) : (
                   "Check Out"

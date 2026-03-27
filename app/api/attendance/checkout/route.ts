@@ -1,5 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { getDatabase } from "@/lib/mongodb"
+import { getCompanyAttendancePolicy, validateAttendanceActionAccess } from "@/lib/attendance-policy"
 import { assertSelfOrAdmin, requireSession } from "@/lib/session"
 
 export async function POST(request: NextRequest) {
@@ -9,7 +10,7 @@ export async function POST(request: NextRequest) {
       return response
     }
 
-    const { userId, checkOutTime, isEarly, earlyReason } = await request.json()
+    const { userId, checkOutTime, isEarly, earlyReason, latitude, longitude, clientPublicIp } = await request.json()
     const accessError = assertSelfOrAdmin(session, userId)
     if (accessError) {
       return accessError
@@ -17,6 +18,22 @@ export async function POST(request: NextRequest) {
 
     const db = await getDatabase()
     const attendanceCollection = db.collection("attendance")
+    const companiesCollection = db.collection("companies")
+
+    const company = await companiesCollection.findOne({ companyId: session.companyId })
+    const attendancePolicy = getCompanyAttendancePolicy(company)
+    const attendanceAccessError = validateAttendanceActionAccess({
+      actionLabel: "Check-out",
+      clientPublicIp,
+      latitude,
+      longitude,
+      policy: attendancePolicy,
+      request,
+    })
+
+    if (attendanceAccessError) {
+      return NextResponse.json({ error: attendanceAccessError }, { status: 400 })
+    }
 
     const today = new Date().toISOString().split("T")[0]
 
