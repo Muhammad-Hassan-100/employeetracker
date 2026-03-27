@@ -165,7 +165,7 @@ export default function LeaveManagement({ user }: LeaveManagementProps) {
         </Button>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
         <Card className="rounded-3xl shadow-sm">
           <CardContent className="flex items-center gap-4 p-5">
             <FileClock className="h-10 w-10 rounded-2xl bg-amber-100 p-2 text-amber-700" />

@@ -120,19 +120,19 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen bg-[#f5f8f4]">
       <div className="absolute inset-x-0 top-0 -z-10 h-[520px] bg-[radial-gradient(circle_at_top_left,_rgba(16,185,129,0.18),_transparent_34%),radial-gradient(circle_at_top_right,_rgba(14,165,233,0.16),_transparent_30%),linear-gradient(180deg,_#eefbf6_0%,_#f5f8f4_72%)]" />
-      <div className="container flex min-h-screen flex-col justify-center py-10">
+      <div className="container flex min-h-screen flex-col justify-center px-4 py-8 sm:px-6 sm:py-10">
         <Link href="/" className="mb-8 inline-flex items-center gap-2 text-sm font-medium text-slate-600 hover:text-slate-950">
           <ArrowLeft className="h-4 w-4" />
           Back to home
         </Link>
 
         <div className="grid gap-8 lg:grid-cols-[0.9fr_1.1fr]">
-          <div className="rounded-[32px] bg-slate-950 p-8 text-white shadow-[0_30px_70px_rgba(15,23,42,0.18)]">
+          <div className="rounded-[32px] bg-slate-950 p-6 text-white shadow-[0_30px_70px_rgba(15,23,42,0.18)] sm:p-8">
             <div className="inline-flex items-center gap-3 rounded-full border border-white/15 bg-white/10 px-4 py-2 text-sm">
               <BriefcaseBusiness className="h-4 w-4 text-emerald-300" />
               EmployeeTracker Pro
             </div>
-            <h1 className="mt-6 text-4xl font-extrabold tracking-tight">
+            <h1 className="mt-6 text-3xl font-extrabold tracking-tight sm:text-4xl">
               Manage one company or many, from one clean system.
             </h1>
             <p className="mt-4 text-base leading-7 text-slate-300">
@@ -160,14 +160,14 @@ export default function LoginPage() {
 
           <Card className="rounded-[32px] border-slate-200 bg-white/90 shadow-xl backdrop-blur">
             <CardHeader className="space-y-3 pb-0">
-              <CardTitle className="text-3xl font-bold text-slate-950">Access your workspace</CardTitle>
+              <CardTitle className="text-2xl font-bold text-slate-950 sm:text-3xl">Access your workspace</CardTitle>
               <CardDescription className="text-base text-slate-600">
                 Sign in as an admin or employee, or create a new company workspace.
               </CardDescription>
             </CardHeader>
             <CardContent className="pt-6">
               <Tabs value={mode} onValueChange={(value) => setMode(value as "login" | "signup")}>
-                <TabsList className="grid w-full grid-cols-2 rounded-full bg-slate-100 p-1">
+                <TabsList className="grid h-auto w-full grid-cols-1 gap-2 rounded-3xl bg-slate-100 p-2 sm:grid-cols-2 sm:gap-0 sm:rounded-full sm:p-1">
                   <TabsTrigger value="login" className="rounded-full">
                     Sign In
                   </TabsTrigger>

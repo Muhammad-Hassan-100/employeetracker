@@ -140,7 +140,7 @@ export default function AdminLeaveManagement({ adminUser }: AdminLeaveManagement
         </Button>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <Card className="rounded-3xl shadow-sm">
           <CardContent className="flex items-center gap-4 p-5">
             <Clock3 className="h-10 w-10 rounded-2xl bg-amber-100 p-2 text-amber-700" />

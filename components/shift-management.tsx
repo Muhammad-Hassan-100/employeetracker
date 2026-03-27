@@ -255,7 +255,7 @@ export default function ShiftManagement() {
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
                   <Label>Start Time</Label>
-                  <div className="grid grid-cols-3 gap-2">
+                  <div className="grid gap-2 sm:grid-cols-3">
                     <Select value={getTimeParts(form.startTime).hour} onValueChange={(value) => handleTimePartChange("startTime", "hour", value)}>
                       <SelectTrigger>
                         <SelectValue placeholder="Hour" />
@@ -300,7 +300,7 @@ export default function ShiftManagement() {
                 </div>
                 <div className="space-y-2">
                   <Label>End Time</Label>
-                  <div className="grid grid-cols-3 gap-2">
+                  <div className="grid gap-2 sm:grid-cols-3">
                     <Select value={getTimeParts(form.endTime).hour} onValueChange={(value) => handleTimePartChange("endTime", "hour", value)}>
                       <SelectTrigger>
                         <SelectValue placeholder="Hour" />

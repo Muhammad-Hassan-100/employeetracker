@@ -38,25 +38,25 @@ export default function LandingPage() {
     <div className="min-h-screen bg-[#f4f7f3] text-slate-950">
       <div className="absolute inset-x-0 top-0 -z-10 h-[540px] bg-[radial-gradient(circle_at_top_left,_rgba(20,184,166,0.20),_transparent_35%),radial-gradient(circle_at_top_right,_rgba(245,158,11,0.18),_transparent_28%),linear-gradient(180deg,_#ecfdf5_0%,_#f4f7f3_72%)]" />
 
-      <header className="container py-6">
-        <nav className="flex items-center justify-between rounded-full border border-slate-200/70 bg-white/80 px-5 py-3 shadow-sm backdrop-blur">
-          <div className="flex items-center gap-3">
+      <header className="container px-4 py-4 sm:px-6 sm:py-6">
+        <nav className="flex flex-col gap-4 rounded-[28px] border border-slate-200/70 bg-white/85 px-4 py-4 shadow-sm backdrop-blur sm:flex-row sm:items-center sm:justify-between sm:rounded-full sm:px-5 sm:py-3">
+          <div className="flex min-w-0 items-center gap-3">
             <div className="rounded-2xl bg-slate-950 p-2 text-white">
               <BriefcaseBusiness className="h-5 w-5" />
             </div>
-            <div>
-              <p className="text-sm font-semibold">EmployeeTracker Pro</p>
+            <div className="min-w-0">
+              <p className="truncate text-sm font-semibold">EmployeeTracker Pro</p>
               <p className="text-xs text-slate-500">Attendance and workforce control</p>
             </div>
           </div>
-          <div className="flex items-center gap-3">
-            <Link href="/login">
-              <Button variant="ghost" className="rounded-full">
+          <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:flex-wrap sm:items-center sm:justify-end sm:gap-3">
+            <Link href="/login" className="w-full sm:w-auto">
+              <Button variant="ghost" className="w-full rounded-full">
                 Login
               </Button>
             </Link>
-            <Link href="/login?mode=signup">
-              <Button className="rounded-full bg-slate-950 text-white hover:bg-slate-800">
+            <Link href="/login?mode=signup" className="w-full sm:w-auto">
+              <Button className="w-full rounded-full bg-slate-950 text-white hover:bg-slate-800">
                 Create Company
               </Button>
             </Link>
@@ -64,29 +64,29 @@ export default function LandingPage() {
         </nav>
       </header>
 
-      <main className="container pb-16 pt-10">
+      <main className="container px-4 pb-16 pt-8 sm:px-6 sm:pt-10">
         <section className="grid gap-10 lg:grid-cols-[1.15fr_0.85fr] lg:items-center">
           <div>
-            <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-medium text-emerald-800">
+            <div className="mb-5 inline-flex max-w-full items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-medium text-emerald-800">
               <ShieldCheck className="h-4 w-4" />
-              Company-level admin and employee management
+              <span className="truncate">Company-level admin and employee management</span>
             </div>
-            <h1 className="max-w-3xl text-5xl font-extrabold tracking-tight text-slate-950 sm:text-6xl">
+            <h1 className="max-w-3xl text-4xl font-extrabold tracking-tight text-slate-950 sm:text-5xl lg:text-6xl">
               Professional employee management system for modern teams.
             </h1>
-            <p className="mt-6 max-w-2xl text-lg leading-8 text-slate-600">
+            <p className="mt-6 max-w-2xl text-base leading-7 text-slate-600 sm:text-lg sm:leading-8">
               One system handles company signup, admin controls, employee records, shift-based attendance,
               future leave approvals, and real-time dashboard updates.
             </p>
-            <div className="mt-8 flex flex-wrap items-center gap-4">
-              <Link href="/login?mode=signup">
-                <Button size="lg" className="rounded-full bg-slate-950 px-7 text-white hover:bg-slate-800">
+            <div className="mt-8 grid gap-3 sm:flex sm:flex-wrap sm:items-center sm:gap-4">
+              <Link href="/login?mode=signup" className="w-full sm:w-auto">
+                <Button size="lg" className="w-full rounded-full bg-slate-950 px-7 text-white hover:bg-slate-800">
                   Start Your Workspace
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
               </Link>
-              <Link href="/login">
-                <Button size="lg" variant="outline" className="rounded-full border-slate-300 bg-white px-7">
+              <Link href="/login" className="w-full sm:w-auto">
+                <Button size="lg" variant="outline" className="w-full rounded-full border-slate-300 bg-white px-7">
                   Sign In
                 </Button>
               </Link>
@@ -102,8 +102,8 @@ export default function LandingPage() {
           </div>
 
           <Card className="overflow-hidden rounded-[28px] border-0 bg-slate-950 text-white shadow-[0_30px_80px_rgba(15,23,42,0.18)]">
-            <CardContent className="space-y-6 p-7">
-              <div className="rounded-[24px] bg-white/10 p-6 backdrop-blur">
+            <CardContent className="space-y-6 p-5 sm:p-7">
+              <div className="rounded-[24px] bg-white/10 p-5 backdrop-blur sm:p-6">
                 <p className="text-sm uppercase tracking-[0.2em] text-emerald-300">Core Modules</p>
                 <div className="mt-5 grid gap-4 sm:grid-cols-2">
                   {features.map((feature) => {

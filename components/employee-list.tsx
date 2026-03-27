@@ -112,7 +112,7 @@ export default function EmployeeList() {
 
   return (
     <div className="space-y-6">
-      <div className="grid gap-4 md:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <Card className="rounded-3xl shadow-sm">
           <CardContent className="flex items-center gap-4 p-5">
             <UsersRound className="h-10 w-10 rounded-2xl bg-sky-100 p-2 text-sky-700" />
