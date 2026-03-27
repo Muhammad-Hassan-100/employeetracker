@@ -9,7 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { authFetch } from "@/lib/client-session"
-import { formatLocalDateInput, getLocalTimeMinutes } from "@/lib/attendance-time"
+import { formatLocalDateInput, getLocalTimeMinutes, getTimeStringMinutes } from "@/lib/attendance-time"
 import type { SessionUser } from "@/lib/session"
 import { formatTimeString12Hour } from "@/lib/time"
 
@@ -48,13 +48,6 @@ interface AttendancePolicySummary {
   requiresLocation: boolean
   requiresApprovedNetwork: boolean
   radiusMeters: number
-}
-
-function parseShiftTime(time: string) {
-  const [hours, minutes] = time.split(":").map(Number)
-  const date = new Date()
-  date.setHours(hours, minutes, 0, 0)
-  return date
 }
 
 function formatClock(date: Date) {
@@ -191,27 +184,28 @@ export default function AttendanceTab({ user }: AttendanceTabProps) {
     }
   }, [user.id])
 
-  const shiftStart = useMemo(() => (shift ? parseShiftTime(shift.startTime) : null), [shift])
-  const shiftEnd = useMemo(() => (shift ? parseShiftTime(shift.endTime) : null), [shift])
+  const currentTimeMinutes = useMemo(() => getLocalTimeMinutes(currentTime), [currentTime])
+  const shiftStartMinutes = useMemo(() => (shift ? getTimeStringMinutes(shift.startTime) : null), [shift])
+  const shiftEndMinutes = useMemo(() => (shift ? getTimeStringMinutes(shift.endTime) : null), [shift])
   const earliestCheckIn = useMemo(
-    () => (shiftStart ? new Date(shiftStart.getTime() - attendanceRules.checkInBeforeMinutes * 60 * 1000) : null),
-    [attendanceRules.checkInBeforeMinutes, shiftStart],
+    () => (shiftStartMinutes !== null ? shiftStartMinutes - attendanceRules.checkInBeforeMinutes : null),
+    [attendanceRules.checkInBeforeMinutes, shiftStartMinutes],
   )
   const lateCutoff = useMemo(
-    () => (shiftStart ? new Date(shiftStart.getTime() + attendanceRules.lateGraceMinutes * 60 * 1000) : null),
-    [attendanceRules.lateGraceMinutes, shiftStart],
+    () => (shiftStartMinutes !== null ? shiftStartMinutes + attendanceRules.lateGraceMinutes : null),
+    [attendanceRules.lateGraceMinutes, shiftStartMinutes],
   )
   const isCheckedIn = Boolean(record?.checkInTime && !record?.checkOutTime)
   const isAlreadyCompleted = Boolean(record?.checkInTime && record?.checkOutTime)
   const isOnLeave = record?.status === "on_leave"
-  const canCheckInWindow = !earliestCheckIn || currentTime >= earliestCheckIn
-  const isLate = Boolean(lateCutoff && currentTime > lateCutoff)
-  const isEarly = Boolean(shiftEnd && currentTime < shiftEnd)
-  const earliestCheckInLabel = earliestCheckIn
-    ? earliestCheckIn.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true })
+  const canCheckInWindow = earliestCheckIn === null || currentTimeMinutes >= earliestCheckIn
+  const isLate = lateCutoff !== null && currentTimeMinutes > lateCutoff
+  const isEarly = shiftEndMinutes !== null && currentTimeMinutes < shiftEndMinutes
+  const earliestCheckInLabel = earliestCheckIn !== null
+    ? formatTimeString12Hour(`${String(Math.floor(earliestCheckIn / 60)).padStart(2, "0")}:${String(earliestCheckIn % 60).padStart(2, "0")}`)
     : null
-  const lateCutoffLabel = lateCutoff
-    ? lateCutoff.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true })
+  const lateCutoffLabel = lateCutoff !== null
+    ? formatTimeString12Hour(`${String(Math.floor(lateCutoff / 60)).padStart(2, "0")}:${String(lateCutoff % 60).padStart(2, "0")}`)
     : null
   const checkInDisabled = isCheckingIn || isCheckedIn || isAlreadyCompleted || isOnLeave || !canCheckInWindow
   const checkOutDisabled = isCheckingOut || !isCheckedIn || isOnLeave
@@ -342,6 +336,7 @@ export default function AttendanceTab({ user }: AttendanceTabProps) {
           userId: user.id,
           checkOutTime: actionTime.toISOString(),
           localDate: formatLocalDateInput(actionTime),
+          localTimeMinutes: getLocalTimeMinutes(actionTime),
           isEarly,
           earlyReason: isEarly ? earlyReason.trim() : null,
           ...(clientPublicIp ? { clientPublicIp } : {}),

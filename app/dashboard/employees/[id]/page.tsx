@@ -44,7 +44,11 @@ interface AttendanceRecord {
   checkOutTime: string | null
   isLate: boolean
   isEarly: boolean
-  hoursWorked: number
+  lateReason?: string | null
+  earlyReason?: string | null
+  leaveReason?: string | null
+  leaveType?: string | null
+  hoursWorked?: number | null
   status: "present" | "absent" | "on_leave"
 }
 
@@ -64,6 +68,10 @@ function formatTime(value: string | null) {
     minute: "2-digit",
     hour12: true,
   })
+}
+
+function formatHoursWorked(value?: number | null) {
+  return Number.isFinite(value) ? Number(value).toFixed(2) : "0.00"
 }
 
 export default function EmployeeDetailPage() {
@@ -107,7 +115,7 @@ export default function EmployeeDetailPage() {
       setEmployee(employeeData)
       setEditForm(employeeData)
       if (attendanceRes.ok) {
-        setAttendance(attendanceData)
+        setAttendance(Array.isArray(attendanceData) ? attendanceData : [])
       }
       if (shiftsRes.ok) {
         setShifts(shiftsData)
@@ -418,8 +426,27 @@ export default function EmployeeDetailPage() {
                         <div>
                           <p className="font-semibold text-slate-950">{formatDate(record.date)}</p>
                           <p className="mt-1 text-sm text-slate-600">
-                            In: {formatTime(record.checkInTime)} | Out: {formatTime(record.checkOutTime)} | Hours: {record.hoursWorked.toFixed(2)}
+                            In: {formatTime(record.checkInTime)} | Out: {formatTime(record.checkOutTime)} | Hours: {formatHoursWorked(record.hoursWorked)}
                           </p>
+                          {(record.lateReason || record.earlyReason || record.leaveReason) && (
+                            <div className="mt-3 rounded-2xl bg-slate-50 p-3 text-sm text-slate-700">
+                              {record.leaveReason && (
+                                <p>
+                                  <span className="font-semibold">Leave:</span> {record.leaveType || "Approved"} - {record.leaveReason}
+                                </p>
+                              )}
+                              {record.lateReason && (
+                                <p>
+                                  <span className="font-semibold">Late:</span> {record.lateReason}
+                                </p>
+                              )}
+                              {record.earlyReason && (
+                                <p>
+                                  <span className="font-semibold">Early:</span> {record.earlyReason}
+                                </p>
+                              )}
+                            </div>
+                          )}
                         </div>
                         <Badge
                           className={

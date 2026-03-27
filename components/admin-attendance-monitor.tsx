@@ -66,6 +66,10 @@ function getStatusBadge(status: SnapshotRow["attendanceStatus"]) {
   }
 }
 
+function formatHoursWorked(value?: number | null) {
+  return Number.isFinite(value) ? Number(value).toFixed(2) : "0.00"
+}
+
 export default function AdminAttendanceMonitor() {
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split("T")[0])
   const [rows, setRows] = useState<SnapshotRow[]>([])
@@ -266,7 +270,7 @@ export default function AdminAttendanceMonitor() {
                         In: {formatTime(row.checkInTime)}
                       </span>
                       <span>Out: {formatTime(row.checkOutTime)}</span>
-                      <span>Hours: {row.hoursWorked.toFixed(2)}</span>
+                      <span>Hours: {formatHoursWorked(row.hoursWorked)}</span>
                     </div>
                     {(row.lateReason || row.earlyReason || row.leaveReason) && (
                       <div className="rounded-2xl bg-slate-50 p-3 text-sm text-slate-700">

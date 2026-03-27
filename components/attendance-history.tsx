@@ -18,7 +18,9 @@ interface AttendanceRecord {
   isEarly: boolean
   lateReason: string | null
   earlyReason: string | null
-  hoursWorked: number
+  leaveReason: string | null
+  leaveType: string | null
+  hoursWorked?: number | null
   status: "present" | "absent" | "on_leave"
 }
 
@@ -45,6 +47,10 @@ function formatDate(value: string) {
     day: "numeric",
     year: "numeric",
   })
+}
+
+function formatHoursWorked(value?: number | null) {
+  return Number.isFinite(value) ? Number(value).toFixed(2) : "0.00"
 }
 
 export default function AttendanceHistory({ user }: AttendanceHistoryProps) {
@@ -75,7 +81,9 @@ export default function AttendanceHistory({ user }: AttendanceHistoryProps) {
   }, [records, dateFilter])
 
   const onTimeCount = records.filter((record) => record.status === "present" && !record.isLate && !record.isEarly).length
-  const avgHours = records.length ? (records.reduce((sum, record) => sum + record.hoursWorked, 0) / records.length).toFixed(1) : "0.0"
+  const avgHours = records.length
+    ? (records.reduce((sum, record) => sum + (Number(record.hoursWorked) || 0), 0) / records.length).toFixed(1)
+    : "0.0"
 
   return (
     <div className="space-y-6">
@@ -148,10 +156,15 @@ export default function AttendanceHistory({ user }: AttendanceHistoryProps) {
                         In: {formatTime(record.checkInTime)}
                       </span>
                       <span>Out: {formatTime(record.checkOutTime)}</span>
-                      <span>Hours: {record.hoursWorked.toFixed(2)}</span>
+                      <span>Hours: {formatHoursWorked(record.hoursWorked)}</span>
                     </div>
-                    {(record.lateReason || record.earlyReason) && (
+                    {(record.lateReason || record.earlyReason || record.leaveReason) && (
                       <div className="rounded-2xl bg-slate-50 p-3 text-sm text-slate-700">
+                        {record.leaveReason && (
+                          <p>
+                            <span className="font-semibold">Leave:</span> {record.leaveType || "Approved"} - {record.leaveReason}
+                          </p>
+                        )}
                         {record.lateReason && <p><span className="font-semibold">Late:</span> {record.lateReason}</p>}
                         {record.earlyReason && <p><span className="font-semibold">Early:</span> {record.earlyReason}</p>}
                       </div>

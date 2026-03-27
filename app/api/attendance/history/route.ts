@@ -23,25 +23,41 @@ export async function GET(request: NextRequest) {
 
     const db = await getDatabase()
     const attendanceCollection = db.collection("attendance")
+    const leavesCollection = db.collection("leaves")
 
-    const userRecords = await attendanceCollection
-      .find({ userId: userId, companyId: session.companyId })
-      .sort({ date: -1 })
-      .toArray()
+    const [userRecords, approvedLeaves] = await Promise.all([
+      attendanceCollection
+        .find({ userId: userId, companyId: session.companyId })
+        .sort({ date: -1 })
+        .toArray(),
+      leavesCollection
+        .find({
+          userId: userId,
+          companyId: session.companyId,
+          status: "approved",
+        })
+        .toArray(),
+    ])
 
-    const formattedRecords = userRecords.map((record) => ({
-      id: record._id.toString(),
-      date: record.date,
-      checkInTime: record.checkInTime,
-      checkOutTime: record.checkOutTime,
-      isLate: record.isLate,
-      isEarly: record.isEarly,
-      lateReason: record.lateReason,
-      earlyReason: record.earlyReason,
-      hoursWorked: record.hoursWorked,
-      status: record.status || "present", // Default to present for backward compatibility
-      leaveId: record.leaveId,
-    }))
+    const formattedRecords = userRecords.map((record) => {
+      const matchedLeave = approvedLeaves.find((leave) => leave.startDate <= record.date && leave.endDate >= record.date)
+
+      return {
+        id: record._id.toString(),
+        date: record.date,
+        checkInTime: record.checkInTime,
+        checkOutTime: record.checkOutTime,
+        isLate: record.isLate,
+        isEarly: record.isEarly,
+        lateReason: record.lateReason,
+        earlyReason: record.earlyReason,
+        hoursWorked: record.hoursWorked,
+        status: record.status || "present", // Default to present for backward compatibility
+        leaveId: record.leaveId,
+        leaveReason: matchedLeave?.reason || null,
+        leaveType: matchedLeave?.leaveType || null,
+      }
+    })
 
     return NextResponse.json(formattedRecords)
   } catch (error) {
