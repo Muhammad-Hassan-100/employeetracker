@@ -43,7 +43,7 @@ interface AttendanceRules {
 }
 
 interface AttendancePolicySummary {
-  mode: "open" | "office_ip" | "office_location" | "hybrid"
+  mode: "open" | "office_ip"
   isRestricted: boolean
   requiresLocation: boolean
   requiresApprovedNetwork: boolean
@@ -83,14 +83,6 @@ function formatTime(time?: string | null) {
 function getAttendanceAccessMessage(policy: AttendancePolicySummary) {
   if (policy.mode === "office_ip") {
     return "Check-in and check-out are allowed only from your approved office network."
-  }
-
-  if (policy.mode === "office_location") {
-    return `Check-in and check-out are allowed only within your office radius of ${policy.radiusMeters} meters.`
-  }
-
-  if (policy.mode === "hybrid") {
-    return `Check-in and check-out require both your approved office network and office location within ${policy.radiusMeters} meters.`
   }
 
   return ""

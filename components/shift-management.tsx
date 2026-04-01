@@ -263,10 +263,7 @@ export default function ShiftManagement() {
     }
   }
 
-  const requiresOfficeIp =
-    companyRules.attendancePolicyMode === "office_ip" || companyRules.attendancePolicyMode === "hybrid"
-  const requiresOfficeLocation =
-    companyRules.attendancePolicyMode === "office_location" || companyRules.attendancePolicyMode === "hybrid"
+  const requiresOfficeIp = companyRules.attendancePolicyMode === "office_ip"
 
   return (
     <div className="space-y-6">
@@ -536,41 +533,6 @@ export default function ShiftManagement() {
               <p className="text-xs text-slate-500">
                 Add one or more office public IP addresses. Separate them with commas or line breaks.
               </p>
-            </div>
-          )}
-
-          {requiresOfficeLocation && (
-            <div className="grid gap-4 md:grid-cols-3">
-              <div className="space-y-2">
-                <Label>Office Latitude</Label>
-                <Input
-                  type="number"
-                  step="any"
-                  value={companyRules.officeLat}
-                  onChange={(event) => setCompanyRules((prev) => ({ ...prev, officeLat: event.target.value }))}
-                  placeholder="24.8607"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Office Longitude</Label>
-                <Input
-                  type="number"
-                  step="any"
-                  value={companyRules.officeLng}
-                  onChange={(event) => setCompanyRules((prev) => ({ ...prev, officeLng: event.target.value }))}
-                  placeholder="67.0011"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Allowed Radius (meters)</Label>
-                <Input
-                  type="number"
-                  min="1"
-                  value={companyRules.radiusMeters}
-                  onChange={(event) => setCompanyRules((prev) => ({ ...prev, radiusMeters: event.target.value }))}
-                  placeholder="150"
-                />
-              </div>
             </div>
           )}
 

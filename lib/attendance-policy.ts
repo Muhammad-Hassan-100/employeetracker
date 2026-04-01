@@ -1,6 +1,6 @@
 import type { NextRequest } from "next/server"
 
-export type AttendancePolicyMode = "open" | "office_ip" | "office_location" | "hybrid"
+export type AttendancePolicyMode = "open" | "office_ip"
 
 export interface AttendancePolicy {
   mode: AttendancePolicyMode
@@ -32,16 +32,6 @@ export const ATTENDANCE_POLICY_OPTIONS: Array<{
     value: "office_ip",
     label: "Office Network Only",
     description: "Attendance is allowed only from approved office public IP addresses.",
-  },
-  {
-    value: "office_location",
-    label: "Office Location Only",
-    description: "Attendance is allowed only within your office location radius.",
-  },
-  {
-    value: "hybrid",
-    label: "Network and Location",
-    description: "Attendance requires both an approved office IP and office location match.",
   },
 ]
 
@@ -97,7 +87,7 @@ export function normalizeAttendancePolicy(value: unknown): AttendancePolicy {
   const mode = source.mode
 
   return {
-    mode: mode === "office_ip" || mode === "office_location" || mode === "hybrid" ? mode : DEFAULT_ATTENDANCE_POLICY.mode,
+    mode: mode === "office_ip" ? mode : DEFAULT_ATTENDANCE_POLICY.mode,
     allowedIPs: normalizeAllowedIPs(source.allowedIPs),
     officeLat: normalizeCoordinate(source.officeLat),
     officeLng: normalizeCoordinate(source.officeLng),
@@ -110,29 +100,19 @@ export function getCompanyAttendancePolicy(company: any): AttendancePolicy {
 }
 
 export function validateAttendancePolicyConfiguration(policy: AttendancePolicy) {
-  if ((policy.mode === "office_ip" || policy.mode === "hybrid") && !policy.allowedIPs.length) {
+  if (policy.mode === "office_ip" && !policy.allowedIPs.length) {
     return "Add at least one approved office IP address for this attendance policy."
-  }
-
-  if (policy.mode === "office_location" || policy.mode === "hybrid") {
-    if (policy.officeLat === null || policy.officeLng === null) {
-      return "Enter the office latitude and longitude for this attendance policy."
-    }
-
-    if (policy.radiusMeters <= 0) {
-      return "Enter a valid office radius in meters."
-    }
   }
 
   return null
 }
 
 export function requiresAttendanceLocation(policy: AttendancePolicy) {
-  return policy.mode === "office_location" || policy.mode === "hybrid"
+  return false
 }
 
 export function requiresAttendanceOfficeIp(policy: AttendancePolicy) {
-  return policy.mode === "office_ip" || policy.mode === "hybrid"
+  return policy.mode === "office_ip"
 }
 
 export function extractClientIp(request: NextRequest) {
