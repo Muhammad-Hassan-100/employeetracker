@@ -15,8 +15,91 @@ export function getTimeStringMinutes(time: string) {
   return Number(hours) * 60 + Number(minutes)
 }
 
+export function shiftSpansMidnight(startMinutes: number, endMinutes: number) {
+  return endMinutes <= startMinutes
+}
+
+export function getPreviousLocalDateInput(dateInput: string) {
+  const [year, month, day] = dateInput.split("-").map(Number)
+  const value = new Date(year, (month || 1) - 1, day || 1)
+  value.setDate(value.getDate() - 1)
+  return formatLocalDateInput(value)
+}
+
+export function getRecentShiftDateInputs(dateInput: string) {
+  return [getPreviousLocalDateInput(dateInput), dateInput]
+}
+
+export function resolveAttendanceRecordDate(dateInput: string, currentMinutes: number, startMinutes: number, endMinutes: number) {
+  if (shiftSpansMidnight(startMinutes, endMinutes) && currentMinutes < endMinutes) {
+    return getPreviousLocalDateInput(dateInput)
+  }
+
+  return dateInput
+}
+
+export function getLocalDateDifference(fromDateInput: string, toDateInput: string) {
+  const [fromYear, fromMonth, fromDay] = fromDateInput.split("-").map(Number)
+  const [toYear, toMonth, toDay] = toDateInput.split("-").map(Number)
+  const fromDate = new Date(fromYear, (fromMonth || 1) - 1, fromDay || 1)
+  const toDate = new Date(toYear, (toMonth || 1) - 1, toDay || 1)
+
+  return Math.round((toDate.getTime() - fromDate.getTime()) / 86_400_000)
+}
+
+export function getShiftEndAbsoluteMinutes(startMinutes: number, endMinutes: number) {
+  return shiftSpansMidnight(startMinutes, endMinutes) ? endMinutes + 1440 : endMinutes
+}
+
+export function getAttendanceWindowState({
+  currentDateInput,
+  currentMinutes,
+  graceMinutes,
+  recordDateInput,
+  startMinutes,
+  endMinutes,
+}: {
+  currentDateInput: string
+  currentMinutes: number
+  graceMinutes: number
+  recordDateInput: string
+  startMinutes: number
+  endMinutes: number
+}) {
+  const dayDifference = getLocalDateDifference(recordDateInput, currentDateInput)
+  const absoluteCurrentMinutes = dayDifference * 1440 + currentMinutes
+  const shiftEndAbsoluteMinutes = getShiftEndAbsoluteMinutes(startMinutes, endMinutes)
+  const checkoutDeadlineMinutes = shiftEndAbsoluteMinutes + graceMinutes
+
+  return {
+    isBeforeShiftEnd: absoluteCurrentMinutes < shiftEndAbsoluteMinutes,
+    isCheckoutExpired: absoluteCurrentMinutes > checkoutDeadlineMinutes,
+    shiftEndAbsoluteMinutes,
+    checkoutDeadlineMinutes,
+    absoluteCurrentMinutes,
+  }
+}
+
+export function hasShiftEndedForRecordDate({
+  currentDateInput,
+  currentMinutes,
+  recordDateInput,
+  startMinutes,
+  endMinutes,
+}: {
+  currentDateInput: string
+  currentMinutes: number
+  recordDateInput: string
+  startMinutes: number
+  endMinutes: number
+}) {
+  const dayDifference = getLocalDateDifference(recordDateInput, currentDateInput)
+  const absoluteCurrentMinutes = dayDifference * 1440 + currentMinutes
+  return absoluteCurrentMinutes >= getShiftEndAbsoluteMinutes(startMinutes, endMinutes)
+}
+
 export function normalizeShiftTimeline(currentMinutes: number, startMinutes: number, endMinutes: number) {
-  const isOvernight = endMinutes <= startMinutes
+  const isOvernight = shiftSpansMidnight(startMinutes, endMinutes)
 
   return {
     isOvernight,

@@ -2,7 +2,13 @@ import { type NextRequest, NextResponse } from "next/server"
 import { getDatabase } from "@/lib/mongodb"
 import { ObjectId } from "mongodb"
 import { getCompanyAttendancePolicy, validateAttendanceActionAccess } from "@/lib/attendance-policy"
-import { formatLocalDateInput, getLocalTimeMinutes, getTimeStringMinutes } from "@/lib/attendance-time"
+import {
+  formatLocalDateInput,
+  getLocalTimeMinutes,
+  getRecentShiftDateInputs,
+  getTimeStringMinutes,
+  hasShiftEndedForRecordDate,
+} from "@/lib/attendance-time"
 import { assertSelfOrAdmin, requireSession } from "@/lib/session"
 
 export async function POST(request: NextRequest) {
@@ -62,10 +68,60 @@ export async function POST(request: NextRequest) {
             name: { $regex: new RegExp(`^${user.shiftId}$`, "i") },
           })
         }
-        if (shift?.startTime) {
+        if (shift?.startTime && shift?.endTime) {
           const shiftStartMinutes = getTimeStringMinutes(shift.startTime)
           const earliestCheckInMinutes = shiftStartMinutes - employeeCheckInBeforeMinutes
           const lateCutoffMinutes = shiftStartMinutes + employeeLateGraceMinutes
+          const candidateDates = getRecentShiftDateInputs(today)
+
+          for (const candidateDate of candidateDates) {
+            const shiftEnded = hasShiftEndedForRecordDate({
+              currentDateInput: today,
+              currentMinutes: actionTimeMinutes,
+              recordDateInput: candidateDate,
+              startMinutes: shiftStartMinutes,
+              endMinutes: getTimeStringMinutes(shift.endTime),
+            })
+
+            if (!shiftEnded) {
+              continue
+            }
+
+            const [existingCandidateRecord, approvedLeaveForCandidate] = await Promise.all([
+              attendanceCollection.findOne({
+                companyId: session.companyId,
+                userId: userId,
+                date: candidateDate,
+              }),
+              leavesCollection.findOne({
+                companyId: session.companyId,
+                userId: userId,
+                status: "approved",
+                startDate: { $lte: candidateDate },
+                endDate: { $gte: candidateDate },
+              }),
+            ])
+
+            if (!existingCandidateRecord && !approvedLeaveForCandidate) {
+              await attendanceCollection.insertOne({
+                userId,
+                companyId: session.companyId,
+                date: candidateDate,
+                checkInTime: null,
+                checkOutTime: null,
+                isLate: false,
+                isEarly: false,
+                lateReason: null,
+                earlyReason: null,
+                hoursWorked: 0,
+                status: "absent",
+                autoAbsent: true,
+                createdAt: new Date(),
+                updatedAt: new Date(),
+              })
+            }
+          }
+
           if (actionTimeMinutes < earliestCheckInMinutes) {
             return NextResponse.json(
               { error: `Check-in allowed only ${employeeCheckInBeforeMinutes} minutes before shift start` },
@@ -91,6 +147,9 @@ export async function POST(request: NextRequest) {
     if (existingRecord) {
       if (existingRecord.status === "on_leave") {
         return NextResponse.json({ error: "Cannot check in while on approved leave" }, { status: 400 })
+      }
+      if (existingRecord.status === "absent") {
+        return NextResponse.json({ error: "Shift has ended. You were marked absent for today." }, { status: 400 })
       }
       if (existingRecord.checkInTime) {
         return NextResponse.json({ error: "Already checked in today" }, { status: 400 })

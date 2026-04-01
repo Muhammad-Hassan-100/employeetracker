@@ -67,8 +67,8 @@ export async function GET(request: NextRequest) {
         
         // Count different types of attendance
         const presentDays = attendanceRecords.filter((record) => record.status === "present" || !record.status).length
-        const absentDays = attendanceRecords.filter((record) => record.status === "absent").length
         const leaveDays = attendanceRecords.filter((record) => record.status === "on_leave").length
+        const absentDays = Math.max(totalWorkingDays - presentDays - leaveDays, 0)
         const lateDays = attendanceRecords.filter((record) => record.isLate && (record.status === "present" || !record.status)).length
         const earlyLeaveDays = attendanceRecords.filter((record) => record.isEarly && (record.status === "present" || !record.status)).length
         
