@@ -6,7 +6,12 @@ import { Toaster } from "sonner"
 export const metadata: Metadata = {
   title: "Employee Tracker - Professional Workforce Management",
   description: "Comprehensive employee management and attendance tracking system",
-    generator: 'v0.dev'
+  generator: "v0.dev",
+  icons: {
+    icon: "/icon.svg",
+    shortcut: "/icon.svg",
+    apple: "/icon.svg",
+  },
 }
 
 export default function RootLayout({
