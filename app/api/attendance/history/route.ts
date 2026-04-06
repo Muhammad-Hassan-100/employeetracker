@@ -51,6 +51,7 @@ export async function GET(request: NextRequest) {
         isEarly: record.isEarly,
         lateReason: record.lateReason,
         earlyReason: record.earlyReason,
+        lateCheckoutReason: record.lateCheckoutReason || null,
         hoursWorked: record.hoursWorked,
         status: record.status || "present", // Default to present for backward compatibility
         leaveId: record.leaveId,

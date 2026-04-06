@@ -26,6 +26,7 @@ interface Employee {
   shift: string
   checkInBeforeMinutes: number
   lateGraceMinutes: number
+  checkOutGraceMinutes: number
   joinDate: string
   status: "active" | "inactive"
   password?: string
@@ -47,6 +48,7 @@ interface AttendanceRecord {
   isEarly: boolean
   lateReason?: string | null
   earlyReason?: string | null
+  lateCheckoutReason?: string | null
   leaveReason?: string | null
   leaveType?: string | null
   hoursWorked?: number | null
@@ -93,6 +95,7 @@ function normalizeEmployeePayload(value: any): Employee | null {
     shift: String(value.shift || ""),
     checkInBeforeMinutes: Number(value.checkInBeforeMinutes) || 0,
     lateGraceMinutes: Number(value.lateGraceMinutes) || 0,
+    checkOutGraceMinutes: Number(value.checkOutGraceMinutes) || 0,
     joinDate: String(value.joinDate || ""),
     status: value.status === "inactive" ? "inactive" : "active",
     password: value.password ? String(value.password) : undefined,
@@ -115,6 +118,7 @@ function normalizeAttendanceRecords(value: unknown): AttendanceRecord[] {
       isEarly: Boolean(entry.isEarly),
       lateReason: entry.lateReason ? String(entry.lateReason) : null,
       earlyReason: entry.earlyReason ? String(entry.earlyReason) : null,
+      lateCheckoutReason: entry.lateCheckoutReason ? String(entry.lateCheckoutReason) : null,
       leaveReason: entry.leaveReason ? String(entry.leaveReason) : null,
       leaveType: entry.leaveType ? String(entry.leaveType) : null,
       hoursWorked: Number.isFinite(Number(entry.hoursWorked)) ? Number(entry.hoursWorked) : 0,
@@ -475,6 +479,22 @@ export default function EmployeeDetailPage() {
                   )}
                 </div>
                 <div className="space-y-2">
+                  <Label>Normal Check-Out After Shift (minutes)</Label>
+                  {isEditing ? (
+                    <Input
+                      type="number"
+                      min={0}
+                      step={1}
+                      value={String(editForm.checkOutGraceMinutes ?? 0)}
+                      onChange={(event) =>
+                        setEditForm((prev) => ({ ...prev, checkOutGraceMinutes: Number(event.target.value) }))
+                      }
+                    />
+                  ) : (
+                    <div className="rounded-2xl bg-slate-50 px-4 py-3">{employee.checkOutGraceMinutes}</div>
+                  )}
+                </div>
+                <div className="space-y-2">
                   <Label>Joined On</Label>
                   <div className="rounded-2xl bg-slate-50 px-4 py-3">{formatDate(employee.joinDate)}</div>
                 </div>
@@ -518,7 +538,7 @@ export default function EmployeeDetailPage() {
                           <p className="mt-1 text-sm text-slate-600">
                             In: {formatTime(record.checkInTime)} | Out: {formatTime(record.checkOutTime)} | Hours: {formatHoursWorked(record.hoursWorked)}
                           </p>
-                          {(record.lateReason || record.earlyReason || record.leaveReason) && (
+                          {(record.lateReason || record.earlyReason || record.lateCheckoutReason || record.leaveReason) && (
                             <div className="mt-3 rounded-2xl bg-slate-50 p-3 text-sm text-slate-700">
                               {record.leaveReason && (
                                 <p>
@@ -533,6 +553,11 @@ export default function EmployeeDetailPage() {
                               {record.earlyReason && (
                                 <p>
                                   <span className="font-semibold">Early:</span> {record.earlyReason}
+                                </p>
+                              )}
+                              {record.lateCheckoutReason && (
+                                <p>
+                                  <span className="font-semibold">Late Check-Out:</span> {record.lateCheckoutReason}
                                 </p>
                               )}
                             </div>

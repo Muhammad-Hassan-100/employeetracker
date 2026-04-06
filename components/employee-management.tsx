@@ -34,6 +34,7 @@ export default function EmployeeManagement() {
     position: "",
     checkInBeforeMinutes: "5",
     lateGraceMinutes: "0",
+    checkOutGraceMinutes: "0",
   })
 
   const fetchShifts = async () => {
@@ -94,6 +95,7 @@ export default function EmployeeManagement() {
         position: "",
         checkInBeforeMinutes: "5",
         lateGraceMinutes: "0",
+        checkOutGraceMinutes: "0",
       })
     } catch {
       toast.error("Unable to add employee")
@@ -195,6 +197,20 @@ export default function EmployeeManagement() {
               onChange={(event) => setForm((prev) => ({ ...prev, lateGraceMinutes: event.target.value }))}
               required
             />
+          </div>
+          <div className="space-y-2">
+            <Label>Normal Check-Out After Shift (minutes)</Label>
+            <Input
+              type="number"
+              min={0}
+              step={1}
+              value={form.checkOutGraceMinutes}
+              onChange={(event) => setForm((prev) => ({ ...prev, checkOutGraceMinutes: event.target.value }))}
+              required
+            />
+            <p className="text-xs text-slate-500">
+              After this many minutes past shift end, the employee must give a late check-out reason.
+            </p>
           </div>
           <div className="md:col-span-2">
             <Button

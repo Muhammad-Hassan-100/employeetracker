@@ -55,6 +55,7 @@ export function getAttendanceWindowState({
   currentDateInput,
   currentMinutes,
   graceMinutes,
+  lateCheckoutGraceMinutes = 0,
   recordDateInput,
   startMinutes,
   endMinutes,
@@ -62,6 +63,7 @@ export function getAttendanceWindowState({
   currentDateInput: string
   currentMinutes: number
   graceMinutes: number
+  lateCheckoutGraceMinutes?: number
   recordDateInput: string
   startMinutes: number
   endMinutes: number
@@ -69,12 +71,15 @@ export function getAttendanceWindowState({
   const dayDifference = getLocalDateDifference(recordDateInput, currentDateInput)
   const absoluteCurrentMinutes = dayDifference * 1440 + currentMinutes
   const shiftEndAbsoluteMinutes = getShiftEndAbsoluteMinutes(startMinutes, endMinutes)
+  const normalCheckoutDeadlineMinutes = shiftEndAbsoluteMinutes + lateCheckoutGraceMinutes
   const checkoutDeadlineMinutes = shiftEndAbsoluteMinutes + graceMinutes
 
   return {
     isBeforeShiftEnd: absoluteCurrentMinutes < shiftEndAbsoluteMinutes,
+    isAfterNormalCheckoutWindow: absoluteCurrentMinutes > normalCheckoutDeadlineMinutes,
     isCheckoutExpired: absoluteCurrentMinutes > checkoutDeadlineMinutes,
     shiftEndAbsoluteMinutes,
+    normalCheckoutDeadlineMinutes,
     checkoutDeadlineMinutes,
     absoluteCurrentMinutes,
   }
@@ -111,4 +116,12 @@ export function normalizeShiftTimeline(currentMinutes: number, startMinutes: num
 export function isBeforeShiftEnd(currentMinutes: number, startMinutes: number, endMinutes: number) {
   const { adjustedCurrentMinutes, adjustedEndMinutes } = normalizeShiftTimeline(currentMinutes, startMinutes, endMinutes)
   return adjustedCurrentMinutes < adjustedEndMinutes
+}
+
+export function getTimeStringFromMinutes(totalMinutes: number) {
+  const normalizedMinutes = ((totalMinutes % 1440) + 1440) % 1440
+  const hours = Math.floor(normalizedMinutes / 60)
+  const minutes = normalizedMinutes % 60
+
+  return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`
 }

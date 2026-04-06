@@ -12,13 +12,14 @@ export async function POST(request: NextRequest) {
       return response
     }
 
-    const { name, password, shift, department, position, checkInBeforeMinutes, lateGraceMinutes } = await request.json()
+    const { name, password, shift, department, position, checkInBeforeMinutes, lateGraceMinutes, checkOutGraceMinutes } = await request.json()
     if (!name || !password || !shift || !department || !position) {
       return NextResponse.json({ error: "All fields are required" }, { status: 400 })
     }
 
     const parsedCheckInBefore = Number(checkInBeforeMinutes)
     const parsedLateGrace = Number(lateGraceMinutes)
+    const parsedCheckOutGrace = Number(checkOutGraceMinutes)
 
     if (
       !Number.isFinite(parsedCheckInBefore) ||
@@ -26,10 +27,13 @@ export async function POST(request: NextRequest) {
       parsedCheckInBefore < 0 ||
       !Number.isFinite(parsedLateGrace) ||
       !Number.isInteger(parsedLateGrace) ||
-      parsedLateGrace < 0
+      parsedLateGrace < 0 ||
+      !Number.isFinite(parsedCheckOutGrace) ||
+      !Number.isInteger(parsedCheckOutGrace) ||
+      parsedCheckOutGrace < 0
     ) {
       return NextResponse.json(
-        { error: "Check-in before minutes and late relaxation must be whole non-negative numbers" },
+        { error: "Check-in before, late relaxation, and normal check-out minutes must be whole non-negative numbers" },
         { status: 400 },
       )
     }
@@ -82,6 +86,7 @@ export async function POST(request: NextRequest) {
       shiftId: shift,
       checkInBeforeMinutes: parsedCheckInBefore,
       lateGraceMinutes: parsedLateGrace,
+      checkOutGraceMinutes: parsedCheckOutGrace,
       joinDate: new Date(),
       status: "active",
       createdAt: new Date(),
@@ -102,6 +107,7 @@ export async function POST(request: NextRequest) {
         shiftId: newEmployee.shiftId,
         checkInBeforeMinutes: newEmployee.checkInBeforeMinutes,
         lateGraceMinutes: newEmployee.lateGraceMinutes,
+        checkOutGraceMinutes: newEmployee.checkOutGraceMinutes,
         joinDate: newEmployee.joinDate,
         status: newEmployee.status,
         companyId: newEmployee.companyId,

@@ -29,6 +29,7 @@ interface SnapshotRow {
   isEarly: boolean
   lateReason: string | null
   earlyReason: string | null
+  lateCheckoutReason: string | null
   leaveReason: string | null
   leaveType: string | null
   shift: {
@@ -272,11 +273,12 @@ export default function AdminAttendanceMonitor() {
                       <span>Out: {formatTime(row.checkOutTime)}</span>
                       <span>Hours: {formatHoursWorked(row.hoursWorked)}</span>
                     </div>
-                    {(row.lateReason || row.earlyReason || row.leaveReason) && (
+                    {(row.lateReason || row.earlyReason || row.lateCheckoutReason || row.leaveReason) && (
                       <div className="rounded-2xl bg-slate-50 p-3 text-sm text-slate-700">
                         {row.leaveReason && <p><span className="font-semibold">Leave:</span> {row.leaveType} - {row.leaveReason}</p>}
                         {row.lateReason && <p><span className="font-semibold">Late:</span> {row.lateReason}</p>}
                         {row.earlyReason && <p><span className="font-semibold">Early:</span> {row.earlyReason}</p>}
+                        {row.lateCheckoutReason && <p><span className="font-semibold">Late Check-Out:</span> {row.lateCheckoutReason}</p>}
                       </div>
                     )}
                   </div>

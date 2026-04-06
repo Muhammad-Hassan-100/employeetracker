@@ -107,6 +107,7 @@ export async function GET(request: NextRequest) {
         isEarly: Boolean(record?.isEarly),
         lateReason: record?.lateReason || null,
         earlyReason: record?.earlyReason || null,
+        lateCheckoutReason: record?.lateCheckoutReason || null,
         leaveReason: approvedLeave?.reason || null,
         leaveType: approvedLeave?.leaveType || null,
         shift: shift

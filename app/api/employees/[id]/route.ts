@@ -40,6 +40,7 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
       shift: employee.shiftId,
       checkInBeforeMinutes: employee.checkInBeforeMinutes ?? 5,
       lateGraceMinutes: employee.lateGraceMinutes ?? 0,
+      checkOutGraceMinutes: employee.checkOutGraceMinutes ?? 0,
       joinDate: employee.joinDate,
       status: employee.status,
       password: employee.password, // Include password for admin
@@ -125,6 +126,17 @@ export async function PUT(request: NextRequest, { params }: RouteContext) {
         )
       }
       updateData.lateGraceMinutes = parsedLateGrace
+    }
+
+    if (updateData.checkOutGraceMinutes !== undefined) {
+      const parsedCheckOutGrace = Number(updateData.checkOutGraceMinutes)
+      if (!Number.isFinite(parsedCheckOutGrace) || !Number.isInteger(parsedCheckOutGrace) || parsedCheckOutGrace < 0) {
+        return NextResponse.json(
+          { error: "Normal check-out after shift must be a whole non-negative number" },
+          { status: 400 },
+        )
+      }
+      updateData.checkOutGraceMinutes = parsedCheckOutGrace
     }
 
     if (updateData.email) {

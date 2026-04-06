@@ -9,7 +9,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { authFetch } from "@/lib/client-session"
-import { formatLocalDateInput, getLocalTimeMinutes, getTimeStringMinutes, isBeforeShiftEnd } from "@/lib/attendance-time"
+import {
+  formatLocalDateInput,
+  getAttendanceWindowState,
+  getLocalTimeMinutes,
+  getTimeStringFromMinutes,
+  getTimeStringMinutes,
+} from "@/lib/attendance-time"
 import type { SessionUser } from "@/lib/session"
 import { formatTimeString12Hour } from "@/lib/time"
 
@@ -30,7 +36,9 @@ interface AttendanceRecord {
   isEarly: boolean
   lateReason?: string | null
   earlyReason?: string | null
+  lateCheckoutReason?: string | null
   hoursWorked?: number
+  date?: string
 }
 
 interface AttendanceTabProps {
@@ -40,6 +48,7 @@ interface AttendanceTabProps {
 interface AttendanceRules {
   checkInBeforeMinutes: number
   lateGraceMinutes: number
+  checkOutGraceMinutes: number
 }
 
 interface AttendancePolicySummary {
@@ -109,6 +118,7 @@ export default function AttendanceTab({ user }: AttendanceTabProps) {
   const [attendanceRules, setAttendanceRules] = useState<AttendanceRules>({
     checkInBeforeMinutes: 5,
     lateGraceMinutes: 0,
+    checkOutGraceMinutes: 0,
   })
   const [attendancePolicy, setAttendancePolicy] = useState<AttendancePolicySummary>({
     mode: "open",
@@ -119,8 +129,10 @@ export default function AttendanceTab({ user }: AttendanceTabProps) {
   })
   const [lateReason, setLateReason] = useState("")
   const [earlyReason, setEarlyReason] = useState("")
+  const [lateCheckoutReason, setLateCheckoutReason] = useState("")
   const [showLateReason, setShowLateReason] = useState(false)
   const [showEarlyReason, setShowEarlyReason] = useState(false)
+  const [showLateCheckoutReason, setShowLateCheckoutReason] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
   const [isCheckingIn, setIsCheckingIn] = useState(false)
   const [isCheckingOut, setIsCheckingOut] = useState(false)
@@ -138,6 +150,7 @@ export default function AttendanceTab({ user }: AttendanceTabProps) {
         setAttendanceRules({
           checkInBeforeMinutes: shiftData.attendanceRules?.checkInBeforeMinutes ?? 5,
           lateGraceMinutes: shiftData.attendanceRules?.lateGraceMinutes ?? 0,
+          checkOutGraceMinutes: shiftData.attendanceRules?.checkOutGraceMinutes ?? 0,
         })
         setAttendancePolicy({
           mode: shiftData.attendancePolicy?.mode ?? "open",
@@ -177,6 +190,7 @@ export default function AttendanceTab({ user }: AttendanceTabProps) {
   }, [user.id])
 
   const currentTimeMinutes = useMemo(() => getLocalTimeMinutes(currentTime), [currentTime])
+  const currentDateInput = useMemo(() => formatLocalDateInput(currentTime), [currentTime])
   const shiftStartMinutes = useMemo(() => (shift ? getTimeStringMinutes(shift.startTime) : null), [shift])
   const shiftEndMinutes = useMemo(() => (shift ? getTimeStringMinutes(shift.endTime) : null), [shift])
   const earliestCheckIn = useMemo(
@@ -190,25 +204,53 @@ export default function AttendanceTab({ user }: AttendanceTabProps) {
   const isCheckedIn = Boolean(record?.checkInTime && !record?.checkOutTime)
   const isAlreadyCompleted = Boolean(record?.checkInTime && record?.checkOutTime)
   const isOnLeave = record?.status === "on_leave"
+  const isAbsent = record?.status === "absent"
   const canCheckInWindow = earliestCheckIn === null || currentTimeMinutes >= earliestCheckIn
   const isLate = lateCutoff !== null && currentTimeMinutes > lateCutoff
-  const isEarly =
+  const checkoutWindowState =
     shiftStartMinutes !== null && shiftEndMinutes !== null
-      ? isBeforeShiftEnd(currentTimeMinutes, shiftStartMinutes, shiftEndMinutes)
-      : false
+      ? getAttendanceWindowState({
+          currentDateInput,
+          currentMinutes: currentTimeMinutes,
+          graceMinutes: 360,
+          lateCheckoutGraceMinutes: attendanceRules.checkOutGraceMinutes,
+          recordDateInput: record?.date || currentDateInput,
+          startMinutes: shiftStartMinutes,
+          endMinutes: shiftEndMinutes,
+        })
+      : null
+  const isEarly = Boolean(checkoutWindowState?.isBeforeShiftEnd)
+  const requiresLateCheckoutReason = Boolean(
+    isCheckedIn && checkoutWindowState && !checkoutWindowState.isBeforeShiftEnd && checkoutWindowState.isAfterNormalCheckoutWindow,
+  )
+  const hasMissedShift =
+    isAbsent ||
+    Boolean(
+      shift &&
+        checkoutWindowState &&
+        !checkoutWindowState.isBeforeShiftEnd &&
+        !isCheckedIn &&
+        !isAlreadyCompleted &&
+        !isOnLeave,
+    )
   const shouldRequireEarlyReason = isCheckedIn && isEarly
   const earliestCheckInLabel = earliestCheckIn !== null
-    ? formatTimeString12Hour(`${String(Math.floor(earliestCheckIn / 60)).padStart(2, "0")}:${String(earliestCheckIn % 60).padStart(2, "0")}`)
+    ? formatTimeString12Hour(getTimeStringFromMinutes(earliestCheckIn))
     : null
   const lateCutoffLabel = lateCutoff !== null
-    ? formatTimeString12Hour(`${String(Math.floor(lateCutoff / 60)).padStart(2, "0")}:${String(lateCutoff % 60).padStart(2, "0")}`)
+    ? formatTimeString12Hour(getTimeStringFromMinutes(lateCutoff))
     : null
-  const checkInDisabled = isCheckingIn || isCheckedIn || isAlreadyCompleted || isOnLeave || !canCheckInWindow
+  const normalCheckoutCutoffLabel = checkoutWindowState
+    ? formatTimeString12Hour(getTimeStringFromMinutes(checkoutWindowState.normalCheckoutDeadlineMinutes))
+    : null
+  const checkInDisabled = isCheckingIn || isCheckedIn || isAlreadyCompleted || isOnLeave || hasMissedShift || !canCheckInWindow
   const checkOutDisabled = isCheckingOut || !isCheckedIn || isOnLeave
   const attendanceAccessMessage = getAttendanceAccessMessage(attendancePolicy)
 
   const statusMeta = isOnLeave
     ? { label: "Approved Leave", tone: "bg-amber-100 text-amber-900" }
+    : hasMissedShift
+      ? { label: "Absent", tone: "bg-rose-100 text-rose-900" }
     : isCheckedIn
       ? { label: "Checked In", tone: "bg-emerald-100 text-emerald-900" }
       : isAlreadyCompleted
@@ -216,6 +258,13 @@ export default function AttendanceTab({ user }: AttendanceTabProps) {
         : { label: "Ready to Start", tone: "bg-slate-100 text-slate-900" }
 
   const handleCheckIn = async () => {
+    if (hasMissedShift) {
+      toast.error("Shift missed", {
+        description: "Your shift has already ended, so you are marked absent for today.",
+      })
+      return
+    }
+
     if (isLate && !lateReason.trim()) {
       setShowLateReason(true)
       toast.error("Late reason required", {
@@ -291,15 +340,38 @@ export default function AttendanceTab({ user }: AttendanceTabProps) {
   const handleCheckOut = async () => {
     const actionTime = new Date()
     const actionTimeMinutes = getLocalTimeMinutes(actionTime)
-    const isEarlyAtAction =
+    const actionLocalDateInput = formatLocalDateInput(actionTime)
+    const checkoutStateAtAction =
       shiftStartMinutes !== null && shiftEndMinutes !== null
-        ? isBeforeShiftEnd(actionTimeMinutes, shiftStartMinutes, shiftEndMinutes)
-        : false
+        ? getAttendanceWindowState({
+            currentDateInput: actionLocalDateInput,
+            currentMinutes: actionTimeMinutes,
+            graceMinutes: 360,
+            lateCheckoutGraceMinutes: attendanceRules.checkOutGraceMinutes,
+            recordDateInput: record?.date || actionLocalDateInput,
+            startMinutes: shiftStartMinutes,
+            endMinutes: shiftEndMinutes,
+          })
+        : null
+    const isEarlyAtAction = Boolean(checkoutStateAtAction?.isBeforeShiftEnd)
+    const requiresLateCheckoutReasonAtAction = Boolean(
+      checkoutStateAtAction &&
+        !checkoutStateAtAction.isBeforeShiftEnd &&
+        checkoutStateAtAction.isAfterNormalCheckoutWindow,
+    )
 
     if (isEarlyAtAction && !earlyReason.trim()) {
       setShowEarlyReason(true)
       toast.error("Early checkout reason required", {
         description: "Please explain why you are leaving before shift end.",
+      })
+      return
+    }
+
+    if (requiresLateCheckoutReasonAtAction && !lateCheckoutReason.trim()) {
+      setShowLateCheckoutReason(true)
+      toast.error("Late check-out reason required", {
+        description: "Please explain why you are checking out after your normal checkout window.",
       })
       return
     }
@@ -337,10 +409,11 @@ export default function AttendanceTab({ user }: AttendanceTabProps) {
         body: JSON.stringify({
           userId: user.id,
           checkOutTime: actionTime.toISOString(),
-          localDate: formatLocalDateInput(actionTime),
+          localDate: actionLocalDateInput,
           localTimeMinutes: getLocalTimeMinutes(actionTime),
           isEarly: isEarlyAtAction,
           earlyReason: isEarlyAtAction ? earlyReason.trim() : null,
+          lateCheckoutReason: requiresLateCheckoutReasonAtAction ? lateCheckoutReason.trim() : null,
           ...(clientPublicIp ? { clientPublicIp } : {}),
           ...locationPayload,
         }),
@@ -351,12 +424,17 @@ export default function AttendanceTab({ user }: AttendanceTabProps) {
         if (String(data.error || "").toLowerCase().includes("early checkout reason")) {
           setShowEarlyReason(true)
         }
+        if (String(data.error || "").toLowerCase().includes("late checkout reason")) {
+          setShowLateCheckoutReason(true)
+        }
         toast.error("Check-out failed", { description: data.error || "Please try again." })
         return
       }
 
       setEarlyReason("")
+      setLateCheckoutReason("")
       setShowEarlyReason(false)
+      setShowLateCheckoutReason(false)
       toast.success("Checked out successfully", {
         description: `Total hours worked today: ${data.hoursWorked}.`,
       })
@@ -422,6 +500,8 @@ export default function AttendanceTab({ user }: AttendanceTabProps) {
                     ? "You are currently clocked in."
                     : isAlreadyCompleted
                       ? "Your attendance is complete for today."
+                      : hasMissedShift
+                        ? "Your shift ended without a check-in, so you are marked absent today."
                       : isOnLeave
                         ? "Your approved leave is active today."
                         : "Use the action cards to start or end your shift."}
@@ -450,6 +530,8 @@ export default function AttendanceTab({ user }: AttendanceTabProps) {
               <CardDescription>
                 {isOnLeave
                   ? "Check-in is disabled because your leave is approved for today."
+                  : hasMissedShift
+                    ? "Your shift has already ended. You are marked absent for today."
                   : isAlreadyCompleted
                     ? "You already completed today's attendance."
                     : isCheckedIn
@@ -477,7 +559,7 @@ export default function AttendanceTab({ user }: AttendanceTabProps) {
                 )}
               </Button>
 
-              {showLateReason && (
+              {showLateReason && !hasMissedShift && (
                 <div className="space-y-2">
                   <Label htmlFor="late-reason">Late arrival reason</Label>
                   <Textarea
@@ -500,10 +582,17 @@ export default function AttendanceTab({ user }: AttendanceTabProps) {
                 </div>
               )}
 
-              {isLate && !isCheckedIn && !isAlreadyCompleted && (
+              {isLate && !hasMissedShift && !isCheckedIn && !isAlreadyCompleted && (
                 <div className="flex items-start gap-3 rounded-2xl border border-rose-200 bg-rose-50 p-4 text-rose-900">
                   <Siren className="mt-0.5 h-5 w-5 shrink-0" />
                   <p className="text-sm">You are past the late grace window, so a late arrival reason is required before check-in.</p>
+                </div>
+              )}
+
+              {hasMissedShift && (
+                <div className="flex items-start gap-3 rounded-2xl border border-rose-200 bg-rose-50 p-4 text-rose-900">
+                  <AlertCircle className="mt-0.5 h-5 w-5 shrink-0" />
+                  <p className="text-sm">Your shift already ended without a check-in. Attendance is marked absent for today.</p>
                 </div>
               )}
             </CardContent>
@@ -556,10 +645,30 @@ export default function AttendanceTab({ user }: AttendanceTabProps) {
                 </div>
               )}
 
+              {(showLateCheckoutReason || requiresLateCheckoutReason) && (
+                <div className="space-y-2">
+                  <Label htmlFor="late-checkout-reason">Late check-out reason</Label>
+                  <Textarea
+                    id="late-checkout-reason"
+                    value={lateCheckoutReason}
+                    onChange={(event) => setLateCheckoutReason(event.target.value)}
+                    placeholder="Explain why you are checking out after your normal checkout window..."
+                    className="min-h-[110px]"
+                  />
+                </div>
+              )}
+
               {shouldRequireEarlyReason && (
                 <div className="flex items-start gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-amber-900">
                   <Siren className="mt-0.5 h-5 w-5 shrink-0" />
                   <p className="text-sm">You are checking out before shift end, so an early checkout reason is required.</p>
+                </div>
+              )}
+
+              {requiresLateCheckoutReason && (
+                <div className="flex items-start gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-amber-900">
+                  <Siren className="mt-0.5 h-5 w-5 shrink-0" />
+                  <p className="text-sm">You are past the normal check-out window, so a late check-out reason is required.</p>
                 </div>
               )}
             </CardContent>
@@ -572,7 +681,7 @@ export default function AttendanceTab({ user }: AttendanceTabProps) {
           <CardTitle>Attendance Summary</CardTitle>
           <CardDescription>Today's attendance details are shown here.</CardDescription>
         </CardHeader>
-        <CardContent className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+        <CardContent className="grid gap-4 md:grid-cols-2 xl:grid-cols-6">
           <div className="rounded-2xl bg-slate-50 p-4">
             <p className="text-sm text-slate-500">Check In</p>
             <p className="mt-1 text-lg font-semibold text-slate-950">{formatTime(record?.checkInTime)}</p>
@@ -593,10 +702,14 @@ export default function AttendanceTab({ user }: AttendanceTabProps) {
             <p className="text-sm text-slate-500">Late Cutoff</p>
             <p className="mt-1 text-lg font-semibold text-slate-950">{lateCutoffLabel ?? "Not configured"}</p>
           </div>
+          <div className="rounded-2xl bg-slate-50 p-4">
+            <p className="text-sm text-slate-500">Normal Check-Out Until</p>
+            <p className="mt-1 text-lg font-semibold text-slate-950">{normalCheckoutCutoffLabel ?? "Shift end"}</p>
+          </div>
         </CardContent>
       </Card>
 
-      {(isLate || isEarly || isOnLeave) && (
+      {(isLate || isEarly || requiresLateCheckoutReason || hasMissedShift || isOnLeave) && (
         <Card className="rounded-3xl border-slate-200 shadow-sm">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -605,9 +718,14 @@ export default function AttendanceTab({ user }: AttendanceTabProps) {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-2 text-sm text-slate-600">
-            {isLate && <p>You are currently past shift start time, so a late reason is required for check-in.</p>}
+            {isLate && !hasMissedShift && <p>You are currently past shift start time, so a late reason is required for check-in.</p>}
+            {hasMissedShift && <p>Your shift ended without a check-in. You are marked absent for today.</p>}
             {lateCutoff && shift && <p>Late mark cutoff: {lateCutoffLabel}</p>}
             {isEarly && isCheckedIn && <p>You are checking out before shift end, so an early checkout reason is required.</p>}
+            {requiresLateCheckoutReason && isCheckedIn && (
+              <p>You are checking out after the normal checkout window, so a late check-out reason is required.</p>
+            )}
+            {normalCheckoutCutoffLabel && shift && <p>Normal check-out stays reason-free until: {normalCheckoutCutoffLabel}</p>}
             {isOnLeave && <p>Your leave has been approved for today, so attendance actions remain disabled.</p>}
           </CardContent>
         </Card>

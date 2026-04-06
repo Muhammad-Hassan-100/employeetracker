@@ -19,7 +19,7 @@ export async function POST(request: NextRequest) {
       return response
     }
 
-    const { userId, checkOutTime, isEarly, earlyReason, latitude, longitude, clientPublicIp, localDate, localTimeMinutes } =
+    const { userId, checkOutTime, isEarly, earlyReason, lateCheckoutReason, latitude, longitude, clientPublicIp, localDate, localTimeMinutes } =
       await request.json()
     const accessError = assertSelfOrAdmin(session, userId)
     if (accessError) {
@@ -51,7 +51,9 @@ export async function POST(request: NextRequest) {
       typeof localDate === "string" && /^\d{4}-\d{2}-\d{2}$/.test(localDate) ? localDate : formatLocalDateInput(checkOutMoment)
     const actionTimeMinutes = Number.isFinite(Number(localTimeMinutes)) ? Number(localTimeMinutes) : getLocalTimeMinutes(checkOutMoment)
     let computedIsEarly = false
+    let computedNeedsLateCheckoutReason = false
     let matchedShift: any = null
+    let employeeCheckOutGraceMinutes = 0
 
     try {
       const user = await usersCollection.findOne({
@@ -59,6 +61,7 @@ export async function POST(request: NextRequest) {
         companyId: session.companyId,
       })
       if (user?.shiftId) {
+        employeeCheckOutGraceMinutes = Number.isInteger(user.checkOutGraceMinutes) ? user.checkOutGraceMinutes : 0
         try {
           matchedShift = await shiftsCollection.findOne({
             _id: new ObjectId(user.shiftId),
@@ -105,12 +108,14 @@ export async function POST(request: NextRequest) {
         currentDateInput: localDateInput,
         currentMinutes: actionTimeMinutes,
         graceMinutes: CHECKOUT_GRACE_MINUTES,
+        lateCheckoutGraceMinutes: employeeCheckOutGraceMinutes,
         recordDateInput: record.date,
         startMinutes: shiftStartMinutes,
         endMinutes: shiftEndMinutes,
       })
 
       computedIsEarly = windowState.isBeforeShiftEnd
+      computedNeedsLateCheckoutReason = !windowState.isBeforeShiftEnd && windowState.isAfterNormalCheckoutWindow
 
       if (windowState.isCheckoutExpired) {
         await attendanceCollection.updateOne(
@@ -120,6 +125,7 @@ export async function POST(request: NextRequest) {
               status: "present",
               isEarly: false,
               earlyReason: null,
+              lateCheckoutReason: null,
               hoursWorked: 0,
               checkoutWindowExpired: true,
               updatedAt: new Date(),
@@ -138,6 +144,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Early checkout reason is required before shift end" }, { status: 400 })
     }
 
+    if (computedNeedsLateCheckoutReason && !String(lateCheckoutReason || "").trim()) {
+      return NextResponse.json(
+        { error: "Late checkout reason is required after your normal checkout window" },
+        { status: 400 },
+      )
+    }
+
     const updateResult = await attendanceCollection.updateOne(
       { _id: record._id, companyId: session.companyId },
       {
@@ -145,6 +158,7 @@ export async function POST(request: NextRequest) {
           checkOutTime: checkOutTimeDate,
           isEarly: computedIsEarly || Boolean(isEarly),
           earlyReason: computedIsEarly || isEarly ? String(earlyReason || "").trim() || null : null,
+          lateCheckoutReason: computedNeedsLateCheckoutReason ? String(lateCheckoutReason || "").trim() || null : null,
           hoursWorked: Math.round(hoursWorked * 100) / 100,
           updatedAt: new Date(),
         },

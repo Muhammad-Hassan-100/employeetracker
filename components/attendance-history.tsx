@@ -18,6 +18,7 @@ interface AttendanceRecord {
   isEarly: boolean
   lateReason: string | null
   earlyReason: string | null
+  lateCheckoutReason: string | null
   leaveReason: string | null
   leaveType: string | null
   hoursWorked?: number | null
@@ -158,7 +159,7 @@ export default function AttendanceHistory({ user }: AttendanceHistoryProps) {
                       <span>Out: {formatTime(record.checkOutTime)}</span>
                       <span>Hours: {formatHoursWorked(record.hoursWorked)}</span>
                     </div>
-                    {(record.lateReason || record.earlyReason || record.leaveReason) && (
+                    {(record.lateReason || record.earlyReason || record.lateCheckoutReason || record.leaveReason) && (
                       <div className="rounded-2xl bg-slate-50 p-3 text-sm text-slate-700">
                         {record.leaveReason && (
                           <p>
@@ -167,6 +168,7 @@ export default function AttendanceHistory({ user }: AttendanceHistoryProps) {
                         )}
                         {record.lateReason && <p><span className="font-semibold">Late:</span> {record.lateReason}</p>}
                         {record.earlyReason && <p><span className="font-semibold">Early:</span> {record.earlyReason}</p>}
+                        {record.lateCheckoutReason && <p><span className="font-semibold">Late Check-Out:</span> {record.lateCheckoutReason}</p>}
                       </div>
                     )}
                   </div>

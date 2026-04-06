@@ -74,6 +74,7 @@ export async function GET(request: NextRequest) {
       attendanceRules: {
         checkInBeforeMinutes: user.checkInBeforeMinutes ?? 5,
         lateGraceMinutes: user.lateGraceMinutes ?? 0,
+        checkOutGraceMinutes: user.checkOutGraceMinutes ?? 0,
       },
       attendancePolicy: {
         mode: attendancePolicy.mode,

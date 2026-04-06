@@ -110,6 +110,7 @@ export async function GET(request: NextRequest) {
                 isEarly: false,
                 lateReason: null,
                 earlyReason: null,
+                lateCheckoutReason: null,
                 hoursWorked: 0,
                 status: "absent",
                 autoAbsent: true,
@@ -132,13 +133,14 @@ export async function GET(request: NextRequest) {
           )
 
           if (openRecord) {
-            const windowState = getAttendanceWindowState({
-              currentDateInput: localDateInput,
-              currentMinutes,
-              graceMinutes: CHECKOUT_GRACE_MINUTES,
-              recordDateInput: openRecord.date,
-              startMinutes: shiftStartMinutes,
-              endMinutes: shiftEndMinutes,
+              const windowState = getAttendanceWindowState({
+                currentDateInput: localDateInput,
+                currentMinutes,
+                graceMinutes: CHECKOUT_GRACE_MINUTES,
+                lateCheckoutGraceMinutes: Number.isInteger(user.checkOutGraceMinutes) ? user.checkOutGraceMinutes : 0,
+                recordDateInput: openRecord.date,
+                startMinutes: shiftStartMinutes,
+                endMinutes: shiftEndMinutes,
             })
 
             if (windowState.isCheckoutExpired) {
@@ -149,6 +151,7 @@ export async function GET(request: NextRequest) {
                     status: "present",
                     isEarly: false,
                     earlyReason: null,
+                    lateCheckoutReason: null,
                     hoursWorked: 0,
                     checkoutWindowExpired: true,
                     updatedAt: new Date(),
