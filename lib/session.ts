@@ -18,6 +18,7 @@ export interface SessionUser {
   shiftId?: string
   status?: "active" | "inactive"
   approvalStatus?: ApprovalStatus
+  allowEmployeePasswordChange?: boolean
 }
 
 export interface RequestSession {
@@ -31,7 +32,12 @@ export interface RequestSession {
   approvalStatus?: ApprovalStatus
 }
 
-export function buildSessionUser(user: any, companyName?: string, companyDomain?: string): SessionUser {
+export function buildSessionUser(
+  user: any,
+  companyName?: string,
+  companyDomain?: string,
+  allowEmployeePasswordChange?: boolean,
+): SessionUser {
   const fallbackCompanyName = user.role === "super_admin" ? "Platform Control" : "Workspace"
   const fallbackCompanyDomain = user.role === "super_admin" ? "hassan.com" : extractEmailDomain(user.email)
 
@@ -48,6 +54,7 @@ export function buildSessionUser(user: any, companyName?: string, companyDomain?
     shiftId: user.shiftId,
     status: user.status,
     approvalStatus: user.approvalStatus,
+    allowEmployeePasswordChange: allowEmployeePasswordChange ?? user.allowEmployeePasswordChange ?? false,
   }
 }
 

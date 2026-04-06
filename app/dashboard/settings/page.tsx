@@ -13,6 +13,7 @@ import {
 import { Separator } from "@/components/ui/separator"
 import { SidebarTrigger } from "@/components/ui/sidebar"
 import AdminSettings from "@/components/admin-settings"
+import EmployeeSettings from "@/components/employee-settings"
 import { getStoredUser } from "@/lib/client-session"
 import type { SessionUser } from "@/lib/session"
 
@@ -27,8 +28,8 @@ export default function SettingsPage() {
       return
     }
 
-    if (storedUser.role !== "admin") {
-      router.push("/dashboard/attendance")
+    if (storedUser.role !== "admin" && storedUser.role !== "employee") {
+      router.push("/dashboard")
       return
     }
 
@@ -60,9 +61,17 @@ export default function SettingsPage() {
       <div className="flex flex-1 flex-col gap-4 p-4">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Settings</h1>
-          <p className="text-muted-foreground">Update your admin account. Your company domain remains locked.</p>
+          <p className="text-muted-foreground">
+            {user.role === "admin"
+              ? "Update your admin account. Your company domain remains locked."
+              : "Update only your own password if your admin has allowed it."}
+          </p>
         </div>
-        <AdminSettings user={user} onUserUpdate={setUser} />
+        {user.role === "admin" ? (
+          <AdminSettings user={user} onUserUpdate={setUser} />
+        ) : (
+          <EmployeeSettings user={user} onUserUpdate={setUser} onAccessDenied={() => router.replace("/dashboard/attendance")} />
+        )}
       </div>
     </>
   )

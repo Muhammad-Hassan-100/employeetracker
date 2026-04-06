@@ -5,7 +5,14 @@ import {
   normalizeAttendancePolicy,
   validateAttendancePolicyConfiguration,
 } from "@/lib/attendance-policy"
-import { getCompanyDepartments, getCompanyWorkingDays, normalizeDepartments, normalizeWorkingDays } from "@/lib/company-settings"
+import {
+  getCompanyAllowEmployeePasswordChange,
+  getCompanyDepartments,
+  getCompanyWorkingDays,
+  normalizeAllowEmployeePasswordChange,
+  normalizeDepartments,
+  normalizeWorkingDays,
+} from "@/lib/company-settings"
 import { requireAdmin } from "@/lib/session"
 
 export async function GET(request: NextRequest) {
@@ -26,6 +33,7 @@ export async function GET(request: NextRequest) {
     const workingDays = getCompanyWorkingDays(company)
     const departments = getCompanyDepartments(company)
     const attendancePolicy = getCompanyAttendancePolicy(company)
+    const allowEmployeePasswordChange = getCompanyAllowEmployeePasswordChange(company)
 
     return NextResponse.json({
       settings: {
@@ -33,6 +41,7 @@ export async function GET(request: NextRequest) {
         offDays: [0, 1, 2, 3, 4, 5, 6].filter((day) => !workingDays.includes(day)),
         departments,
         attendancePolicy,
+        allowEmployeePasswordChange,
       },
     })
   } catch (error) {
@@ -48,10 +57,11 @@ export async function PUT(request: NextRequest) {
       return response
     }
 
-    const { workingDays, departments, attendancePolicy } = await request.json()
+    const { workingDays, departments, attendancePolicy, allowEmployeePasswordChange } = await request.json()
     const normalizedWorkingDays = normalizeWorkingDays(workingDays)
     const normalizedDepartments = normalizeDepartments(departments)
     const normalizedAttendancePolicy = normalizeAttendancePolicy(attendancePolicy)
+    const normalizedAllowEmployeePasswordChange = normalizeAllowEmployeePasswordChange(allowEmployeePasswordChange)
 
     if (!normalizedWorkingDays.length) {
       return NextResponse.json({ error: "Select at least one working day" }, { status: 400 })
@@ -76,6 +86,7 @@ export async function PUT(request: NextRequest) {
           workingDays: normalizedWorkingDays,
           departments: normalizedDepartments,
           attendancePolicy: normalizedAttendancePolicy,
+          allowEmployeePasswordChange: normalizedAllowEmployeePasswordChange,
           updatedAt: new Date(),
         },
       },
@@ -92,6 +103,7 @@ export async function PUT(request: NextRequest) {
         offDays: [0, 1, 2, 3, 4, 5, 6].filter((day) => !normalizedWorkingDays.includes(day)),
         departments: normalizedDepartments,
         attendancePolicy: normalizedAttendancePolicy,
+        allowEmployeePasswordChange: normalizedAllowEmployeePasswordChange,
       },
     })
   } catch (error) {

@@ -1,7 +1,7 @@
 "use client"
 
 import Link from "next/link"
-import { useEffect } from "react"
+import { useEffect, useState } from "react"
 import { usePathname, useRouter } from "next/navigation"
 import { BarChart3, Building2, CalendarClock, ClipboardList, Home, LogOut, Settings2, ShieldCheck, UserPlus2, UsersRound } from "lucide-react"
 import { toast } from "sonner"
@@ -22,7 +22,7 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar"
 import type { SessionUser } from "@/lib/session"
-import { clearStoredUser } from "@/lib/client-session"
+import { authFetch, clearStoredUser, setStoredUser } from "@/lib/client-session"
 
 interface AppSidebarProps {
   user: SessionUser
@@ -32,12 +32,58 @@ export function AppSidebar({ user }: AppSidebarProps) {
   const router = useRouter()
   const pathname = usePathname()
   const { isMobile, setOpenMobile } = useSidebar()
+  const [currentUser, setCurrentUser] = useState(user)
+
+  useEffect(() => {
+    setCurrentUser(user)
+  }, [user])
 
   useEffect(() => {
     if (isMobile) {
       setOpenMobile(false)
     }
   }, [isMobile, pathname, setOpenMobile])
+
+  useEffect(() => {
+    if (user.role === "super_admin") {
+      return
+    }
+
+    let isCancelled = false
+
+    const syncCurrentUser = async () => {
+      try {
+        const response = await authFetch("/api/auth/profile")
+        if (!response.ok) {
+          if (response.status === 403 && user.role === "employee") {
+            const nextUser = {
+              ...user,
+              allowEmployeePasswordChange: false,
+            }
+            setCurrentUser(nextUser)
+            setStoredUser(nextUser)
+          }
+          return
+        }
+
+        const data = await response.json()
+        if (!data.user || isCancelled) {
+          return
+        }
+
+        setCurrentUser(data.user)
+        setStoredUser(data.user)
+      } catch {
+        // Silent refresh keeps the sidebar current without interrupting the user.
+      }
+    }
+
+    syncCurrentUser()
+
+    return () => {
+      isCancelled = true
+    }
+  }, [user.role])
 
   const handleLogout = () => {
     clearStoredUser()
@@ -48,13 +94,13 @@ export function AppSidebar({ user }: AppSidebarProps) {
   }
 
   const menuItems =
-    user.role === "super_admin"
+    currentUser.role === "super_admin"
       ? [
           { title: "Approval Requests", url: "/dashboard/platform/requests", icon: ShieldCheck },
           { title: "Companies", url: "/dashboard/platform/companies", icon: Building2 },
           { title: "Employees", url: "/dashboard/platform/employees", icon: UsersRound },
         ]
-      : user.role === "admin"
+      : currentUser.role === "admin"
       ? [
           { title: "Add Employee", url: "/dashboard/employees", icon: UserPlus2 },
           { title: "Shifts & Rules", url: "/dashboard/shifts", icon: CalendarClock },
@@ -68,6 +114,9 @@ export function AppSidebar({ user }: AppSidebarProps) {
           { title: "Attendance", url: "/dashboard/attendance", icon: Home },
           { title: "Leave Requests", url: "/dashboard/leaves", icon: ClipboardList },
           { title: "My History", url: "/dashboard/history", icon: BarChart3 },
+          ...(currentUser.allowEmployeePasswordChange
+            ? [{ title: "Settings", url: "/dashboard/settings", icon: Settings2 }]
+            : []),
         ]
 
   return (
@@ -77,21 +126,21 @@ export function AppSidebar({ user }: AppSidebarProps) {
           <div className="flex items-start justify-between gap-3">
             <div>
               <p className="text-xs uppercase tracking-[0.2em] text-emerald-300">
-                {user.role === "super_admin" ? "Platform" : "Workspace"}
+                {currentUser.role === "super_admin" ? "Platform" : "Workspace"}
               </p>
-              <h1 className="mt-1 text-lg font-bold">{user.companyName}</h1>
-              <p className="mt-1 text-sm text-slate-300">{user.name}</p>
+              <h1 className="mt-1 text-lg font-bold">{currentUser.companyName}</h1>
+              <p className="mt-1 text-sm text-slate-300">{currentUser.name}</p>
             </div>
             <Badge
               className={
-                user.role === "super_admin"
+                currentUser.role === "super_admin"
                   ? "bg-amber-300 text-slate-950"
-                  : user.role === "admin"
+                  : currentUser.role === "admin"
                     ? "bg-emerald-400 text-slate-950"
                     : "bg-sky-400 text-slate-950"
               }
             >
-              {user.role === "super_admin" ? "Super Admin" : user.role === "admin" ? "Admin" : "Employee"}
+              {currentUser.role === "super_admin" ? "Super Admin" : currentUser.role === "admin" ? "Admin" : "Employee"}
             </Badge>
           </div>
         </div>

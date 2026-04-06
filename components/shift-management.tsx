@@ -60,9 +60,7 @@ export default function ShiftManagement() {
     departmentsInput: "",
     attendancePolicyMode: "open" as AttendancePolicyMode,
     allowedIPsInput: "",
-    officeLat: "",
-    officeLng: "",
-    radiusMeters: "150",
+    allowEmployeePasswordChange: false,
   })
   const [isLoading, setIsLoading] = useState(true)
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -102,9 +100,7 @@ export default function ShiftManagement() {
           departmentsInput: settingsData.settings.departments.join(", "),
           attendancePolicyMode: attendancePolicy?.mode ?? "open",
           allowedIPsInput: attendancePolicy?.allowedIPs?.join(", ") ?? "",
-          officeLat: attendancePolicy?.officeLat?.toString?.() ?? "",
-          officeLng: attendancePolicy?.officeLng?.toString?.() ?? "",
-          radiusMeters: attendancePolicy?.radiusMeters?.toString?.() ?? "150",
+          allowEmployeePasswordChange: Boolean(settingsData.settings.allowEmployeePasswordChange),
         })
       }
     } catch {
@@ -228,12 +224,10 @@ export default function ShiftManagement() {
         body: JSON.stringify({
           workingDays: companyRules.workingDays,
           departments,
+          allowEmployeePasswordChange: companyRules.allowEmployeePasswordChange,
           attendancePolicy: {
             mode: companyRules.attendancePolicyMode,
             allowedIPs,
-            officeLat: companyRules.officeLat.trim() ? Number(companyRules.officeLat) : null,
-            officeLng: companyRules.officeLng.trim() ? Number(companyRules.officeLng) : null,
-            radiusMeters: companyRules.radiusMeters.trim() ? Number(companyRules.radiusMeters) : 150,
           },
         }),
       })
@@ -251,9 +245,7 @@ export default function ShiftManagement() {
         departmentsInput: data.settings.departments.join(", "),
         attendancePolicyMode: data.settings.attendancePolicy.mode,
         allowedIPsInput: data.settings.attendancePolicy.allowedIPs.join(", "),
-        officeLat: data.settings.attendancePolicy.officeLat?.toString?.() ?? "",
-        officeLng: data.settings.attendancePolicy.officeLng?.toString?.() ?? "",
-        radiusMeters: data.settings.attendancePolicy.radiusMeters.toString(),
+        allowEmployeePasswordChange: Boolean(data.settings.allowEmployeePasswordChange),
       })
       toast.success("Company rules updated")
     } catch {
@@ -535,6 +527,30 @@ export default function ShiftManagement() {
               </p>
             </div>
           )}
+
+          <div className="space-y-2">
+            <Label htmlFor="employee-password-access">Employee password access</Label>
+            <Select
+              value={companyRules.allowEmployeePasswordChange ? "allowed" : "blocked"}
+              onValueChange={(value) =>
+                setCompanyRules((prev) => ({
+                  ...prev,
+                  allowEmployeePasswordChange: value === "allowed",
+                }))
+              }
+            >
+              <SelectTrigger id="employee-password-access" className="rounded-2xl">
+                <SelectValue placeholder="Choose employee password access" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="blocked">Blocked by admin</SelectItem>
+                <SelectItem value="allowed">Employee can change password</SelectItem>
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-slate-500">
+              Admin creates the initial employee password. Employees can only update it later if this permission is enabled.
+            </p>
+          </div>
 
           <Button
             onClick={handleRulesSave}

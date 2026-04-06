@@ -1,14 +1,21 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { getDatabase } from "@/lib/mongodb"
-import { buildSessionUser, requireAdmin } from "@/lib/session"
-import { extractEmailDomain } from "@/lib/company-utils"
 import { ObjectId } from "mongodb"
+import { extractEmailDomain } from "@/lib/company-utils"
+import {
+  getCompanyAllowEmployeePasswordChange,
+} from "@/lib/company-settings"
+import { getDatabase } from "@/lib/mongodb"
+import { buildSessionUser, forbidden, requireSession } from "@/lib/session"
 
 export async function GET(request: NextRequest) {
   try {
-    const { session, response } = requireAdmin(request)
+    const { session, response } = requireSession(request)
     if (!session) {
       return response
+    }
+
+    if (session.role !== "admin" && session.role !== "employee") {
+      return forbidden("Settings are only available for admin and employee accounts")
     }
 
     const db = await getDatabase()
@@ -19,35 +26,95 @@ export async function GET(request: NextRequest) {
       usersCollection.findOne({
         _id: new ObjectId(session.userId),
         companyId: session.companyId,
-        role: "admin",
+        role: session.role,
       }),
       companiesCollection.findOne({ companyId: session.companyId }),
     ])
 
     if (!user) {
-      return NextResponse.json({ error: "Admin profile not found" }, { status: 404 })
+      return NextResponse.json({ error: `${session.role === "admin" ? "Admin" : "Employee"} profile not found` }, { status: 404 })
+    }
+
+    const allowEmployeePasswordChange = getCompanyAllowEmployeePasswordChange(company)
+    if (session.role === "employee" && !allowEmployeePasswordChange) {
+      return forbidden("Your admin has not allowed employee password changes")
     }
 
     return NextResponse.json({
-      user: buildSessionUser(user, company?.name, company?.domain),
-      profile: {
-        name: user.name,
-        email: user.email,
-        companyName: company?.name || session.companyName,
-        companyDomain: company?.domain || session.companyDomain,
-      },
+      user: buildSessionUser(user, company?.name, company?.domain, allowEmployeePasswordChange),
+      profile:
+        session.role === "admin"
+          ? {
+              name: user.name,
+              email: user.email,
+              companyName: company?.name || session.companyName,
+              companyDomain: company?.domain || session.companyDomain,
+              allowEmployeePasswordChange,
+            }
+          : {
+              name: user.name,
+              email: user.email,
+              allowEmployeePasswordChange,
+            },
     })
   } catch (error) {
-    console.error("Fetch admin profile error:", error)
-    return NextResponse.json({ error: "Failed to fetch admin profile" }, { status: 500 })
+    console.error("Fetch profile error:", error)
+    return NextResponse.json({ error: "Failed to fetch profile" }, { status: 500 })
   }
 }
 
 export async function PUT(request: NextRequest) {
   try {
-    const { session, response } = requireAdmin(request)
+    const { session, response } = requireSession(request)
     if (!session) {
       return response
+    }
+
+    if (session.role !== "admin" && session.role !== "employee") {
+      return forbidden("Settings are only available for admin and employee accounts")
+    }
+
+    const db = await getDatabase()
+    const usersCollection = db.collection("users")
+    const companiesCollection = db.collection("companies")
+    const company = await companiesCollection.findOne({ companyId: session.companyId })
+    const allowEmployeePasswordChange = getCompanyAllowEmployeePasswordChange(company)
+
+    if (session.role === "employee") {
+      if (!allowEmployeePasswordChange) {
+        return forbidden("Your admin has not allowed employee password changes")
+      }
+
+      const { password } = await request.json()
+      const normalizedPassword = String(password || "")
+
+      if (normalizedPassword.length < 6) {
+        return NextResponse.json({ error: "Password must be at least 6 characters" }, { status: 400 })
+      }
+
+      const result = await usersCollection.findOneAndUpdate(
+        {
+          _id: new ObjectId(session.userId),
+          companyId: session.companyId,
+          role: "employee",
+        },
+        {
+          $set: {
+            password: normalizedPassword,
+            updatedAt: new Date(),
+          },
+        },
+        { returnDocument: "after" },
+      )
+
+      if (!result) {
+        return NextResponse.json({ error: "Employee profile not found" }, { status: 404 })
+      }
+
+      return NextResponse.json({
+        message: "Password updated successfully",
+        user: buildSessionUser(result, company?.name, company?.domain, allowEmployeePasswordChange),
+      })
     }
 
     const { name, email, password } = await request.json()
@@ -69,10 +136,6 @@ export async function PUT(request: NextRequest) {
     if (password && String(password).length < 6) {
       return NextResponse.json({ error: "Password must be at least 6 characters" }, { status: 400 })
     }
-
-    const db = await getDatabase()
-    const usersCollection = db.collection("users")
-    const companiesCollection = db.collection("companies")
 
     const duplicateUser = await usersCollection.findOne({
       _id: { $ne: new ObjectId(session.userId) },
@@ -109,14 +172,12 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: "Admin profile not found" }, { status: 404 })
     }
 
-    const company = await companiesCollection.findOne({ companyId: session.companyId })
-
     return NextResponse.json({
       message: "Admin profile updated successfully",
-      user: buildSessionUser(result, company?.name, company?.domain),
+      user: buildSessionUser(result, company?.name, company?.domain, allowEmployeePasswordChange),
     })
   } catch (error) {
-    console.error("Update admin profile error:", error)
-    return NextResponse.json({ error: "Failed to update admin profile" }, { status: 500 })
+    console.error("Update profile error:", error)
+    return NextResponse.json({ error: "Failed to update profile" }, { status: 500 })
   }
 }

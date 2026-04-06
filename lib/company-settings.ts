@@ -9,6 +9,7 @@ export const WEEKDAY_OPTIONS = [
 ]
 
 export const DEFAULT_WORKING_DAYS = [1, 2, 3, 4, 5]
+export const DEFAULT_ALLOW_EMPLOYEE_PASSWORD_CHANGE = false
 export const DEFAULT_DEPARTMENTS = [
   "HR",
   "IT",
@@ -48,6 +49,22 @@ export function getCompanyWorkingDays(company: any): number[] {
 export function getCompanyDepartments(company: any): string[] {
   const normalized = normalizeDepartments(company?.departments)
   return normalized.length ? normalized : DEFAULT_DEPARTMENTS
+}
+
+export function normalizeAllowEmployeePasswordChange(value: unknown) {
+  if (value === true || value === "true") {
+    return true
+  }
+
+  if (value === false || value === "false") {
+    return false
+  }
+
+  return DEFAULT_ALLOW_EMPLOYEE_PASSWORD_CHANGE
+}
+
+export function getCompanyAllowEmployeePasswordChange(company: any) {
+  return normalizeAllowEmployeePasswordChange(company?.allowEmployeePasswordChange)
 }
 
 export function isCompanyOffDay(date: Date, workingDays: number[]) {
