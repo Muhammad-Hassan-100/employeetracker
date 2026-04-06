@@ -2,6 +2,7 @@ import { type NextRequest, NextResponse } from "next/server"
 import { getDatabase } from "@/lib/mongodb"
 import { ObjectId } from "mongodb"
 import { getCompanyAttendancePolicy, validateAttendanceActionAccess } from "@/lib/attendance-policy"
+import { getCompanyWorkingDays } from "@/lib/company-settings"
 import {
   formatLocalDateInput,
   getLocalTimeMinutes,
@@ -9,6 +10,7 @@ import {
   getTimeStringMinutes,
   hasShiftEndedForRecordDate,
 } from "@/lib/attendance-time"
+import { getEmployeeShiftAssignmentForDate } from "@/lib/employee-schedule"
 import { assertSelfOrAdmin, requireSession } from "@/lib/session"
 
 export async function POST(request: NextRequest) {
@@ -34,6 +36,7 @@ export async function POST(request: NextRequest) {
 
     const company = await companiesCollection.findOne({ companyId: session.companyId })
     const attendancePolicy = getCompanyAttendancePolicy(company)
+    const workingDays = getCompanyWorkingDays(company)
     const attendanceAccessError = validateAttendanceActionAccess({
       actionLabel: "Check-in",
       clientPublicIp,
@@ -55,73 +58,83 @@ export async function POST(request: NextRequest) {
 
     try {
       const user = await usersCollection.findOne({ _id: new ObjectId(userId), companyId: session.companyId })
-      if (user?.shiftId) {
+      if (user) {
         employeeCheckInBeforeMinutes = Number.isInteger(user.checkInBeforeMinutes) ? user.checkInBeforeMinutes : 5
         const employeeLateGraceMinutes = Number.isInteger(user.lateGraceMinutes) ? user.lateGraceMinutes : 0
-        let shift: any = null
-        try {
-          shift = await shiftsCollection.findOne({ _id: new ObjectId(user.shiftId), companyId: session.companyId })
-        } catch {}
-        if (!shift) {
-          shift = await shiftsCollection.findOne({
+
+        const todayShiftAssignment = await getEmployeeShiftAssignmentForDate({
+          user,
+          dateInput: today,
+          workingDays,
+          shiftsCollection,
+          companyId: session.companyId,
+        })
+
+        for (const candidateDate of getRecentShiftDateInputs(today)) {
+          const candidateShiftAssignment = await getEmployeeShiftAssignmentForDate({
+            user,
+            dateInput: candidateDate,
+            workingDays,
+            shiftsCollection,
             companyId: session.companyId,
-            name: { $regex: new RegExp(`^${user.shiftId}$`, "i") },
           })
+
+          if (!candidateShiftAssignment.shift?.startTime || !candidateShiftAssignment.shift?.endTime) {
+            continue
+          }
+
+          const shiftEnded = hasShiftEndedForRecordDate({
+            currentDateInput: today,
+            currentMinutes: actionTimeMinutes,
+            recordDateInput: candidateDate,
+            startMinutes: getTimeStringMinutes(candidateShiftAssignment.shift.startTime),
+            endMinutes: getTimeStringMinutes(candidateShiftAssignment.shift.endTime),
+          })
+
+          if (!shiftEnded) {
+            continue
+          }
+
+          const [existingCandidateRecord, approvedLeaveForCandidate] = await Promise.all([
+            attendanceCollection.findOne({
+              companyId: session.companyId,
+              userId: userId,
+              date: candidateDate,
+            }),
+            leavesCollection.findOne({
+              companyId: session.companyId,
+              userId: userId,
+              status: "approved",
+              startDate: { $lte: candidateDate },
+              endDate: { $gte: candidateDate },
+            }),
+          ])
+
+          if (!existingCandidateRecord && !approvedLeaveForCandidate) {
+            await attendanceCollection.insertOne({
+              userId,
+              companyId: session.companyId,
+              date: candidateDate,
+              checkInTime: null,
+              checkOutTime: null,
+              isLate: false,
+              isEarly: false,
+              lateReason: null,
+              earlyReason: null,
+              lateCheckoutReason: null,
+              hoursWorked: 0,
+              status: "absent",
+              autoAbsent: true,
+              createdAt: new Date(),
+              updatedAt: new Date(),
+            })
+          }
         }
-        if (shift?.startTime && shift?.endTime) {
-          const shiftStartMinutes = getTimeStringMinutes(shift.startTime)
+
+        if (todayShiftAssignment.shift?.startTime && todayShiftAssignment.shift?.endTime) {
+          const shiftStartMinutes = getTimeStringMinutes(todayShiftAssignment.shift.startTime)
           const earliestCheckInMinutes = shiftStartMinutes - employeeCheckInBeforeMinutes
           const lateCutoffMinutes = shiftStartMinutes + employeeLateGraceMinutes
-          const candidateDates = getRecentShiftDateInputs(today)
-
-          for (const candidateDate of candidateDates) {
-            const shiftEnded = hasShiftEndedForRecordDate({
-              currentDateInput: today,
-              currentMinutes: actionTimeMinutes,
-              recordDateInput: candidateDate,
-              startMinutes: shiftStartMinutes,
-              endMinutes: getTimeStringMinutes(shift.endTime),
-            })
-
-            if (!shiftEnded) {
-              continue
-            }
-
-            const [existingCandidateRecord, approvedLeaveForCandidate] = await Promise.all([
-              attendanceCollection.findOne({
-                companyId: session.companyId,
-                userId: userId,
-                date: candidateDate,
-              }),
-              leavesCollection.findOne({
-                companyId: session.companyId,
-                userId: userId,
-                status: "approved",
-                startDate: { $lte: candidateDate },
-                endDate: { $gte: candidateDate },
-              }),
-            ])
-
-            if (!existingCandidateRecord && !approvedLeaveForCandidate) {
-              await attendanceCollection.insertOne({
-                userId,
-                companyId: session.companyId,
-                date: candidateDate,
-                checkInTime: null,
-                checkOutTime: null,
-                isLate: false,
-                isEarly: false,
-                lateReason: null,
-                earlyReason: null,
-                lateCheckoutReason: null,
-                hoursWorked: 0,
-                status: "absent",
-                autoAbsent: true,
-                createdAt: new Date(),
-                updatedAt: new Date(),
-              })
-            }
-          }
 
           if (actionTimeMinutes < earliestCheckInMinutes) {
             return NextResponse.json(
@@ -130,6 +143,8 @@ export async function POST(request: NextRequest) {
             )
           }
           computedIsLate = actionTimeMinutes > lateCutoffMinutes
+        } else {
+          return NextResponse.json({ error: "No shift is assigned for today" }, { status: 400 })
         }
       }
     } catch {}

@@ -9,6 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import MonthlyScheduleEditor from "@/components/monthly-schedule-editor"
 import { authFetch, getStoredUser } from "@/lib/client-session"
 import { buildPreviewEmail } from "@/lib/company-utils"
 import { formatTimeString12Hour } from "@/lib/time"
@@ -24,6 +25,7 @@ export default function EmployeeManagement() {
   const companyDomain = getStoredUser()?.companyDomain || ""
   const [shifts, setShifts] = useState<Shift[]>([])
   const [departments, setDepartments] = useState<string[]>([])
+  const [workingDays, setWorkingDays] = useState<number[]>([1, 2, 3, 4, 5])
   const [isLoadingShifts, setIsLoadingShifts] = useState(true)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [form, setForm] = useState({
@@ -35,6 +37,9 @@ export default function EmployeeManagement() {
     checkInBeforeMinutes: "5",
     lateGraceMinutes: "0",
     checkOutGraceMinutes: "0",
+    scheduleMode: "company_default",
+    customScheduleMonth: new Date().toISOString().slice(0, 7),
+    customSchedule: [] as Array<{ date: string; shiftId: string }>,
   })
 
   const fetchShifts = async () => {
@@ -53,6 +58,7 @@ export default function EmployeeManagement() {
       setShifts(shiftsData)
       if (settingsResponse.ok) {
         setDepartments(settingsData.settings.departments)
+        setWorkingDays(settingsData.settings.workingDays || [1, 2, 3, 4, 5])
       }
     } catch {
       toast.error("Unable to load employee setup data")
@@ -96,6 +102,9 @@ export default function EmployeeManagement() {
         checkInBeforeMinutes: "5",
         lateGraceMinutes: "0",
         checkOutGraceMinutes: "0",
+        scheduleMode: "company_default",
+        customScheduleMonth: new Date().toISOString().slice(0, 7),
+        customSchedule: [],
       })
     } catch {
       toast.error("Unable to add employee")
@@ -162,8 +171,36 @@ export default function EmployeeManagement() {
             </Select>
           </div>
           <div className="space-y-2">
-            <Label>Assigned Shift</Label>
-            <Select value={form.shift} onValueChange={(value) => setForm((prev) => ({ ...prev, shift: value }))}>
+            <Label>Schedule Type</Label>
+            <Select
+              value={form.scheduleMode}
+              onValueChange={(value) =>
+                setForm((prev) => ({
+                  ...prev,
+                  scheduleMode: value,
+                  customSchedule: value === "company_default" ? [] : prev.customSchedule,
+                }))
+              }
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Choose schedule type" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="company_default">Use company working days</SelectItem>
+                <SelectItem value="custom_monthly">Use custom monthly schedule</SelectItem>
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-slate-500">
+              Company mode uses your workspace working days. Custom mode lets you assign different shifts day by day for a month.
+            </p>
+          </div>
+          <div className="space-y-2">
+            <Label>Default Shift</Label>
+            <Select
+              value={form.shift}
+              onValueChange={(value) => setForm((prev) => ({ ...prev, shift: value }))}
+              disabled={form.scheduleMode !== "company_default"}
+            >
               <SelectTrigger>
                 <SelectValue placeholder={shifts.length ? "Choose shift" : "No shifts available"} />
               </SelectTrigger>
@@ -175,6 +212,9 @@ export default function EmployeeManagement() {
                 ))}
               </SelectContent>
             </Select>
+            <p className="text-xs text-slate-500">
+              This shift is used on company working days when the employee follows the default company schedule.
+            </p>
           </div>
           <div className="space-y-2">
             <Label>Check-In Before (minutes)</Label>
@@ -213,6 +253,18 @@ export default function EmployeeManagement() {
             </p>
           </div>
           <div className="md:col-span-2">
+            {form.scheduleMode === "custom_monthly" && (
+              <div className="mb-4">
+                <MonthlyScheduleEditor
+                  month={form.customScheduleMonth}
+                  onMonthChange={(value) => setForm((prev) => ({ ...prev, customScheduleMonth: value, customSchedule: [] }))}
+                  schedule={form.customSchedule}
+                  onScheduleChange={(value) => setForm((prev) => ({ ...prev, customSchedule: value }))}
+                  shifts={shifts}
+                  workingDays={workingDays}
+                />
+              </div>
+            )}
             <Button
               type="submit"
               disabled={isSubmitting || shifts.length === 0}

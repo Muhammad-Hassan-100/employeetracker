@@ -2,12 +2,14 @@ import { type NextRequest, NextResponse } from "next/server"
 import { getDatabase } from "@/lib/mongodb"
 import { ObjectId } from "mongodb"
 import { getCompanyAttendancePolicy, validateAttendanceActionAccess } from "@/lib/attendance-policy"
+import { getCompanyWorkingDays } from "@/lib/company-settings"
 import {
   getAttendanceWindowState,
   formatLocalDateInput,
   getLocalTimeMinutes,
   getTimeStringMinutes,
 } from "@/lib/attendance-time"
+import { getEmployeeShiftAssignmentForDate } from "@/lib/employee-schedule"
 import { assertSelfOrAdmin, requireSession } from "@/lib/session"
 
 const CHECKOUT_GRACE_MINUTES = 360
@@ -34,6 +36,7 @@ export async function POST(request: NextRequest) {
 
     const company = await companiesCollection.findOne({ companyId: session.companyId })
     const attendancePolicy = getCompanyAttendancePolicy(company)
+    const workingDays = getCompanyWorkingDays(company)
     const attendanceAccessError = validateAttendanceActionAccess({
       actionLabel: "Check-out",
       clientPublicIp,
@@ -52,29 +55,16 @@ export async function POST(request: NextRequest) {
     const actionTimeMinutes = Number.isFinite(Number(localTimeMinutes)) ? Number(localTimeMinutes) : getLocalTimeMinutes(checkOutMoment)
     let computedIsEarly = false
     let computedNeedsLateCheckoutReason = false
-    let matchedShift: any = null
     let employeeCheckOutGraceMinutes = 0
+    let employee: any = null
 
     try {
-      const user = await usersCollection.findOne({
+      employee = await usersCollection.findOne({
         _id: new ObjectId(userId),
         companyId: session.companyId,
       })
-      if (user?.shiftId) {
-        employeeCheckOutGraceMinutes = Number.isInteger(user.checkOutGraceMinutes) ? user.checkOutGraceMinutes : 0
-        try {
-          matchedShift = await shiftsCollection.findOne({
-            _id: new ObjectId(user.shiftId),
-            companyId: session.companyId,
-          })
-        } catch {}
-
-        if (!matchedShift) {
-          matchedShift = await shiftsCollection.findOne({
-            companyId: session.companyId,
-            name: { $regex: new RegExp(`^${user.shiftId}$`, "i") },
-          })
-        }
+      if (employee) {
+        employeeCheckOutGraceMinutes = Number.isInteger(employee.checkOutGraceMinutes) ? employee.checkOutGraceMinutes : 0
       }
     } catch {}
 
@@ -101,9 +91,20 @@ export async function POST(request: NextRequest) {
     const checkInTime = new Date(record.checkInTime)
     const checkOutTimeDate = checkOutMoment
     const hoursWorked = Math.max(0, (checkOutTimeDate.getTime() - checkInTime.getTime()) / (1000 * 60 * 60))
-    if (matchedShift?.startTime && matchedShift?.endTime) {
-      const shiftStartMinutes = getTimeStringMinutes(matchedShift.startTime)
-      const shiftEndMinutes = getTimeStringMinutes(matchedShift.endTime)
+    const shiftAssignment =
+      employee
+        ? await getEmployeeShiftAssignmentForDate({
+            user: employee,
+            dateInput: record.date,
+            workingDays,
+            shiftsCollection,
+            companyId: session.companyId,
+          })
+        : null
+
+    if (shiftAssignment?.shift?.startTime && shiftAssignment.shift?.endTime) {
+      const shiftStartMinutes = getTimeStringMinutes(shiftAssignment.shift.startTime)
+      const shiftEndMinutes = getTimeStringMinutes(shiftAssignment.shift.endTime)
       const windowState = getAttendanceWindowState({
         currentDateInput: localDateInput,
         currentMinutes: actionTimeMinutes,
@@ -138,6 +139,8 @@ export async function POST(request: NextRequest) {
           { status: 400 },
         )
       }
+    } else {
+      return NextResponse.json({ error: "No shift is assigned for this attendance day" }, { status: 400 })
     }
 
     if ((computedIsEarly || isEarly) && !String(earlyReason || "").trim()) {

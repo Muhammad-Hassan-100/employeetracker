@@ -115,6 +115,7 @@ export default function AttendanceTab({ user }: AttendanceTabProps) {
   const [currentTime, setCurrentTime] = useState(new Date())
   const [shift, setShift] = useState<Shift | null>(null)
   const [record, setRecord] = useState<AttendanceRecord | null>(null)
+  const [hasShiftAssignedToday, setHasShiftAssignedToday] = useState(false)
   const [attendanceRules, setAttendanceRules] = useState<AttendanceRules>({
     checkInBeforeMinutes: 5,
     lateGraceMinutes: 0,
@@ -147,6 +148,7 @@ export default function AttendanceTab({ user }: AttendanceTabProps) {
       if (shiftResponse.ok) {
         const shiftData = await shiftResponse.json()
         setShift(shiftData.shift)
+        setHasShiftAssignedToday(Boolean(shiftData.user?.hasShiftAssigned))
         setAttendanceRules({
           checkInBeforeMinutes: shiftData.attendanceRules?.checkInBeforeMinutes ?? 5,
           lateGraceMinutes: shiftData.attendanceRules?.lateGraceMinutes ?? 0,
@@ -243,12 +245,16 @@ export default function AttendanceTab({ user }: AttendanceTabProps) {
   const normalCheckoutCutoffLabel = checkoutWindowState
     ? formatTimeString12Hour(getTimeStringFromMinutes(checkoutWindowState.normalCheckoutDeadlineMinutes))
     : null
-  const checkInDisabled = isCheckingIn || isCheckedIn || isAlreadyCompleted || isOnLeave || hasMissedShift || !canCheckInWindow
+  const isScheduledOffDay = !hasShiftAssignedToday && !isCheckedIn && !isAlreadyCompleted && !isOnLeave && !hasMissedShift
+  const checkInDisabled =
+    isCheckingIn || isCheckedIn || isAlreadyCompleted || isOnLeave || isScheduledOffDay || hasMissedShift || !canCheckInWindow
   const checkOutDisabled = isCheckingOut || !isCheckedIn || isOnLeave
   const attendanceAccessMessage = getAttendanceAccessMessage(attendancePolicy)
 
   const statusMeta = isOnLeave
     ? { label: "Approved Leave", tone: "bg-amber-100 text-amber-900" }
+    : isScheduledOffDay
+      ? { label: "Off Day", tone: "bg-slate-200 text-slate-900" }
     : hasMissedShift
       ? { label: "Absent", tone: "bg-rose-100 text-rose-900" }
     : isCheckedIn
@@ -261,6 +267,13 @@ export default function AttendanceTab({ user }: AttendanceTabProps) {
     if (hasMissedShift) {
       toast.error("Shift missed", {
         description: "Your shift has already ended, so you are marked absent for today.",
+      })
+      return
+    }
+
+    if (isScheduledOffDay) {
+      toast.error("No shift scheduled", {
+        description: "This employee does not have a shift assigned for today.",
       })
       return
     }
@@ -500,6 +513,8 @@ export default function AttendanceTab({ user }: AttendanceTabProps) {
                     ? "You are currently clocked in."
                     : isAlreadyCompleted
                       ? "Your attendance is complete for today."
+                      : isScheduledOffDay
+                        ? "No shift is scheduled for you today."
                       : hasMissedShift
                         ? "Your shift ended without a check-in, so you are marked absent today."
                       : isOnLeave
@@ -530,6 +545,8 @@ export default function AttendanceTab({ user }: AttendanceTabProps) {
               <CardDescription>
                 {isOnLeave
                   ? "Check-in is disabled because your leave is approved for today."
+                  : isScheduledOffDay
+                    ? "No shift is scheduled for you today."
                   : hasMissedShift
                     ? "Your shift has already ended. You are marked absent for today."
                   : isAlreadyCompleted
@@ -593,6 +610,13 @@ export default function AttendanceTab({ user }: AttendanceTabProps) {
                 <div className="flex items-start gap-3 rounded-2xl border border-rose-200 bg-rose-50 p-4 text-rose-900">
                   <AlertCircle className="mt-0.5 h-5 w-5 shrink-0" />
                   <p className="text-sm">Your shift already ended without a check-in. Attendance is marked absent for today.</p>
+                </div>
+              )}
+
+              {isScheduledOffDay && (
+                <div className="flex items-start gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-4 text-slate-700">
+                  <AlertCircle className="mt-0.5 h-5 w-5 shrink-0" />
+                  <p className="text-sm">No shift is assigned for this date, so attendance actions are not available today.</p>
                 </div>
               )}
             </CardContent>
@@ -709,7 +733,7 @@ export default function AttendanceTab({ user }: AttendanceTabProps) {
         </CardContent>
       </Card>
 
-      {(isLate || isEarly || requiresLateCheckoutReason || hasMissedShift || isOnLeave) && (
+      {(isLate || isEarly || requiresLateCheckoutReason || hasMissedShift || isScheduledOffDay || isOnLeave) && (
         <Card className="rounded-3xl border-slate-200 shadow-sm">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -719,6 +743,7 @@ export default function AttendanceTab({ user }: AttendanceTabProps) {
           </CardHeader>
           <CardContent className="space-y-2 text-sm text-slate-600">
             {isLate && !hasMissedShift && <p>You are currently past shift start time, so a late reason is required for check-in.</p>}
+            {isScheduledOffDay && <p>No shift is assigned for today, so attendance actions remain unavailable.</p>}
             {hasMissedShift && <p>Your shift ended without a check-in. You are marked absent for today.</p>}
             {lateCutoff && shift && <p>Late mark cutoff: {lateCutoffLabel}</p>}
             {isEarly && isCheckedIn && <p>You are checking out before shift end, so an early checkout reason is required.</p>}

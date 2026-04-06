@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import MonthlyScheduleEditor from "@/components/monthly-schedule-editor"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Separator } from "@/components/ui/separator"
 import { SidebarTrigger } from "@/components/ui/sidebar"
@@ -24,6 +25,9 @@ interface Employee {
   department: string
   position: string
   shift: string
+  scheduleMode: "company_default" | "custom_monthly"
+  customScheduleMonth: string
+  customSchedule: Array<{ date: string; shiftId: string }>
   checkInBeforeMinutes: number
   lateGraceMinutes: number
   checkOutGraceMinutes: number
@@ -93,6 +97,17 @@ function normalizeEmployeePayload(value: any): Employee | null {
     department: String(value.department || "N/A"),
     position: String(value.position || "N/A"),
     shift: String(value.shift || ""),
+    scheduleMode: value.scheduleMode === "custom_monthly" ? "custom_monthly" : "company_default",
+    customScheduleMonth: String(value.customScheduleMonth || ""),
+    customSchedule: Array.isArray(value.customSchedule)
+      ? value.customSchedule
+          .filter((entry: any) => entry && typeof entry === "object")
+          .map((entry: any) => ({
+            date: String(entry.date || ""),
+            shiftId: String(entry.shiftId || ""),
+          }))
+          .filter((entry) => entry.date && entry.shiftId)
+      : [],
     checkInBeforeMinutes: Number(value.checkInBeforeMinutes) || 0,
     lateGraceMinutes: Number(value.lateGraceMinutes) || 0,
     checkOutGraceMinutes: Number(value.checkOutGraceMinutes) || 0,
@@ -159,6 +174,7 @@ export default function EmployeeDetailPage() {
   const [attendance, setAttendance] = useState<AttendanceRecord[]>([])
   const [shifts, setShifts] = useState<Shift[]>([])
   const [departments, setDepartments] = useState<string[]>([])
+  const [workingDays, setWorkingDays] = useState<number[]>([1, 2, 3, 4, 5])
   const [editForm, setEditForm] = useState<Partial<Employee>>({})
   const [isEditing, setIsEditing] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
@@ -211,6 +227,7 @@ export default function EmployeeDetailPage() {
       }
       if (settingsRes.ok) {
         setDepartments(normalizeDepartments(settingsData?.settings?.departments))
+        setWorkingDays(Array.isArray(settingsData?.settings?.workingDays) ? settingsData.settings.workingDays : [1, 2, 3, 4, 5])
       }
     } catch {
       toast.error("Unable to load employee detail", {
@@ -422,9 +439,41 @@ export default function EmployeeDetailPage() {
                   )}
                 </div>
                 <div className="space-y-2">
-                  <Label>Shift</Label>
+                  <Label>Schedule Type</Label>
                   {isEditing ? (
-                    <Select value={editForm.shift || ""} onValueChange={(value) => setEditForm((prev) => ({ ...prev, shift: value }))}>
+                    <Select
+                      value={editForm.scheduleMode || "company_default"}
+                      onValueChange={(value) =>
+                        setEditForm((prev) => ({
+                          ...prev,
+                          scheduleMode: value as Employee["scheduleMode"],
+                          customSchedule:
+                            value === "company_default" ? [] : Array.isArray(prev.customSchedule) ? prev.customSchedule : [],
+                        }))
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Choose schedule type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="company_default">Use company working days</SelectItem>
+                        <SelectItem value="custom_monthly">Use custom monthly schedule</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    <div className="rounded-2xl bg-slate-50 px-4 py-3">
+                      {employee.scheduleMode === "custom_monthly" ? "Custom monthly schedule" : "Company working days"}
+                    </div>
+                  )}
+                </div>
+                <div className="space-y-2">
+                  <Label>Default Shift</Label>
+                  {isEditing ? (
+                    <Select
+                      value={editForm.shift || ""}
+                      onValueChange={(value) => setEditForm((prev) => ({ ...prev, shift: value }))}
+                      disabled={editForm.scheduleMode === "custom_monthly"}
+                    >
                       <SelectTrigger>
                         <SelectValue placeholder="Choose shift" />
                       </SelectTrigger>
@@ -438,7 +487,9 @@ export default function EmployeeDetailPage() {
                     </Select>
                   ) : (
                     <div className="rounded-2xl bg-slate-50 px-4 py-3">
-                      {shifts.find((shift) => shift.id === employee.shift)?.name || employee.shift || "Unassigned"}
+                      {employee.scheduleMode === "custom_monthly"
+                        ? "Used only when the employee follows company working days"
+                        : shifts.find((shift) => shift.id === employee.shift)?.name || employee.shift || "Unassigned"}
                     </div>
                   )}
                 </div>
@@ -498,6 +549,25 @@ export default function EmployeeDetailPage() {
                   <Label>Joined On</Label>
                   <div className="rounded-2xl bg-slate-50 px-4 py-3">{formatDate(employee.joinDate)}</div>
                 </div>
+                {(isEditing ? editForm.scheduleMode : employee.scheduleMode) === "custom_monthly" && (
+                  <div className="md:col-span-2">
+                    <MonthlyScheduleEditor
+                      month={String(editForm.customScheduleMonth || employee.customScheduleMonth || "")}
+                      onMonthChange={(value) =>
+                        setEditForm((prev) => ({
+                          ...prev,
+                          customScheduleMonth: value,
+                          customSchedule: [],
+                        }))
+                      }
+                      schedule={Array.isArray(editForm.customSchedule) ? editForm.customSchedule : employee.customSchedule}
+                      onScheduleChange={(value) => setEditForm((prev) => ({ ...prev, customSchedule: value }))}
+                      shifts={shifts}
+                      workingDays={workingDays}
+                      disabled={!isEditing}
+                    />
+                  </div>
+                )}
               </CardContent>
               </Card>
             )}

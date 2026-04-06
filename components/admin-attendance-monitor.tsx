@@ -21,7 +21,7 @@ interface SnapshotRow {
   status: string
   joinDate: string
   selectedDate: string
-  attendanceStatus: "present" | "absent" | "on_leave" | "weekend" | "not_joined"
+  attendanceStatus: "present" | "absent" | "on_leave" | "weekend" | "off_day" | "not_joined"
   checkInTime: string | null
   checkOutTime: string | null
   hoursWorked: number
@@ -60,6 +60,8 @@ function getStatusBadge(status: SnapshotRow["attendanceStatus"]) {
       return <Badge className="bg-amber-100 text-amber-900">On Leave</Badge>
     case "weekend":
       return <Badge className="bg-sky-100 text-sky-900">Weekend</Badge>
+    case "off_day":
+      return <Badge className="bg-slate-200 text-slate-700">Off Day</Badge>
     case "not_joined":
       return <Badge className="bg-slate-200 text-slate-700">Not Joined</Badge>
     default:
@@ -214,6 +216,7 @@ export default function AdminAttendanceMonitor() {
                   <SelectItem value="absent">Absent</SelectItem>
                   <SelectItem value="on_leave">On Leave</SelectItem>
                   <SelectItem value="weekend">Weekend</SelectItem>
+                  <SelectItem value="off_day">Off Day</SelectItem>
                   <SelectItem value="not_joined">Not Joined</SelectItem>
                 </SelectContent>
               </Select>

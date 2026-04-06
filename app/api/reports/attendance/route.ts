@@ -1,6 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { getDatabase } from "@/lib/mongodb"
 import { getCompanyWorkingDays } from "@/lib/company-settings"
+import { normalizeEmployeeCustomSchedule, normalizeEmployeeScheduleMode } from "@/lib/employee-schedule"
 import { requireAdmin } from "@/lib/session"
 
 export async function GET(request: NextRequest) {
@@ -63,7 +64,10 @@ export async function GET(request: NextRequest) {
 
         // Calculate working days in the range (excluding weekends) starting from join date
         const employeeStartDate = new Date(employee.joinDate) > startDate ? new Date(employee.joinDate) : startDate
-        const totalWorkingDays = getWorkingDaysCount(employeeStartDate, endDate, workingDays)
+        const totalWorkingDays =
+          normalizeEmployeeScheduleMode(employee.scheduleMode) === "custom_monthly"
+            ? getCustomScheduledDaysCount(employee, employeeStartDate, endDate)
+            : getWorkingDaysCount(employeeStartDate, endDate, workingDays)
         
         // Count different types of attendance
         const presentDays = attendanceRecords.filter((record) => record.status === "present" || !record.status).length
@@ -114,4 +118,13 @@ function getWorkingDaysCount(startDate: Date, endDate: Date, workingDays: number
   }
 
   return count
+}
+
+function getCustomScheduledDaysCount(employee: any, startDate: Date, endDate: Date) {
+  const startDateInput = startDate.toISOString().split("T")[0]
+  const endDateInput = endDate.toISOString().split("T")[0]
+
+  return normalizeEmployeeCustomSchedule(employee.customSchedule).filter(
+    (entry) => entry.date >= startDateInput && entry.date <= endDateInput,
+  ).length
 }

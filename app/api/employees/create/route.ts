@@ -4,6 +4,12 @@ import { getCompanyDepartments } from "@/lib/company-settings"
 import { ObjectId } from "mongodb"
 import { requireAdmin } from "@/lib/session"
 import { buildEmailLocalPart } from "@/lib/company-utils"
+import {
+  getMonthInputFromDate,
+  isDateWithinMonth,
+  normalizeEmployeeCustomSchedule,
+  normalizeEmployeeScheduleMode,
+} from "@/lib/employee-schedule"
 
 export async function POST(request: NextRequest) {
   try {
@@ -12,9 +18,43 @@ export async function POST(request: NextRequest) {
       return response
     }
 
-    const { name, password, shift, department, position, checkInBeforeMinutes, lateGraceMinutes, checkOutGraceMinutes } = await request.json()
-    if (!name || !password || !shift || !department || !position) {
+    const {
+      name,
+      password,
+      shift,
+      department,
+      position,
+      checkInBeforeMinutes,
+      lateGraceMinutes,
+      checkOutGraceMinutes,
+      scheduleMode,
+      customScheduleMonth,
+      customSchedule,
+    } = await request.json()
+    if (!name || !password || !department || !position) {
       return NextResponse.json({ error: "All fields are required" }, { status: 400 })
+    }
+
+    const normalizedScheduleMode = normalizeEmployeeScheduleMode(scheduleMode)
+    const normalizedCustomSchedule = normalizeEmployeeCustomSchedule(customSchedule)
+    const normalizedCustomScheduleMonth = typeof customScheduleMonth === "string" ? customScheduleMonth.trim() : ""
+
+    if (normalizedScheduleMode === "company_default" && !shift) {
+      return NextResponse.json({ error: "Select a default shift for company-rule scheduling" }, { status: 400 })
+    }
+
+    if (normalizedScheduleMode === "custom_monthly") {
+      if (!/^\d{4}-\d{2}$/.test(normalizedCustomScheduleMonth)) {
+        return NextResponse.json({ error: "Select a valid month for the custom schedule" }, { status: 400 })
+      }
+
+      if (!normalizedCustomSchedule.length) {
+        return NextResponse.json({ error: "Add at least one scheduled day for the custom month" }, { status: 400 })
+      }
+
+      if (normalizedCustomSchedule.some((entry) => !isDateWithinMonth(entry.date, normalizedCustomScheduleMonth))) {
+        return NextResponse.json({ error: "Each custom shift must belong to the selected schedule month" }, { status: 400 })
+      }
     }
 
     const parsedCheckInBefore = Number(checkInBeforeMinutes)
@@ -43,16 +83,40 @@ export async function POST(request: NextRequest) {
     const shiftsCollection = db.collection("shifts")
     const companiesCollection = db.collection("companies")
 
-    const [assignedShift, company] = await Promise.all([
-      shiftsCollection.findOne({
-        _id: new ObjectId(shift),
-        companyId: session.companyId,
-      }),
-      companiesCollection.findOne({ companyId: session.companyId }),
-    ])
+    const company = await companiesCollection.findOne({ companyId: session.companyId })
 
-    if (!assignedShift) {
-      return NextResponse.json({ error: "Selected shift was not found in this workspace" }, { status: 400 })
+    let assignedShift = null
+    if (normalizedScheduleMode === "company_default") {
+      try {
+        assignedShift = await shiftsCollection.findOne({
+          _id: new ObjectId(shift),
+          companyId: session.companyId,
+        })
+      } catch {
+        return NextResponse.json({ error: "Selected shift is invalid" }, { status: 400 })
+      }
+
+      if (!assignedShift) {
+        return NextResponse.json({ error: "Selected shift was not found in this workspace" }, { status: 400 })
+      }
+    }
+
+    if (normalizedScheduleMode === "custom_monthly") {
+      let uniqueShiftIds: ObjectId[] = []
+      try {
+        uniqueShiftIds = Array.from(new Set(normalizedCustomSchedule.map((entry) => entry.shiftId))).map((entry) => new ObjectId(entry))
+      } catch {
+        return NextResponse.json({ error: "One or more custom schedule shifts are invalid" }, { status: 400 })
+      }
+
+      const validShiftCount = await shiftsCollection.countDocuments({
+        companyId: session.companyId,
+        _id: { $in: uniqueShiftIds },
+      })
+
+      if (validShiftCount !== uniqueShiftIds.length) {
+        return NextResponse.json({ error: "One or more custom schedule shifts are not available in this workspace" }, { status: 400 })
+      }
     }
 
     const availableDepartments = getCompanyDepartments(company)
@@ -83,7 +147,15 @@ export async function POST(request: NextRequest) {
       companyDomain: session.companyDomain,
       department,
       position,
-      shiftId: shift,
+      shiftId: normalizedScheduleMode === "company_default" ? shift : "",
+      scheduleMode: normalizedScheduleMode,
+      customScheduleMonth:
+        normalizedScheduleMode === "custom_monthly"
+          ? normalizedCustomScheduleMonth
+          : normalizedCustomSchedule.length
+            ? getMonthInputFromDate(normalizedCustomSchedule[0].date)
+            : "",
+      customSchedule: normalizedScheduleMode === "custom_monthly" ? normalizedCustomSchedule : [],
       checkInBeforeMinutes: parsedCheckInBefore,
       lateGraceMinutes: parsedLateGrace,
       checkOutGraceMinutes: parsedCheckOutGrace,
@@ -105,6 +177,9 @@ export async function POST(request: NextRequest) {
         position: newEmployee.position,
         role: newEmployee.role,
         shiftId: newEmployee.shiftId,
+        scheduleMode: newEmployee.scheduleMode,
+        customScheduleMonth: newEmployee.customScheduleMonth,
+        customSchedule: newEmployee.customSchedule,
         checkInBeforeMinutes: newEmployee.checkInBeforeMinutes,
         lateGraceMinutes: newEmployee.lateGraceMinutes,
         checkOutGraceMinutes: newEmployee.checkOutGraceMinutes,

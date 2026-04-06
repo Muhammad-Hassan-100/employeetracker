@@ -4,6 +4,11 @@ import { getCompanyDepartments } from "@/lib/company-settings"
 import { ObjectId } from "mongodb"
 import { requireAdmin } from "@/lib/session"
 import { extractEmailDomain } from "@/lib/company-utils"
+import {
+  isDateWithinMonth,
+  normalizeEmployeeCustomSchedule,
+  normalizeEmployeeScheduleMode,
+} from "@/lib/employee-schedule"
 
 type RouteContext = {
   params: Promise<{ id: string }>
@@ -38,6 +43,9 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
       department: employee.department,
       position: employee.position,
       shift: employee.shiftId,
+      scheduleMode: employee.scheduleMode || "company_default",
+      customScheduleMonth: employee.customScheduleMonth || "",
+      customSchedule: employee.customSchedule || [],
       checkInBeforeMinutes: employee.checkInBeforeMinutes ?? 5,
       lateGraceMinutes: employee.lateGraceMinutes ?? 0,
       checkOutGraceMinutes: employee.checkOutGraceMinutes ?? 0,
@@ -105,6 +113,15 @@ export async function PUT(request: NextRequest, { params }: RouteContext) {
     const usersCollection = db.collection("users")
     const shiftsCollection = db.collection("shifts")
     const companiesCollection = db.collection("companies")
+    const existingEmployee = await usersCollection.findOne({
+      _id: new ObjectId(id),
+      companyId: session.companyId,
+      role: "employee",
+    })
+
+    if (!existingEmployee) {
+      return NextResponse.json({ error: "Employee not found" }, { status: 404 })
+    }
 
     if (updateData.checkInBeforeMinutes !== undefined) {
       const parsedCheckInBefore = Number(updateData.checkInBeforeMinutes)
@@ -139,6 +156,19 @@ export async function PUT(request: NextRequest, { params }: RouteContext) {
       updateData.checkOutGraceMinutes = parsedCheckOutGrace
     }
 
+    const normalizedScheduleMode = normalizeEmployeeScheduleMode(updateData.scheduleMode ?? existingEmployee.scheduleMode)
+    const normalizedCustomSchedule =
+      updateData.customSchedule !== undefined
+        ? normalizeEmployeeCustomSchedule(updateData.customSchedule)
+        : normalizeEmployeeCustomSchedule(existingEmployee.customSchedule)
+    const normalizedCustomScheduleMonth =
+      typeof updateData.customScheduleMonth === "string"
+        ? updateData.customScheduleMonth.trim()
+        : typeof existingEmployee.customScheduleMonth === "string"
+          ? existingEmployee.customScheduleMonth.trim()
+          : ""
+    const nextShiftId = typeof updateData.shiftId === "string" ? updateData.shiftId : existingEmployee.shiftId
+
     if (updateData.email) {
       const normalizedEmail = String(updateData.email).toLowerCase()
       const domain = extractEmailDomain(normalizedEmail)
@@ -162,14 +192,53 @@ export async function PUT(request: NextRequest, { params }: RouteContext) {
       updateData.email = normalizedEmail
     }
 
-    if (updateData.shiftId) {
-      const shift = await shiftsCollection.findOne({
-        _id: new ObjectId(updateData.shiftId),
-        companyId: session.companyId,
-      })
+    if (nextShiftId) {
+      let shift = null
+      try {
+        shift = await shiftsCollection.findOne({
+          _id: new ObjectId(nextShiftId),
+          companyId: session.companyId,
+        })
+      } catch {
+        return NextResponse.json({ error: "Selected shift is invalid" }, { status: 400 })
+      }
 
       if (!shift) {
         return NextResponse.json({ error: "Selected shift was not found in this workspace" }, { status: 400 })
+      }
+    }
+
+    if (normalizedScheduleMode === "company_default" && !nextShiftId) {
+      return NextResponse.json({ error: "Select a default shift for company-rule scheduling" }, { status: 400 })
+    }
+
+    if (normalizedScheduleMode === "custom_monthly") {
+      if (!/^\d{4}-\d{2}$/.test(normalizedCustomScheduleMonth)) {
+        return NextResponse.json({ error: "Select a valid month for the custom schedule" }, { status: 400 })
+      }
+
+      if (!normalizedCustomSchedule.length) {
+        return NextResponse.json({ error: "Add at least one scheduled day for the custom month" }, { status: 400 })
+      }
+
+      if (normalizedCustomSchedule.some((entry) => !isDateWithinMonth(entry.date, normalizedCustomScheduleMonth))) {
+        return NextResponse.json({ error: "Each custom shift must belong to the selected schedule month" }, { status: 400 })
+      }
+
+      let shiftIds: ObjectId[] = []
+      try {
+        shiftIds = Array.from(new Set(normalizedCustomSchedule.map((entry) => entry.shiftId))).map((entry) => new ObjectId(entry))
+      } catch {
+        return NextResponse.json({ error: "One or more custom schedule shifts are invalid" }, { status: 400 })
+      }
+
+      const validShiftCount = await shiftsCollection.countDocuments({
+        companyId: session.companyId,
+        _id: { $in: shiftIds },
+      })
+
+      if (validShiftCount !== shiftIds.length) {
+        return NextResponse.json({ error: "One or more custom schedule shifts are not available in this workspace" }, { status: 400 })
       }
     }
 
@@ -187,14 +256,14 @@ export async function PUT(request: NextRequest, { params }: RouteContext) {
       {
         $set: {
           ...updateData,
+          scheduleMode: normalizedScheduleMode,
+          customScheduleMonth: normalizedScheduleMode === "custom_monthly" ? normalizedCustomScheduleMonth : "",
+          customSchedule: normalizedScheduleMode === "custom_monthly" ? normalizedCustomSchedule : [],
+          shiftId: normalizedScheduleMode === "company_default" ? nextShiftId : "",
           updatedAt: new Date(),
         },
       },
     )
-
-    if (updateResult.matchedCount === 0) {
-      return NextResponse.json({ error: "Employee not found" }, { status: 404 })
-    }
 
     return NextResponse.json({
       message: "Employee updated successfully",

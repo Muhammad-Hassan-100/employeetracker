@@ -17,6 +17,7 @@ interface Employee {
   department: string
   position: string
   shift: string
+  scheduleMode?: "company_default" | "custom_monthly"
   joinDate: string
   status: "active" | "inactive"
 }
@@ -184,7 +185,7 @@ export default function EmployeeList() {
                     <div className="flex flex-wrap gap-x-6 gap-y-1 text-sm text-slate-600">
                       <span>Department: {employee.department}</span>
                       <span>Position: {employee.position}</span>
-                      <span>Shift: {employee.shift || "Unassigned"}</span>
+                      <span>{employee.scheduleMode === "custom_monthly" ? `Schedule: ${employee.shift}` : `Shift: ${employee.shift || "Unassigned"}`}</span>
                     </div>
                   </div>
                   <div className="flex flex-wrap gap-2">

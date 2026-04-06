@@ -2,6 +2,9 @@ import { type NextRequest, NextResponse } from "next/server"
 import { getDatabase } from "@/lib/mongodb"
 import { ObjectId } from "mongodb"
 import { getCompanyAttendancePolicy, requiresAttendanceLocation, requiresAttendanceOfficeIp } from "@/lib/attendance-policy"
+import { formatLocalDateInput } from "@/lib/attendance-time"
+import { getCompanyWorkingDays } from "@/lib/company-settings"
+import { getEmployeeShiftAssignmentForDate } from "@/lib/employee-schedule"
 import { assertSelfOrAdmin, requireSession } from "@/lib/session"
 
 export async function GET(request: NextRequest) {
@@ -39,25 +42,15 @@ export async function GET(request: NextRequest) {
 
     const company = await companiesCollection.findOne({ companyId: session.companyId })
     const attendancePolicy = getCompanyAttendancePolicy(company)
-
-    let shift = null
-    if (user.shiftId) {
-      try {
-        shift = await shiftsCollection.findOne({
-          _id: new ObjectId(user.shiftId),
-          companyId: session.companyId,
-        })
-      } catch (error) {
-        shift = null
-      }
-
-      if (!shift) {
-        shift = await shiftsCollection.findOne({
-          companyId: session.companyId,
-          name: { $regex: new RegExp(`^${user.shiftId}$`, "i") },
-        })
-      }
-    }
+    const workingDays = getCompanyWorkingDays(company)
+    const shiftAssignment = await getEmployeeShiftAssignmentForDate({
+      user,
+      dateInput: formatLocalDateInput(new Date()),
+      workingDays,
+      shiftsCollection,
+      companyId: session.companyId,
+    })
+    const shift = shiftAssignment.shift
 
     return NextResponse.json({
       shift: shift ? {
@@ -68,8 +61,11 @@ export async function GET(request: NextRequest) {
         description: shift.description,
       } : null,
       user: {
-        hasShiftAssigned: !!user.shiftId,
-        shiftId: user.shiftId,
+        hasShiftAssigned: shiftAssignment.isScheduled,
+        shiftId: shiftAssignment.shiftId,
+        scheduleMode: shiftAssignment.scheduleMode,
+        customScheduleMonth: user.customScheduleMonth || "",
+        customSchedule: user.customSchedule || [],
       },
       attendanceRules: {
         checkInBeforeMinutes: user.checkInBeforeMinutes ?? 5,

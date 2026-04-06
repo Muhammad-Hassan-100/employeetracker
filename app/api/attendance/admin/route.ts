@@ -1,6 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { getDatabase } from "@/lib/mongodb"
 import { getCompanyWorkingDays, isCompanyOffDay } from "@/lib/company-settings"
+import { getEmployeeShiftAssignmentForDate } from "@/lib/employee-schedule"
 import { requireAdmin } from "@/lib/session"
 
 function normalizeDateParam(value: string | null) {
@@ -70,12 +71,19 @@ export async function GET(request: NextRequest) {
     const workingDays = getCompanyWorkingDays(company)
     const weekend = isCompanyOffDay(selectedDateObject, workingDays)
 
-    const rows = employees.map((employee) => {
+    const rows = await Promise.all(employees.map(async (employee) => {
       const record = attendanceByUserId.get(employee._id.toString())
       const approvedLeave = leaveByUserId.get(employee._id.toString())
       const joinDate = new Date(employee.joinDate)
       const joinDateString = joinDate.toISOString().split("T")[0]
-      const shift = employee.shiftId ? shiftById.get(employee.shiftId) : null
+      const shiftAssignment = await getEmployeeShiftAssignmentForDate({
+        user: employee,
+        dateInput: selectedDate,
+        workingDays,
+        shiftsCollection,
+        companyId: session.companyId,
+      })
+      const shift = shiftAssignment.shift
 
       let derivedStatus: string
       if (selectedDate < joinDateString) {
@@ -84,8 +92,8 @@ export async function GET(request: NextRequest) {
         derivedStatus = record.status
       } else if (approvedLeave) {
         derivedStatus = "on_leave"
-      } else if (weekend) {
-        derivedStatus = "weekend"
+      } else if (!shiftAssignment.isScheduled) {
+        derivedStatus = "off_day"
       } else {
         derivedStatus = "absent"
       }
@@ -119,7 +127,7 @@ export async function GET(request: NextRequest) {
             }
           : null,
       }
-    })
+    }))
 
     return NextResponse.json({
       date: selectedDate,
