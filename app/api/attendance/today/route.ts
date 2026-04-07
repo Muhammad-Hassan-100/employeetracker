@@ -45,6 +45,8 @@ export async function GET(request: NextRequest) {
     const localDateInput = formatLocalDateInput(now)
     const currentMinutes = getLocalTimeMinutes(now)
     let activeOpenRecord: any = null
+    let todayHasScheduledShift = false
+    let todayShiftHasEnded = false
 
     try {
       const user = await usersCollection.findOne({
@@ -56,6 +58,24 @@ export async function GET(request: NextRequest) {
         const company = await companiesCollection.findOne({ companyId: session.companyId })
         const workingDays = getCompanyWorkingDays(company)
         const candidateDates = getRecentShiftDateInputs(localDateInput)
+        const todayShiftAssignment = await getEmployeeShiftAssignmentForDate({
+          user,
+          dateInput: localDateInput,
+          workingDays,
+          shiftsCollection,
+          companyId: session.companyId,
+        })
+        todayHasScheduledShift = todayShiftAssignment.isScheduled
+
+        if (todayShiftAssignment.shift?.startTime && todayShiftAssignment.shift?.endTime) {
+          todayShiftHasEnded = hasShiftEndedForRecordDate({
+            currentDateInput: localDateInput,
+            currentMinutes,
+            recordDateInput: localDateInput,
+            startMinutes: getTimeStringMinutes(todayShiftAssignment.shift.startTime),
+            endMinutes: getTimeStringMinutes(todayShiftAssignment.shift.endTime),
+          })
+        }
 
         for (const candidateDate of candidateDates) {
           const shiftAssignment = await getEmployeeShiftAssignmentForDate({
@@ -173,13 +193,18 @@ export async function GET(request: NextRequest) {
       }
     } catch {}
 
-    const todayRecord =
+    let todayRecord =
       activeOpenRecord ||
       (await attendanceCollection.findOne({
         companyId: session.companyId,
         userId: userId,
         date: localDateInput,
       }))
+
+    if (todayRecord?.status === "absent" && todayRecord.autoAbsent && (!todayHasScheduledShift || !todayShiftHasEnded)) {
+      await attendanceCollection.deleteOne({ _id: todayRecord._id, companyId: session.companyId })
+      todayRecord = null
+    }
 
     return NextResponse.json({
       isCheckedIn:

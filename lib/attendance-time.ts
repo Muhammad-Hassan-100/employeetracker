@@ -7,7 +7,7 @@ export function formatLocalDateInput(value = new Date()) {
 }
 
 export function getLocalTimeMinutes(value = new Date()) {
-  return value.getHours() * 60 + value.getMinutes()
+  return value.getHours() * 60 + value.getMinutes() + value.getSeconds() / 60
 }
 
 export function getTimeStringMinutes(time: string) {

@@ -55,6 +55,7 @@ export async function POST(request: NextRequest) {
     const actionTimeMinutes = Number.isFinite(Number(localTimeMinutes)) ? Number(localTimeMinutes) : getLocalTimeMinutes(now)
     let computedIsLate = false
     let employeeCheckInBeforeMinutes = 5
+    let todayShiftHasEnded = false
 
     try {
       const user = await usersCollection.findOne({ _id: new ObjectId(userId), companyId: session.companyId })
@@ -133,8 +134,16 @@ export async function POST(request: NextRequest) {
 
         if (todayShiftAssignment.shift?.startTime && todayShiftAssignment.shift?.endTime) {
           const shiftStartMinutes = getTimeStringMinutes(todayShiftAssignment.shift.startTime)
+          const shiftEndMinutes = getTimeStringMinutes(todayShiftAssignment.shift.endTime)
           const earliestCheckInMinutes = shiftStartMinutes - employeeCheckInBeforeMinutes
           const lateCutoffMinutes = shiftStartMinutes + employeeLateGraceMinutes
+          todayShiftHasEnded = hasShiftEndedForRecordDate({
+            currentDateInput: today,
+            currentMinutes: actionTimeMinutes,
+            recordDateInput: today,
+            startMinutes: shiftStartMinutes,
+            endMinutes: shiftEndMinutes,
+          })
 
           if (actionTimeMinutes < earliestCheckInMinutes) {
             return NextResponse.json(
@@ -154,7 +163,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if user already has an attendance record today
-    const existingRecord = await attendanceCollection.findOne({
+    let existingRecord = await attendanceCollection.findOne({
       companyId: session.companyId,
       userId: userId,
       date: today,
@@ -165,9 +174,14 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: "Cannot check in while on approved leave" }, { status: 400 })
       }
       if (existingRecord.status === "absent") {
-        return NextResponse.json({ error: "Shift has ended. You were marked absent for today." }, { status: 400 })
+        if (existingRecord.autoAbsent && !todayShiftHasEnded) {
+          await attendanceCollection.deleteOne({ _id: existingRecord._id, companyId: session.companyId })
+          existingRecord = null
+        } else {
+          return NextResponse.json({ error: "Shift has ended. You were marked absent for today." }, { status: 400 })
+        }
       }
-      if (existingRecord.checkInTime) {
+      if (existingRecord?.checkInTime) {
         return NextResponse.json({ error: "Already checked in today" }, { status: 400 })
       }
     }
