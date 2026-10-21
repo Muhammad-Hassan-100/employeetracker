@@ -21,6 +21,7 @@ Company-facing records are generally queried with the signed-in session's `compa
 - `/` — product landing page, feature overview, and links to sign in or create a company.
 - `/login` — dedicated sign-in page.
 - `/signup` — dedicated company signup page. Legacy `/login?mode=signup` links redirect here.
+- `/guide` — public, role-based guide to workspace setup, attendance statuses, shift routines, leave requests, and report calculations. The landing-page header links to it.
 - `/privacy`, `/terms`, `/cookies` — public legal-information pages linked from the landing-page footer. Their copy is a Pakistan-oriented product draft and should be reviewed before production use.
 - Unknown routes render the custom 404 page at `app/not-found.tsx`.
 

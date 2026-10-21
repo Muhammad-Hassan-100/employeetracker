@@ -1,7 +1,6 @@
 import Image from "next/image"
 import Link from "next/link"
-import { ArrowLeft } from "lucide-react"
-import BrandMark from "@/components/brand-mark"
+import PublicHeader from "@/components/public-header"
 
 const documents = {
   privacy: {
@@ -62,13 +61,7 @@ export default function LegalDocument({ type }) {
 
   return (
     <main className="min-h-screen bg-[#eef1ec] text-[#19271e]">
-      <header className="mx-auto flex max-w-[1180px] items-center justify-between px-5 py-5 sm:px-8 lg:px-12">
-        <Link href="/" className="inline-flex items-center gap-3 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#315e42] focus-visible:ring-offset-4">
-          <BrandMark />
-          <span><span className="block text-[15px] font-semibold tracking-[-0.03em]">EmployeeTracker</span><span className="block text-[11px] text-[#78847b]">People operations, made clear</span></span>
-        </Link>
-        <Link href="/" className="inline-flex min-h-10 items-center gap-2 rounded-full px-4 text-xs font-semibold text-[#526254] transition hover:bg-[#e9ede6] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#315e42]"><ArrowLeft className="h-4 w-4" /> Back to home</Link>
-      </header>
+      <PublicHeader />
       <article className="mx-auto max-w-[1180px] px-5 pb-16 pt-6 sm:px-8 sm:pb-24 lg:px-12">
         <div className="overflow-hidden rounded-[28px] bg-[#17291e] text-white sm:rounded-[36px]">
           <div className="grid lg:grid-cols-[1fr_0.82fr]">

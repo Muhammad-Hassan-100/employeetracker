@@ -8,6 +8,7 @@ import {
   ChevronDown,
   Clock3,
 } from "lucide-react"
+import PublicHeader from "@/components/public-header"
 import BrandMark from "@/components/brand-mark"
 
 const questions = [
@@ -116,21 +117,7 @@ function ReportsPreview() {
 export default function LandingPage() {
   return (
     <main className="overflow-hidden bg-[#f1f3ef] text-[#17251b]">
-      <header className="mx-auto flex max-w-[1240px] items-center justify-between px-5 py-5 sm:px-8 sm:py-6 lg:px-12">
-        <Link href="/" aria-label="EmployeeTracker home" className="inline-flex items-center gap-2.5 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#496b4f] focus-visible:ring-offset-4">
-          <BrandMark size={36} />
-          <span className="text-[15px] font-semibold tracking-[-0.035em]">EmployeeTracker</span>
-        </Link>
-        <nav aria-label="Main navigation" className="hidden items-center gap-8 md:flex">
-          <a href="#features" className="text-[13px] text-[#69756b] transition hover:text-[#20392b] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#496b4f]">Platform</a>
-          <a href="#how-it-works" className="text-[13px] text-[#69756b] transition hover:text-[#20392b] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#496b4f]">How it works</a>
-          <a href="#questions" className="text-[13px] text-[#69756b] transition hover:text-[#20392b] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#496b4f]">Questions</a>
-        </nav>
-        <div className="flex items-center gap-2 sm:gap-3">
-          <Link href="/login" className="hidden min-h-11 items-center rounded-full px-3 text-[13px] font-medium text-[#455349] transition hover:bg-[#f0f3ee] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#496b4f] sm:inline-flex">Log in</Link>
-          <Link href="/signup" className="inline-flex min-h-11 items-center gap-2 rounded-full bg-[#213a2b] px-4 text-[13px] font-medium text-white transition hover:bg-[#304d38] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#496b4f] focus-visible:ring-offset-2 sm:px-5">Get started <ArrowRight className="h-4 w-4" aria-hidden="true" /></Link>
-        </div>
-      </header>
+      <PublicHeader />
 
       <section className="px-5 pb-12 pt-12 sm:px-8 sm:pb-16 sm:pt-16 lg:pt-20">
         <div className="mx-auto max-w-[820px] text-center">
@@ -206,7 +193,7 @@ export default function LandingPage() {
       <footer className="border-t border-[#e6e9e4] bg-white">
         <div className="mx-auto flex max-w-[1120px] flex-col gap-5 px-5 py-6 sm:px-8 md:flex-row md:items-center md:justify-between lg:px-12">
           <Link href="/" className="text-sm font-semibold tracking-[-0.03em] text-[#26392d]">EmployeeTracker</Link>
-          <nav aria-label="Legal pages" className="flex flex-wrap gap-x-6 gap-y-2 text-xs text-[#707b72]"><Link href="/privacy" className="hover:text-[#20392b]">Privacy</Link><Link href="/terms" className="hover:text-[#20392b]">Terms</Link><Link href="/cookies" className="hover:text-[#20392b]">Cookies</Link></nav>
+          <nav aria-label="Footer navigation" className="flex flex-wrap gap-x-6 gap-y-2 text-xs text-[#707b72]"><Link href="/guide" className="hover:text-[#20392b]">Guide</Link><Link href="/privacy" className="hover:text-[#20392b]">Privacy</Link><Link href="/terms" className="hover:text-[#20392b]">Terms</Link><Link href="/cookies" className="hover:text-[#20392b]">Cookies</Link></nav>
           <p className="text-[11px] text-[#8a938b]">© {new Date().getFullYear()} EmployeeTracker</p>
         </div>
       </footer>
