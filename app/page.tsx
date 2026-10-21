@@ -33,12 +33,12 @@ function AttendancePreview() {
   const rows = [
     { label: "Checked in", detail: "Attendance recorded", tone: "bg-[#dfeee4] text-[#477653]" },
     { label: "Late arrival", detail: "Reason attached", tone: "bg-[#f8ecd9] text-[#9a6b28]" },
-    { label: "Not come yet", detail: "Shift is in progress", tone: "bg-[#edf0ec] text-[#718075]" },
+    { label: "Awaiting check-in", detail: "Shift is in progress", tone: "bg-[#edf0ec] text-[#718075]" },
   ]
 
   return (
     <div className="relative mx-auto max-w-[1050px] px-4 sm:px-8">
-      <div className="overflow-hidden rounded-[18px] border border-[#e5e9e2] bg-white shadow-[0_32px_90px_rgba(31,49,36,0.13)] sm:rounded-[24px]">
+      <div className="overflow-hidden rounded-[18px] border border-[#d8dfd6] bg-white shadow-[0_32px_90px_rgba(24,40,29,0.16)] sm:rounded-[24px]">
         <div className="flex h-12 items-center justify-between border-b border-[#edf0ec] px-4 sm:h-14 sm:px-6">
           <div className="flex items-center gap-2.5">
             <BrandMark size={28} />
@@ -115,7 +115,7 @@ function ReportsPreview() {
 
 export default function LandingPage() {
   return (
-    <main className="overflow-hidden bg-[#fbfcfa] text-[#202d23]">
+    <main className="overflow-hidden bg-[#f1f3ef] text-[#17251b]">
       <header className="mx-auto flex max-w-[1240px] items-center justify-between px-5 py-5 sm:px-8 sm:py-6 lg:px-12">
         <Link href="/" aria-label="EmployeeTracker home" className="inline-flex items-center gap-2.5 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#496b4f] focus-visible:ring-offset-4">
           <BrandMark size={36} />
@@ -134,19 +134,19 @@ export default function LandingPage() {
 
       <section className="px-5 pb-12 pt-12 sm:px-8 sm:pb-16 sm:pt-16 lg:pt-20">
         <div className="mx-auto max-w-[820px] text-center">
-          <div className="mx-auto mb-5 inline-flex items-center gap-2 rounded-full border border-[#e6ebe3] bg-white px-3 py-1.5 text-[10px] font-medium tracking-wide text-[#61735f] shadow-sm"><span className="h-1.5 w-1.5 rounded-full bg-[#8da27e]" /> People operations, made clear</div>
-          <h1 className="mx-auto max-w-[780px] text-[clamp(2.8rem,6.4vw,5.25rem)] font-medium leading-[1.02] tracking-[-0.065em] text-[#20392b]">A better rhythm for your workday.</h1>
-          <p className="mx-auto mt-5 max-w-[560px] text-[15px] leading-7 text-[#6b776d] sm:text-base">People, shifts, attendance, and time off - together in one simple workspace.</p>
+          <div className="mx-auto mb-5 inline-flex items-center gap-2 rounded-full border border-[#d9e1d7] bg-white px-3 py-1.5 text-[10px] font-medium tracking-wide text-[#4f654f] shadow-sm"><span className="h-1.5 w-1.5 rounded-full bg-[#748d68]" /> People operations, made clear</div>
+          <h1 className="mx-auto max-w-[780px] text-[clamp(2.8rem,6.4vw,5.25rem)] font-medium leading-[1.02] tracking-[-0.065em] text-[#182c20]">A better rhythm for your workday.</h1>
+          <p className="mx-auto mt-5 max-w-[560px] text-[15px] leading-7 text-[#58665c] sm:text-base">People, shifts, attendance, and time off - together in one simple workspace.</p>
           <div className="mt-7 flex flex-wrap items-center justify-center gap-3">
-            <Link href="/signup" className="inline-flex min-h-12 items-center justify-center gap-2.5 rounded-full bg-[#213a2b] px-6 text-sm font-medium text-white transition hover:bg-[#304d38] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#496b4f] focus-visible:ring-offset-2">Create your workspace <ArrowRight className="h-4 w-4" aria-hidden="true" /></Link>
-            <Link href="/login" className="inline-flex min-h-12 items-center justify-center rounded-full border border-[#e2e8df] bg-white px-5 text-sm font-medium text-[#435448] transition hover:bg-[#f4f6f2] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#496b4f]">Sign in</Link>
+            <Link href="/signup" className="inline-flex min-h-12 items-center justify-center gap-2.5 rounded-full bg-[#1b3022] px-6 text-sm font-medium text-white transition hover:bg-[#12251a] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#496b4f] focus-visible:ring-offset-2">Create your workspace <ArrowRight className="h-4 w-4" aria-hidden="true" /></Link>
+            <Link href="/login" className="inline-flex min-h-12 items-center justify-center rounded-full border border-[#d6ded4] bg-white px-5 text-sm font-medium text-[#34463a] transition hover:bg-[#e9eee7] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#496b4f]">Sign in</Link>
           </div>
           <p className="mt-4 text-[10px] text-[#98a098]">For administrators and employees</p>
         </div>
         <div className="mt-12 sm:mt-16"><AttendancePreview /></div>
       </section>
 
-      <section id="features" className="scroll-mt-8 border-y border-[#e8ebe6] bg-white py-16 sm:py-20 lg:py-24">
+      <section id="features" className="scroll-mt-8 border-y border-[#dce2da] bg-[#fafbf9] py-16 sm:py-20 lg:py-24">
         <div className="mx-auto max-w-[1120px] px-5 sm:px-8 lg:px-12">
           <div className="grid gap-4 sm:grid-cols-[0.9fr_1.1fr] sm:items-end">
             <div><p className="text-[10px] font-medium uppercase tracking-[0.18em] text-[#788a74]">One connected workspace</p><h2 className="mt-3 max-w-md text-3xl font-medium leading-tight tracking-[-0.05em] text-[#20392b] sm:text-4xl">The everyday essentials, working together.</h2></div>
@@ -178,7 +178,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      <section className="bg-[#17231b] py-16 text-white sm:py-20 lg:py-24">
+      <section className="bg-[#142219] py-16 text-white sm:py-20 lg:py-24">
         <div className="mx-auto max-w-[1120px] px-5 sm:px-8 lg:px-12">
           <div className="grid gap-8 md:grid-cols-[0.85fr_1.15fr] md:items-center md:gap-14">
             <div><p className="text-[10px] font-medium uppercase tracking-[0.18em] text-[#b5c5a9]">Useful visibility</p><h2 className="mt-3 max-w-md text-3xl font-medium leading-tight tracking-[-0.05em] sm:text-4xl">See patterns. Make better decisions.</h2><p className="mt-4 max-w-md text-sm leading-7 text-[#c2cbc0]">Attendance reports bring scheduled days, presence, absences, late arrivals, and working hours into one reviewable view.</p><Link href="/signup" className="mt-6 inline-flex min-h-11 items-center gap-2 rounded-full border border-white/20 px-4 text-xs font-medium text-white transition hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#dce7c7]">Start with your team <ArrowRight className="h-4 w-4" /></Link></div>

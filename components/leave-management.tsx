@@ -295,7 +295,7 @@ export default function LeaveManagement({ user }: LeaveManagementProps) {
                       <p className="mt-2 text-sm leading-6 text-[var(--dashboard-ink-soft)]">{leave.reason}</p>
                     </div>
                   </div>
-                  <div className="text-xs text-[var(--dashboard-muted)] sm:text-right">Applied {new Date(leave.appliedDate).toLocaleDateString()}</div>
+                  <div className="text-xs text-[var(--dashboard-muted)] sm:text-right">Submitted {new Date(leave.appliedDate).toLocaleDateString()}</div>
                 </div>
                 {leave.reviewComments && (
                   <div className="mt-4 rounded-xl border border-[var(--dashboard-border-soft)] bg-[#f8f9f6] p-4 text-sm leading-6 text-[var(--dashboard-ink-soft)]">

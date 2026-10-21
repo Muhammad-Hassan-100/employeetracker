@@ -61,7 +61,7 @@ export default function LegalDocument({ type }) {
   if (!page) return null
 
   return (
-    <main className="min-h-screen bg-[#f7f8f5] text-[#24372a]">
+    <main className="min-h-screen bg-[#eef1ec] text-[#19271e]">
       <header className="mx-auto flex max-w-[1180px] items-center justify-between px-5 py-5 sm:px-8 lg:px-12">
         <Link href="/" className="inline-flex items-center gap-3 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#315e42] focus-visible:ring-offset-4">
           <BrandMark />
@@ -70,7 +70,7 @@ export default function LegalDocument({ type }) {
         <Link href="/" className="inline-flex min-h-10 items-center gap-2 rounded-full px-4 text-xs font-semibold text-[#526254] transition hover:bg-[#e9ede6] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#315e42]"><ArrowLeft className="h-4 w-4" /> Back to home</Link>
       </header>
       <article className="mx-auto max-w-[1180px] px-5 pb-16 pt-6 sm:px-8 sm:pb-24 lg:px-12">
-        <div className="overflow-hidden rounded-[28px] bg-[#20392b] text-white sm:rounded-[36px]">
+        <div className="overflow-hidden rounded-[28px] bg-[#17291e] text-white sm:rounded-[36px]">
           <div className="grid lg:grid-cols-[1fr_0.82fr]">
             <div className="flex flex-col justify-center p-7 sm:p-10 lg:p-14">
               <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[#c7d8af]">{page.eyebrow}</p>

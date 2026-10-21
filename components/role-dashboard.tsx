@@ -284,7 +284,7 @@ function StatusTag({ label, tone }: { label: string; tone: "green" | "amber" | "
 }
 
 function statusDisplay(status: string) {
-  if (status === "no_show") return { label: "Not come yet", tone: "amber" as const }
+  if (status === "no_show") return { label: "Awaiting check-in", tone: "amber" as const }
   if (status === "present") return { label: "Present", tone: "green" as const }
   if (status === "on_leave") return { label: "On leave", tone: "slate" as const }
   if (status === "scheduled") return { label: "Scheduled", tone: "slate" as const }
@@ -309,7 +309,7 @@ function AdminDashboard({ data, user }: { data: Extract<DashboardData, { role: "
     { label: "Present", count: presentRows.length, color: "bg-[#66875c]" },
     { label: "Absent", count: activeRows.filter((row) => row.attendanceStatus === "absent").length, color: "bg-[#b76a58]" },
     { label: "On leave", count: activeRows.filter((row) => row.attendanceStatus === "on_leave").length, color: "bg-[#c4a459]" },
-    { label: "Not come yet", count: noShowRows.length, color: "bg-[#d17a43]" },
+    { label: "Awaiting check-in", count: noShowRows.length, color: "bg-[#d17a43]" },
     { label: "Scheduled", count: activeRows.filter((row) => row.attendanceStatus === "scheduled").length, color: "bg-[#8c9aab]" },
     { label: "Off day", count: activeRows.filter((row) => ["off_day", "weekend"].includes(row.attendanceStatus)).length, color: "bg-[#c9cec7]" },
     { label: "Not scheduled", count: activeRows.filter((row) => row.attendanceStatus === "not_joined").length, color: "bg-[#e1e5df]" },
@@ -318,13 +318,13 @@ function AdminDashboard({ data, user }: { data: Extract<DashboardData, { role: "
 
   return (
     <>
-      <PageHeading eyebrow="Company workspace" title={`${greeting()}, ${user.name.split(" ")[0]}`} description="A clear view of today’s team activity and the actions waiting on you." />
+      <PageHeading eyebrow="Company workspace" title={`${greeting()}, ${user.name.split(" ")[0]}`} description="Review today’s attendance, team patterns, and items that need your attention." />
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
         <StatCard label="Active employees" value={activeEmployees.length} detail="People in your workspace" icon={UsersRound} />
         <StatCard label="Present on shift" value={presentRows.length} detail="Employees checked in for an assigned shift" icon={Check} tone="green" />
         <StatCard label="Late arrivals" value={lateRows.length} detail="Check-ins after allowed grace" icon={Clock3} tone={lateRows.length ? "amber" : "neutral"} />
-        <StatCard label="Not come yet" value={noShowRows.length} detail="Shift started without a check-in" icon={AlertTriangle} tone={noShowRows.length ? "amber" : "neutral"} />
+        <StatCard label="Awaiting check-in" value={noShowRows.length} detail="Shift has started; no check-in is recorded" icon={AlertTriangle} tone={noShowRows.length ? "amber" : "neutral"} />
         <StatCard label="Leave requests" value={pendingLeaves.length} detail="Waiting for your review" icon={WalletCards} tone={pendingLeaves.length ? "amber" : "neutral"} />
       </div>
 
@@ -363,7 +363,7 @@ function AdminDashboard({ data, user }: { data: Extract<DashboardData, { role: "
                     <div className="flex flex-wrap items-center gap-1.5">
                       <StatusTag label={display.label} tone={display.tone} />
                         {row.attendanceStatus === "present" && row.isLate && <StatusTag label="Late" tone="amber" />}
-                      {row.absenceReason === "missing_checkout" && <StatusTag label="Missing checkout" tone="amber" />}
+                      {row.absenceReason === "missing_checkout" && <StatusTag label="Missing check-out" tone="amber" />}
                     </div>
                   </div>
                 )
@@ -385,13 +385,13 @@ function AdminDashboard({ data, user }: { data: Extract<DashboardData, { role: "
                 <div key={`no-show-${row.employeeId}`} className="flex items-center gap-3 border-b border-[var(--dashboard-border-soft)] px-5 py-4 sm:px-6">
                   <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-[#faeae6] text-[#a34f3d]"><AlertTriangle className="size-4" /></div>
                   <div className="min-w-0 flex-1"><p className="truncate text-sm font-medium text-[var(--dashboard-ink-soft)]">{row.name}</p><p className="text-xs text-[var(--dashboard-subtle)]">Shift started, but no check-in has been recorded</p></div>
-                  <StatusTag label="Not come yet" tone="amber" />
+                  <StatusTag label="Awaiting check-in" tone="amber" />
                 </div>
               ))}
               {missingCheckoutRows.slice(0, 3).map((row) => (
                 <div key={`checkout-${row.employeeId}`} className="flex items-center gap-3 border-b border-[var(--dashboard-border-soft)] px-5 py-4 sm:px-6">
                   <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-[#f7efdf] text-[#8a6523]"><Clock3 className="size-4" /></div>
-                  <div className="min-w-0 flex-1"><p className="truncate text-sm font-medium text-[var(--dashboard-ink-soft)]">{row.name}</p><p className="text-xs text-[var(--dashboard-subtle)]">Normal checkout deadline passed; checkout is closed</p></div>
+                  <div className="min-w-0 flex-1"><p className="truncate text-sm font-medium text-[var(--dashboard-ink-soft)]">{row.name}</p><p className="text-xs text-[var(--dashboard-subtle)]">Check-out deadline passed; check-out is closed</p></div>
                   <StatusTag label="Absent" tone="red" />
                 </div>
               ))}
@@ -522,10 +522,10 @@ function EmployeeDashboard({ data, user }: { data: Extract<DashboardData, { role
     : null
   const isNoShow = noCheckInState === "no_show" && !record
   const isScheduled = noCheckInState === "scheduled" && !record
-  const nextAction = isNoShow ? "Not come yet" : isScheduled ? "Scheduled" : record?.breakStartTime && !record.breakEndTime
+  const nextAction = isNoShow ? "Awaiting check-in" : isScheduled ? "Scheduled" : record?.breakStartTime && !record.breakEndTime
     ? "You’re on break"
     : record?.status === "absent" && record.absenceReason === "missing_checkout"
-    ? "Absent · checkout missing"
+    ? "Absent · check-out missing"
     : record?.breakStartTime && !record.breakEndTime
     ? "Your shift clock is still running. Return to Attendance to end your break before checking out."
     : data.attendance.isCheckedIn
@@ -542,7 +542,7 @@ function EmployeeDashboard({ data, user }: { data: Extract<DashboardData, { role
   const actionDescription = isNoShow
     ? "You can still check in before your shift ends. Add a reason for the late arrival."
     : record?.status === "absent" && record.absenceReason === "missing_checkout"
-    ? "No checkout was recorded by your normal checkout deadline. This shift is absent and checkout is closed."
+    ? "No check-out was recorded by the check-out deadline. This shift is marked absent, and check-out is closed."
     : data.attendance.isCheckedIn
     ? `Checked in at ${formatTime(record?.checkInTime)}. Remember to check out when your shift ends.`
     : record?.status === "on_leave"
@@ -550,7 +550,7 @@ function EmployeeDashboard({ data, user }: { data: Extract<DashboardData, { role
       : record?.status === "absent"
         ? "Today’s shift was marked absent because no check-in was recorded. Contact your admin if you think this is incorrect."
         : record?.checkoutWindowExpired
-          ? "Your normal checkout deadline passed. The system recorded zero hours for this shift."
+          ? "The check-out deadline passed. No hours were recorded for this shift."
         : record?.checkOutTime
           ? `You checked out at ${formatTime(record.checkOutTime)}. Your attendance is saved for today.`
           : data.shift.shift

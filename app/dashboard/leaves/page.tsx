@@ -51,7 +51,7 @@ export default function LeavesPage() {
             </BreadcrumbItem>
             <BreadcrumbSeparator className="hidden md:block" />
             <BreadcrumbItem>
-              <BreadcrumbPage>Leave Management</BreadcrumbPage>
+              <BreadcrumbPage>Leave management</BreadcrumbPage>
             </BreadcrumbItem>
           </BreadcrumbList>
         </Breadcrumb>

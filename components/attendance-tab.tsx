@@ -299,11 +299,11 @@ export default function AttendanceTab({ user }: AttendanceTabProps) {
   const statusMeta = isOnLeave
     ? { label: "Approved Leave", tone: "bg-amber-100 text-amber-900" }
     : isScheduledOffDay
-      ? { label: "Off Day", tone: "bg-slate-200 text-slate-900" }
+      ? { label: "Day off", tone: "bg-slate-200 text-slate-900" }
     : hasMissedShift
       ? { label: "Absent", tone: "bg-rose-100 text-rose-900" }
     : isNoShow
-      ? { label: "Not come yet", tone: "bg-orange-100 text-orange-900" }
+      ? { label: "Awaiting check-in", tone: "bg-orange-100 text-orange-900" }
     : isOnBreak
       ? { label: "On break", tone: "bg-amber-100 text-amber-900" }
     : record?.isLate
@@ -405,7 +405,7 @@ export default function AttendanceTab({ user }: AttendanceTabProps) {
 
   const handleCheckOut = async () => {
     if (isOnBreak) {
-      toast.error("End your break first", { description: "Your checkout is available after you return from your break." })
+      toast.error("End your break first", { description: "You can check out after you return from your break." })
       return
     }
     const actionTime = new Date()
@@ -434,7 +434,7 @@ export default function AttendanceTab({ user }: AttendanceTabProps) {
 
     if (isEarlyAtAction && !earlyReason.trim()) {
       setShowEarlyReason(true)
-      toast.error("Early checkout reason required", {
+      toast.error("Early check-out reason required", {
         description: "Please explain why you are leaving before shift end.",
       })
       return
@@ -585,7 +585,7 @@ export default function AttendanceTab({ user }: AttendanceTabProps) {
                       : isScheduledForShift && shift
                         ? `Starts at ${formatTimeString12Hour(shift.startTime)}`
                         : isNoShow
-                          ? "Not come yet"
+                          ? "Awaiting check-in"
                           : hasMissedShift
                             ? "Shift ended · Absent"
                             : isOnLeave
@@ -596,7 +596,7 @@ export default function AttendanceTab({ user }: AttendanceTabProps) {
                     {isMissingCheckoutAbsent
                       ? record?.checkoutWindowExpired
                         ? "Checkout correction window closed"
-                        : "Absent status · checkout correction open"
+                        : "Absent · check-out correction available"
                       : record?.isLate
                         ? `Late arrival${record.lateReason ? ` · ${record.lateReason}` : ""}`
                         : isCheckedIn
@@ -633,7 +633,7 @@ export default function AttendanceTab({ user }: AttendanceTabProps) {
               {isOnLeave ? (
                 <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 p-5 text-amber-950">
                   <p className="font-semibold">You’re on approved leave</p>
-                  <p className="mt-1 text-sm text-amber-800">No check-in or checkout is needed for today.</p>
+                  <p className="mt-1 text-sm text-amber-800">You do not need to check in or out today.</p>
                 </div>
               ) : isScheduledOffDay ? (
                 <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 p-5 text-slate-800">
@@ -652,8 +652,8 @@ export default function AttendanceTab({ user }: AttendanceTabProps) {
                 </div>
               ) : isMissingCheckoutAbsent && !isCheckedIn ? (
                 <div className="mt-4 rounded-2xl border border-rose-200 bg-rose-50 p-5 text-rose-950">
-                  <p className="font-semibold">Absent · checkout missing</p>
-                  <p className="mt-1 text-sm text-rose-800">The normal checkout deadline has passed. This shift is marked absent and checkout is closed.</p>
+                  <p className="font-semibold">Absent · check-out missing</p>
+                  <p className="mt-1 text-sm text-rose-800">The check-out deadline has passed. This shift is marked absent, and check-out is closed.</p>
                 </div>
               ) : isCheckedIn ? (
                 <div className="mt-4">
@@ -666,7 +666,7 @@ export default function AttendanceTab({ user }: AttendanceTabProps) {
                     <p className="mt-1 text-sm leading-6 text-[var(--dashboard-muted)]">
                       {attendancePolicy.requiresLocation
                         ? "Check out when you finish work. Location permission will be requested first."
-                        : "Record your checkout to save today’s hours."}
+                        : "Check out to save today’s working hours."}
                     </p>
                     {(canStartBreak || hasUsedBreak) && (
                       <div className={`mt-4 rounded-xl border p-4 ${isOnBreak ? "border-amber-200 bg-amber-50" : "border-[var(--dashboard-border-soft)] bg-[#f7f8f5]"}`}>
@@ -701,7 +701,7 @@ export default function AttendanceTab({ user }: AttendanceTabProps) {
                     </Button>
                     {(showEarlyReason || shouldRequireEarlyReason) && (
                       <div className="mt-4 space-y-2">
-                        <Label htmlFor="early-reason">Early checkout reason</Label>
+                        <Label htmlFor="early-reason">Early check-out reason</Label>
                         <Textarea id="early-reason" value={earlyReason} onChange={(event) => setEarlyReason(event.target.value)} placeholder="Explain why you are leaving before shift end..." className="min-h-[90px] rounded-xl" />
                       </div>
                     )}
@@ -712,7 +712,7 @@ export default function AttendanceTab({ user }: AttendanceTabProps) {
                 <div className="mt-4 rounded-2xl border border-[var(--dashboard-border-soft)] bg-white p-5">
                   <div className="flex items-center gap-2 text-sm font-medium text-[var(--dashboard-muted)]">
                     <span className={`size-2 rounded-full ${isNoShow ? "bg-orange-500" : "bg-slate-300"}`} />
-                    {isNoShow ? "Not come yet" : isScheduledForShift ? "Scheduled" : "Check-in"}
+                    {isNoShow ? "Awaiting check-in" : isScheduledForShift ? "Scheduled" : "Check in"}
                   </div>
                   <h2 className="mt-2 text-xl font-semibold tracking-tight text-[var(--dashboard-ink)]">
                     {isNoShow ? "Check in when you arrive" : isScheduledForShift ? "Your shift hasn’t started" : "Start your shift"}
@@ -761,7 +761,7 @@ export default function AttendanceTab({ user }: AttendanceTabProps) {
             { label: "Break", value: isOnBreak ? "In progress" : hasUsedBreak ? formatDurationMinutes(Number(record?.breakDurationMinutes || 0)) : "Not taken" },
             { label: "Hours worked", value: record?.hoursWorked?.toFixed?.(2) ?? "0.00" },
             { label: "Late cutoff", value: lateCutoffLabel ?? "Not configured" },
-            { label: "Absent if no checkout", value: normalCheckoutCutoffLabel || (shift ? formatTimeString12Hour(shift.endTime) : "Shift end") },
+            { label: "Check-out deadline", value: normalCheckoutCutoffLabel || (shift ? formatTimeString12Hour(shift.endTime) : "Shift end") },
           ].map((item) => (
             <div key={item.label} className="rounded-2xl bg-[#f7f8f5] px-4 py-3.5">
               <p className="text-xs font-medium text-[var(--dashboard-muted)]">{item.label}</p>
@@ -779,9 +779,9 @@ export default function AttendanceTab({ user }: AttendanceTabProps) {
         <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           {[
             { label: "Scheduled", detail: "Before your shift starts", tone: "bg-slate-100 text-slate-700" },
-            { label: "Not come yet", detail: "Shift started; no check-in recorded", tone: "bg-orange-100 text-orange-900" },
+            { label: "Awaiting check-in", detail: "Shift started; no check-in has been recorded", tone: "bg-orange-100 text-orange-900" },
             { label: "Late", detail: `Check in after ${lateCutoffLabel || "your grace period"}`, tone: "bg-amber-100 text-amber-900" },
-            { label: "Absent", detail: `No check-in by shift end, or no checkout by ${normalCheckoutCutoffLabel || "the normal checkout cutoff"}`, tone: "bg-rose-100 text-rose-900" },
+            { label: "Absent", detail: `No check-in by shift end, or no check-out by ${normalCheckoutCutoffLabel || "the check-out deadline"}`, tone: "bg-rose-100 text-rose-900" },
           ].map((item) => (
             <div key={item.label} className="rounded-2xl border border-[var(--dashboard-border-soft)] p-4">
               <Badge className={`${item.tone} border-0`}>{item.label}</Badge>
@@ -790,7 +790,7 @@ export default function AttendanceTab({ user }: AttendanceTabProps) {
           ))}
         </div>
         <p className="mt-4 text-xs leading-5 text-[var(--dashboard-muted)]">
-          If you checked in but miss checkout, you are marked absent at {normalCheckoutCutoffLabel || "your normal checkout cutoff"}. Checkout is closed after that deadline.
+          If you check in but do not check out, you are marked absent at {normalCheckoutCutoffLabel || "the check-out deadline"}. Check-out is unavailable after that time.
         </p>
       </section>
 
@@ -799,8 +799,8 @@ export default function AttendanceTab({ user }: AttendanceTabProps) {
           <h2 className="flex items-center gap-2 text-sm font-semibold text-[var(--dashboard-ink)]"><Siren className="size-4 text-amber-600" />Attendance notes</h2>
           <div className="mt-3 space-y-1.5 text-sm text-[var(--dashboard-muted)]">
             {record?.lateReason && <p><span className="font-medium text-[var(--dashboard-ink-soft)]">Late reason:</span> {record.lateReason}</p>}
-            {record?.earlyReason && <p><span className="font-medium text-[var(--dashboard-ink-soft)]">Early checkout:</span> {record.earlyReason}</p>}
-            {record?.lateCheckoutReason && <p><span className="font-medium text-[var(--dashboard-ink-soft)]">Late checkout:</span> {record.lateCheckoutReason}</p>}
+            {record?.earlyReason && <p><span className="font-medium text-[var(--dashboard-ink-soft)]">Early check-out:</span> {record.earlyReason}</p>}
+            {record?.lateCheckoutReason && <p><span className="font-medium text-[var(--dashboard-ink-soft)]">Late check-out:</span> {record.lateCheckoutReason}</p>}
             {isOnLeave && <p>Your leave is approved for today.</p>}
             {isScheduledOffDay && <p>No shift is assigned for today.</p>}
           </div>

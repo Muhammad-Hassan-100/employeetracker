@@ -187,7 +187,7 @@ export default function SuperAdminCompanyDetail({ companyId }: { companyId: stri
           {!isEditing ? (
             <Button className="rounded-2xl bg-slate-950 text-white hover:bg-slate-800" onClick={() => setIsEditing(true)}>
               <Pencil className="mr-2 h-4 w-4" />
-              Update Company
+              Edit company
             </Button>
           ) : (
             <>
@@ -197,7 +197,7 @@ export default function SuperAdminCompanyDetail({ companyId }: { companyId: stri
               </Button>
               <Button className="rounded-2xl bg-slate-950 text-white hover:bg-slate-800" disabled={isSaving} onClick={handleSave}>
                 {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-                Save Changes
+                Save changes
               </Button>
             </>
           )}
@@ -206,28 +206,28 @@ export default function SuperAdminCompanyDetail({ companyId }: { companyId: stri
 
       <Card className="rounded-3xl shadow-sm">
         <CardHeader>
-          <CardTitle>Company Details</CardTitle>
-          <CardDescription>Fields stay read-only until you click Update Company.</CardDescription>
+          <CardTitle>Company details</CardTitle>
+          <CardDescription>Fields are read-only until you select Edit company.</CardDescription>
         </CardHeader>
         <CardContent className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
           <div className="space-y-2">
-            <Label>Company Name</Label>
+            <Label>Company name</Label>
             <Input value={form.companyName} readOnly={!isEditing} onChange={(event) => setForm((prev) => prev ? { ...prev, companyName: event.target.value } : prev)} />
           </div>
           <div className="space-y-2">
-            <Label>Company Domain</Label>
+            <Label>Company domain</Label>
             <Input value={company.domain} readOnly />
           </div>
           <div className="space-y-2">
-            <Label>Admin Name</Label>
+            <Label>Administrator name</Label>
             <Input value={form.adminName} readOnly={!isEditing} onChange={(event) => setForm((prev) => prev ? { ...prev, adminName: event.target.value } : prev)} />
           </div>
           <div className="space-y-2">
-            <Label>Admin Email</Label>
+            <Label>Administrator email</Label>
             <Input value={form.adminEmail} readOnly={!isEditing} onChange={(event) => setForm((prev) => prev ? { ...prev, adminEmail: event.target.value } : prev)} />
           </div>
           <div className="space-y-2">
-            <Label>Admin Status</Label>
+            <Label>Administrator status</Label>
             {isEditing ? (
               <Select value={form.adminStatus} onValueChange={(value) => setForm((prev) => prev ? { ...prev, adminStatus: value as CompanyFormState["adminStatus"] } : prev)}>
                 <SelectTrigger>
@@ -243,7 +243,7 @@ export default function SuperAdminCompanyDetail({ companyId }: { companyId: stri
             )}
           </div>
           <div className="space-y-2 md:col-span-2 xl:col-span-2">
-            <Label>Approval Status</Label>
+            <Label>Approval status</Label>
             {isEditing ? (
               <Select value={form.approvalStatus} onValueChange={(value) => setForm((prev) => prev ? { ...prev, approvalStatus: value as CompanyFormState["approvalStatus"] } : prev)}>
                 <SelectTrigger className="w-full md:w-72">
@@ -264,7 +264,7 @@ export default function SuperAdminCompanyDetail({ companyId }: { companyId: stri
 
       <Card className="rounded-3xl shadow-sm">
         <CardHeader>
-          <CardTitle>Danger Zone</CardTitle>
+          <CardTitle>Delete company</CardTitle>
           <CardDescription>Deleting a company removes all related users, shifts, leave requests, and attendance records.</CardDescription>
         </CardHeader>
         <CardContent>

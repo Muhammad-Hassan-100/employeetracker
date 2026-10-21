@@ -131,7 +131,7 @@ export default function AdminLeaveManagement({ adminUser }: AdminLeaveManagement
     <div className="space-y-6" data-dashboard-view="leave-approvals">
       <div className="flex flex-col gap-4 rounded-3xl bg-white p-6 shadow-sm md:flex-row md:items-center md:justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-slate-950">Leave Approval Queue</h2>
+          <h2 className="text-2xl font-bold text-slate-950">Leave requests</h2>
           <p className="text-slate-600">Review and manage upcoming leave requests from your team.</p>
         </div>
         <Button variant="outline" className="rounded-2xl" onClick={() => fetchLeaves(true)}>
@@ -181,7 +181,7 @@ export default function AdminLeaveManagement({ adminUser }: AdminLeaveManagement
 
       <Card className="rounded-3xl shadow-sm">
         <CardHeader>
-          <CardTitle>Queue Filters</CardTitle>
+          <CardTitle>Request filters</CardTitle>
           <CardDescription>Search by employee name and filter by approval state.</CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-4 md:flex-row">
@@ -190,7 +190,7 @@ export default function AdminLeaveManagement({ adminUser }: AdminLeaveManagement
             <Input
               value={searchTerm}
               onChange={(event) => setSearchTerm(event.target.value)}
-              placeholder="Search employee..."
+              placeholder="Search by employee name..."
               className="pl-10"
             />
           </div>
@@ -210,7 +210,7 @@ export default function AdminLeaveManagement({ adminUser }: AdminLeaveManagement
 
       <Card className="rounded-3xl shadow-sm">
         <CardHeader>
-          <CardTitle>Leave Requests</CardTitle>
+          <CardTitle>Requests</CardTitle>
           <CardDescription>Approve or reject requests directly from this queue.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -233,7 +233,7 @@ export default function AdminLeaveManagement({ adminUser }: AdminLeaveManagement
                           {getStatusBadge(leave.status)}
                           <Badge variant="outline">{leave.leaveType}</Badge>
                         </div>
-                        <p className="mt-1 text-xs text-[var(--dashboard-muted)]">Applied {new Date(leave.appliedDate).toLocaleDateString()}</p>
+                        <p className="mt-1 text-xs text-[var(--dashboard-muted)]">Submitted {new Date(leave.appliedDate).toLocaleDateString()}</p>
                       </div>
                     </div>
                     <div className="flex items-start gap-3 rounded-xl bg-[#f7f8f5] p-3.5">

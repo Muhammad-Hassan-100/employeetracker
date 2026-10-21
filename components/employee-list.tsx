@@ -118,7 +118,7 @@ export default function EmployeeList() {
           <CardContent className="flex items-center gap-4 p-5">
             <UsersRound className="h-10 w-10 rounded-2xl bg-sky-100 p-2 text-sky-700" />
             <div>
-              <p className="text-sm text-slate-500">Total Employees</p>
+              <p className="text-sm text-slate-500">Total employees</p>
               <p className="text-2xl font-bold">{employees.length}</p>
             </div>
           </CardContent>
@@ -147,7 +147,7 @@ export default function EmployeeList() {
         <CardHeader>
           <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div>
-              <CardTitle className="text-xl tracking-tight">People directory</CardTitle>
+              <CardTitle className="text-xl tracking-tight">Employee directory</CardTitle>
               <CardDescription>Search, review, and manage employees from one place.</CardDescription>
             </div>
             <div className="relative w-full md:w-72">

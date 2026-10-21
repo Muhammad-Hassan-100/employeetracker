@@ -217,20 +217,20 @@ export default function AdminSettings({ user, onUserUpdate }: AdminSettingsProps
 
       <Card className="rounded-3xl shadow-sm">
         <CardHeader>
-          <CardTitle className="text-2xl">Admin Settings</CardTitle>
+          <CardTitle className="text-2xl">Administrator settings</CardTitle>
           <CardDescription>Update your profile. Your company domain is read-only.</CardDescription>
         </CardHeader>
         <CardContent className="grid gap-4 md:grid-cols-2">
           <div className="space-y-2">
-            <Label>Full Name</Label>
+            <Label>Full name</Label>
             <Input value={form.name} onChange={(event) => setForm((prev) => ({ ...prev, name: event.target.value }))} />
           </div>
           <div className="space-y-2">
-            <Label>Work Email</Label>
+            <Label>Work email</Label>
             <Input value={form.email} onChange={(event) => setForm((prev) => ({ ...prev, email: event.target.value }))} />
           </div>
           <div className="space-y-2">
-            <Label>New Password</Label>
+            <Label>New password</Label>
             <Input
               type="password"
               placeholder="Leave empty to keep current password"
@@ -239,11 +239,11 @@ export default function AdminSettings({ user, onUserUpdate }: AdminSettingsProps
             />
           </div>
           <div className="space-y-2">
-            <Label>Company Name</Label>
+            <Label>Company name</Label>
             <Input value={form.companyName} readOnly />
           </div>
           <div className="space-y-2 md:col-span-2">
-            <Label>Company Domain</Label>
+            <Label>Company domain</Label>
             <Input value={form.companyDomain} readOnly />
             <p className="text-xs text-slate-500">The company domain cannot be changed for security reasons.</p>
           </div>

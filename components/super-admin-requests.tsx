@@ -117,7 +117,7 @@ export default function SuperAdminRequests() {
           <CardContent className="flex items-center gap-4 p-5">
             <ShieldCheck className="h-10 w-10 rounded-2xl bg-amber-100 p-2 text-amber-700" />
             <div>
-              <p className="text-sm text-slate-500">Pending Requests</p>
+              <p className="text-sm text-slate-500">Pending requests</p>
               <p className="text-2xl font-bold">{pendingCompanies.length}</p>
             </div>
           </CardContent>
@@ -126,7 +126,7 @@ export default function SuperAdminRequests() {
           <CardContent className="flex items-center gap-4 p-5">
             <CheckCircle2 className="h-10 w-10 rounded-2xl bg-emerald-100 p-2 text-emerald-700" />
             <div>
-              <p className="text-sm text-slate-500">Approved Companies</p>
+              <p className="text-sm text-slate-500">Approved companies</p>
               <p className="text-2xl font-bold">{companies.filter((company) => company.approvalStatus === "approved").length}</p>
             </div>
           </CardContent>
@@ -135,7 +135,7 @@ export default function SuperAdminRequests() {
           <CardContent className="flex items-center gap-4 p-5">
             <XCircle className="h-10 w-10 rounded-2xl bg-rose-100 p-2 text-rose-700" />
             <div>
-              <p className="text-sm text-slate-500">Rejected Companies</p>
+              <p className="text-sm text-slate-500">Rejected companies</p>
               <p className="text-2xl font-bold">{companies.filter((company) => company.approvalStatus === "rejected").length}</p>
             </div>
           </CardContent>
@@ -144,8 +144,8 @@ export default function SuperAdminRequests() {
 
       <Card className="rounded-3xl shadow-sm">
         <CardHeader>
-          <CardTitle>Admin Signup Requests</CardTitle>
-          <CardDescription>Approve or reject signup requests before any company admin can sign in.</CardDescription>
+          <CardTitle>Organization signup requests</CardTitle>
+          <CardDescription>Approve or reject requests before organization administrators can sign in.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           {pendingCompanies.length === 0 ? (

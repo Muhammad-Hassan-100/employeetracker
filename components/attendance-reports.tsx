@@ -90,7 +90,7 @@ export default function AttendanceReports() {
 
   const exportToCSV = () => {
     const rows = [
-      ["Employee", "Department", "Completed Shifts", "Present", "Check-ins", "Absent", "Leave", "Late", "Early", "Avg Hours", "Attendance Rate", "On-time Rate", "Early Leave Rate"],
+      ["Employee", "Department", "Completed shifts", "Present", "Check-ins", "Absent", "Leave", "Late arrivals", "Early departures", "Average hours", "Attendance rate", "On-time rate", "Early departure rate"],
       ...filteredReports.map((report) => [
         report.employeeName,
         report.department,
@@ -141,7 +141,7 @@ export default function AttendanceReports() {
         </Card>
         <Card className="rounded-3xl shadow-sm">
           <CardContent className="p-5">
-            <p className="text-sm text-slate-500">Avg Attendance</p>
+            <p className="text-sm text-slate-500">Average attendance</p>
             <p className="text-2xl font-bold">{formatRate(avgAttendanceRate, completedShifts)}</p>
             <p className="mt-1 text-xs text-slate-500">Present ÷ completed scheduled shifts</p>
           </CardContent>
@@ -162,7 +162,7 @@ export default function AttendanceReports() {
         </Card>
         <Card className="rounded-3xl shadow-sm">
           <CardContent className="p-5">
-            <p className="text-sm text-slate-500">Avg Hours</p>
+            <p className="text-sm text-slate-500">Average hours</p>
             <p className="text-2xl font-bold">{avgHours.toFixed(1)}</p>
             <p className="mt-1 text-xs text-slate-500">Per attended shift</p>
           </CardContent>
@@ -192,7 +192,7 @@ export default function AttendanceReports() {
               How percentages are calculated
             </div>
             <div className="mt-3 grid gap-2 text-xs leading-5 text-emerald-950 sm:grid-cols-3 sm:gap-4">
-              <p><span className="font-semibold">Attendance:</span> Present shifts with check-in and checkout ÷ completed scheduled shifts. Approved leave and shifts still in progress are excluded.</p>
+              <p><span className="font-semibold">Attendance:</span> Present shifts with both check-in and check-out ÷ completed scheduled shifts. Approved leave and shifts still in progress are excluded.</p>
               <p><span className="font-semibold">On-time:</span> On-time check-ins ÷ all recorded check-ins.</p>
               <p><span className="font-semibold">Early exit:</span> Early departures ÷ attended shifts.</p>
             </div>
@@ -279,7 +279,7 @@ export default function AttendanceReports() {
                     </div>
                     <div className="rounded-2xl bg-slate-50 p-3">
                       <p className="text-xl font-bold">{report.avgHours.toFixed(1)}</p>
-                      <p className="text-xs text-slate-500">Avg Hours</p>
+                      <p className="text-xs text-slate-500">Average hours</p>
                     </div>
                     <div className="rounded-2xl bg-slate-950 p-3 text-white">
                       <p className="text-xl font-bold">{formatRate(getOnTimeRate(report), report.checkInDays)}</p>

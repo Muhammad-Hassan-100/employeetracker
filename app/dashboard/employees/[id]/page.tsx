@@ -326,7 +326,7 @@ export default function EmployeeDetailPage() {
             <BreadcrumbSeparator className="hidden md:block" />
             <BreadcrumbItem className="hidden md:block">
               <BreadcrumbLink href={pageMode === "edit" ? "/dashboard/employee-list" : "/dashboard/attendance-monitor"}>
-                {pageMode === "edit" ? "All Employees" : "Attendance Monitor"}
+                {pageMode === "edit" ? "All employees" : "Attendance monitor"}
               </BreadcrumbLink>
             </BreadcrumbItem>
             <BreadcrumbSeparator className="hidden md:block" />
@@ -384,11 +384,11 @@ export default function EmployeeDetailPage() {
             {pageMode === "edit" && (
               <Card className="rounded-3xl shadow-sm">
               <CardHeader>
-                <CardTitle>Profile Information</CardTitle>
+                <CardTitle>Profile information</CardTitle>
               </CardHeader>
               <CardContent className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-2">
-                  <Label>Full Name</Label>
+                  <Label>Full name</Label>
                   {isEditing ? (
                     <Input value={editForm.name || ""} onChange={(event) => setEditForm((prev) => ({ ...prev, name: event.target.value }))} />
                   ) : (
@@ -511,7 +511,7 @@ export default function EmployeeDetailPage() {
                   <div className="rounded-2xl bg-slate-50 px-4 py-3">{employee.status}</div>
                 </div>
                 <div className="space-y-2">
-                  <Label>Check-In Before (minutes)</Label>
+                  <Label>Early check-in window (minutes)</Label>
                   {isEditing ? (
                     <Input
                       type="number"
@@ -527,7 +527,7 @@ export default function EmployeeDetailPage() {
                   )}
                 </div>
                 <div className="space-y-2">
-                  <Label>Late Relaxation (minutes)</Label>
+                  <Label>Late arrival grace period (minutes)</Label>
                   {isEditing ? (
                     <Input
                       type="number"
@@ -543,7 +543,7 @@ export default function EmployeeDetailPage() {
                   )}
                 </div>
                 <div className="space-y-2">
-                  <Label>Normal Check-Out After Shift (minutes)</Label>
+                  <Label>Check-out deadline after shift (minutes)</Label>
                   {isEditing ? (
                     <Input
                       type="number"
@@ -558,7 +558,7 @@ export default function EmployeeDetailPage() {
                     <div className="rounded-2xl bg-slate-50 px-4 py-3">{employee.checkOutGraceMinutes}</div>
                   )}
                   <p className="text-xs leading-5 text-slate-500">
-                    Without a check-out, status becomes Absent after this many minutes past shift end. Check-out closes at that deadline.
+                    If the employee has not checked out by this deadline after the shift ends, their status changes to absent and check-out is closed.
                   </p>
                 </div>
                 <div className="space-y-2">
@@ -622,7 +622,7 @@ export default function EmployeeDetailPage() {
                         <div>
                           <p className="font-semibold text-slate-950">{formatDate(record.date)}</p>
                           <p className="mt-1 text-sm text-slate-600">
-                            In: {formatTime(record.checkInTime)} | Out: {formatTime(record.checkOutTime)} | Hours: {formatHoursWorked(record.hoursWorked)}
+                            Check-in: {formatTime(record.checkInTime)} | Check-out: {formatTime(record.checkOutTime)} | Hours worked: {formatHoursWorked(record.hoursWorked)}
                           </p>
                           {record.breakTaken && <p className="mt-1 text-sm text-slate-600">Break: {record.breakEndTime ? formatDurationMinutes(Number(record.breakDurationMinutes || 0)) : "In progress"}</p>}
                           {(record.lateReason || record.earlyReason || record.lateCheckoutReason || record.leaveReason) && (
@@ -644,7 +644,7 @@ export default function EmployeeDetailPage() {
                               )}
                               {record.lateCheckoutReason && (
                                 <p>
-                                  <span className="font-semibold">Late Check-Out:</span> {record.lateCheckoutReason}
+                                  <span className="font-semibold">Late check-out:</span> {record.lateCheckoutReason}
                                 </p>
                               )}
                             </div>
@@ -671,10 +671,10 @@ export default function EmployeeDetailPage() {
                               : record.isLate
                                 ? "Late"
                                 : record.isEarly
-                                  ? "Early Exit"
+                                  ? "Early departure"
                                   : "On Time"}
                         </Badge>
-                        {record.absenceReason === "missing_checkout" && <Badge className="bg-amber-100 text-amber-900">Absent · missing checkout</Badge>}
+                        {record.absenceReason === "missing_checkout" && <Badge className="bg-amber-100 text-amber-900">Absent · missing check-out</Badge>}
                         {record.absenceReason === "no_check_in" && <Badge className="bg-rose-100 text-rose-900">No check-in</Badge>}
                         </div>
                       </div>

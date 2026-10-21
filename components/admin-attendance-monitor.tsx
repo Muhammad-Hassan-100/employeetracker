@@ -50,7 +50,7 @@ interface SnapshotRow {
 
 function formatTime(value: string | null) {
   if (!value) {
-    return "Not marked"
+    return "Not recorded"
   }
 
   return new Date(value).toLocaleTimeString("en-US", {
@@ -74,13 +74,13 @@ function getStatusBadge(status: SnapshotRow["attendanceStatus"], isLate = false)
     case "scheduled":
       return <Badge className="bg-slate-100 text-slate-700">Scheduled</Badge>
     case "no_show":
-      return <Badge className="bg-orange-100 text-orange-900">Not come yet</Badge>
+      return <Badge className="bg-orange-100 text-orange-900">Awaiting check-in</Badge>
     case "weekend":
       return <Badge className="bg-sky-100 text-sky-900">Weekend</Badge>
     case "off_day":
-      return <Badge className="bg-slate-200 text-slate-700">Off Day</Badge>
+      return <Badge className="bg-slate-200 text-slate-700">Day off</Badge>
     case "not_joined":
-      return <Badge className="bg-slate-200 text-slate-700">Not Joined</Badge>
+      return <Badge className="bg-slate-200 text-slate-700">Before start date</Badge>
     case "absent":
       return <>
         <Badge className="bg-rose-100 text-rose-900">Absent</Badge>
@@ -212,19 +212,19 @@ export default function AdminAttendanceMonitor() {
         </Card>
         <Card className="rounded-3xl shadow-sm">
           <CardContent className="p-5">
-            <p className="text-sm text-slate-500">Not come yet</p>
+            <p className="text-sm text-slate-500">Awaiting check-in</p>
             <p className="text-2xl font-bold">{noShowCount}</p>
           </CardContent>
         </Card>
         <Card className="rounded-3xl shadow-sm">
           <CardContent className="p-5">
-            <p className="text-sm text-slate-500">Missing checkout</p>
+            <p className="text-sm text-slate-500">Missing check-out</p>
             <p className="text-2xl font-bold">{missingCheckoutCount}</p>
           </CardContent>
         </Card>
         <Card className="rounded-3xl shadow-sm">
           <CardContent className="p-5">
-            <p className="text-sm text-slate-500">Repeated late</p>
+            <p className="text-sm text-slate-500">Frequent late arrivals</p>
             <p className="text-2xl font-bold">{repeatedLateCount}</p>
             <p className="mt-1 text-xs text-slate-500">3+ times in 30 days</p>
           </CardContent>
@@ -237,7 +237,7 @@ export default function AdminAttendanceMonitor() {
             <div>
               <CardTitle className="flex items-center gap-2 text-2xl">
                 <UsersRound className="h-5 w-5 text-emerald-600" />
-                Attendance Monitor
+                Attendance monitor
               </CardTitle>
               <CardDescription>Review attendance for every employee on the selected date.</CardDescription>
             </div>
@@ -282,10 +282,10 @@ export default function AdminAttendanceMonitor() {
                   <SelectItem value="absent">Absent</SelectItem>
                   <SelectItem value="on_leave">On Leave</SelectItem>
                   <SelectItem value="scheduled">Scheduled</SelectItem>
-                  <SelectItem value="no_show">Not come yet</SelectItem>
+                  <SelectItem value="no_show">Awaiting check-in</SelectItem>
                   <SelectItem value="weekend">Weekend</SelectItem>
-                  <SelectItem value="off_day">Off Day</SelectItem>
-                  <SelectItem value="not_joined">Not Joined</SelectItem>
+                  <SelectItem value="off_day">Day off</SelectItem>
+                  <SelectItem value="not_joined">Before start date</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -324,10 +324,10 @@ export default function AdminAttendanceMonitor() {
                       <h3 className="text-lg font-semibold text-slate-950">{row.name}</h3>
                       {getStatusBadge(row.attendanceStatus, row.isLate)}
                       {row.status === "active" && row.breakStartTime && !row.breakEndTime && <Badge className="bg-amber-100 text-amber-900">On break</Badge>}
-                      {row.status === "active" && row.isEarly && <Badge className="bg-sky-100 text-sky-900">Early Exit</Badge>}
-                      {row.status === "active" && row.absenceReason === "missing_checkout" && <Badge className="bg-amber-100 text-amber-900">Missing checkout</Badge>}
+                      {row.status === "active" && row.isEarly && <Badge className="bg-sky-100 text-sky-900">Early departure</Badge>}
+                      {row.status === "active" && row.absenceReason === "missing_checkout" && <Badge className="bg-amber-100 text-amber-900">Missing check-out</Badge>}
                       {row.status === "active" && row.absenceReason === "no_check_in" && <Badge className="bg-rose-100 text-rose-900">No check-in</Badge>}
-                      {row.status === "active" && row.lateOccurrencesLast30Days >= 3 && <Badge className="bg-orange-100 text-orange-900">{row.lateOccurrencesLast30Days} Late / 30d</Badge>}
+                      {row.status === "active" && row.lateOccurrencesLast30Days >= 3 && <Badge className="bg-orange-100 text-orange-900">{row.lateOccurrencesLast30Days} late arrivals in 30 days</Badge>}
                     </div>
                     <p className="text-sm text-slate-600">{row.email}</p>
                     <div className="flex flex-wrap gap-x-6 gap-y-1 text-sm text-slate-600">
@@ -342,10 +342,10 @@ export default function AdminAttendanceMonitor() {
                     <div className="flex flex-wrap gap-x-6 gap-y-1 text-sm text-slate-700">
                       <span className="flex items-center gap-1">
                         <Clock3 className="h-4 w-4" />
-                        In: {formatTime(row.checkInTime)}
+                        Check-in: {formatTime(row.checkInTime)}
                       </span>
-                      <span>Out: {formatTime(row.checkOutTime)}</span>
-                      <span>Hours: {formatHoursWorked(row.hoursWorked)}</span>
+                      <span>Check-out: {formatTime(row.checkOutTime)}</span>
+                      <span>Hours worked: {formatHoursWorked(row.hoursWorked)}</span>
                       {row.breakTaken && <span className={row.breakStartTime && !row.breakEndTime ? "font-medium text-amber-800" : ""}>
                         Break: {row.breakStartTime && !row.breakEndTime ? "In progress" : formatDurationMinutes(Number(row.breakDurationMinutes || 0))}
                       </span>}
@@ -355,14 +355,14 @@ export default function AdminAttendanceMonitor() {
                         {row.leaveReason && <p><span className="font-semibold">Leave:</span> {row.leaveType} - {row.leaveReason}</p>}
                         {row.lateReason && <p><span className="font-semibold">Late:</span> {row.lateReason}</p>}
                         {row.earlyReason && <p><span className="font-semibold">Early:</span> {row.earlyReason}</p>}
-                        {row.lateCheckoutReason && <p><span className="font-semibold">Late Check-Out:</span> {row.lateCheckoutReason}</p>}
+                        {row.lateCheckoutReason && <p><span className="font-semibold">Late check-out:</span> {row.lateCheckoutReason}</p>}
                       </div>
                     )}
                   </div>
                   <Link href={`/dashboard/employees/${row.employeeId}?mode=view`}>
                     <Button variant="outline" className="rounded-2xl">
                       <Eye className="mr-2 h-4 w-4" />
-                      Open Detail
+                      View details
                     </Button>
                   </Link>
                 </div>

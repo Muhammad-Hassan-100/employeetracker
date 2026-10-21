@@ -57,7 +57,7 @@ export default function EmployeesPage() {
             </BreadcrumbItem>
             <BreadcrumbSeparator className="hidden md:block" />
             <BreadcrumbItem>
-              <BreadcrumbPage>Employee Management</BreadcrumbPage>
+              <BreadcrumbPage>Employee management</BreadcrumbPage>
             </BreadcrumbItem>
           </BreadcrumbList>
         </Breadcrumb>

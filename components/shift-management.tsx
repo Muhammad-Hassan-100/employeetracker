@@ -413,7 +413,7 @@ export default function ShiftManagement() {
               </div>
             ) : shifts.length === 0 ? (
               <div className="col-span-full rounded-2xl border border-dashed border-slate-300 p-8 text-center text-slate-500">
-                No shifts yet. Create your first shift to start assigning employees.
+                No shifts yet. Create a shift to begin assigning employees.
               </div>
             ) : (
               shifts.map((shift) => (
@@ -454,7 +454,7 @@ export default function ShiftManagement() {
         </CardHeader>
         <CardContent className="space-y-6">
           <div className="space-y-3">
-            <Label>Working Days</Label>
+            <Label>Company workdays</Label>
             <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
               {WEEKDAY_OPTIONS.map((day) => {
                 const selected = companyRules.workingDays.includes(day.value)

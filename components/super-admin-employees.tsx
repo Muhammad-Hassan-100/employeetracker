@@ -141,14 +141,14 @@ export default function SuperAdminEmployees() {
           <div>
             <CardTitle className="flex items-center gap-2">
               <UsersRound className="h-5 w-5 text-violet-600" />
-              All Employees
+              All employees
             </CardTitle>
             <CardDescription>Review employee data across all companies without opening attendance tools.</CardDescription>
           </div>
           <Input
             value={search}
             onChange={(event) => setSearch(event.target.value)}
-            placeholder="Search employees or companies..."
+            placeholder="Search by employee or company name..."
             className="w-full md:w-80"
           />
         </div>

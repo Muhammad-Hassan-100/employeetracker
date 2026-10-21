@@ -157,15 +157,15 @@ export default function EmployeeSettings({ user, onUserUpdate, onAccessDenied }:
         </CardHeader>
         <CardContent className="grid gap-4 md:grid-cols-2">
           <div className="space-y-2">
-            <Label>Full Name</Label>
+            <Label>Full name</Label>
             <Input value={profile.name} readOnly />
           </div>
           <div className="space-y-2">
-            <Label>Work Email</Label>
+            <Label>Work email</Label>
             <Input value={profile.email} readOnly />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="employee-new-password">New Password</Label>
+            <Label htmlFor="employee-new-password">New password</Label>
             <Input
               id="employee-new-password"
               type="password"
@@ -176,7 +176,7 @@ export default function EmployeeSettings({ user, onUserUpdate, onAccessDenied }:
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="employee-confirm-password">Confirm Password</Label>
+            <Label htmlFor="employee-confirm-password">Confirm password</Label>
             <Input
               id="employee-confirm-password"
               type="password"

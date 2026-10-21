@@ -58,7 +58,7 @@ export default function EmployeeListPage() {
             </BreadcrumbItem>
             <BreadcrumbSeparator className="hidden md:block" />
             <BreadcrumbItem>
-              <BreadcrumbPage>All Employees</BreadcrumbPage>
+              <BreadcrumbPage>All employees</BreadcrumbPage>
             </BreadcrumbItem>
           </BreadcrumbList>
         </Breadcrumb>
@@ -66,8 +66,8 @@ export default function EmployeeListPage() {
 
       <div className="flex flex-1 flex-col gap-4 p-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">All Employees</h1>
-          <p className="text-muted-foreground">View and manage all employees in the system</p>
+          <h1 className="text-3xl font-bold tracking-tight">All employees</h1>
+          <p className="text-muted-foreground">View and manage employees in your organization.</p>
         </div>
         <EmployeeList />
       </div>

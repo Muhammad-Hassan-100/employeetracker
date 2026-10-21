@@ -56,7 +56,7 @@ export default function PlatformCompanyDetailPage() {
             </BreadcrumbItem>
             <BreadcrumbSeparator className="hidden md:block" />
             <BreadcrumbItem>
-              <BreadcrumbPage>Company Detail</BreadcrumbPage>
+              <BreadcrumbPage>Company details</BreadcrumbPage>
             </BreadcrumbItem>
           </BreadcrumbList>
         </Breadcrumb>

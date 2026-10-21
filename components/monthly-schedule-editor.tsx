@@ -97,7 +97,7 @@ export default function MonthlyScheduleEditor({
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-xl">
           <CalendarDays className="h-5 w-5 text-sky-600" />
-          Custom Monthly Schedule
+          Custom monthly schedule
         </CardTitle>
         <CardDescription>
           Choose a month and assign any shift to any day. Days left as off will not allow attendance.
@@ -118,7 +118,7 @@ export default function MonthlyScheduleEditor({
           <div className="rounded-2xl bg-slate-50 p-4">
             <div className="flex flex-col gap-3 lg:flex-row lg:items-end">
               <div className="min-w-[220px] flex-1 space-y-2">
-                <Label>Quick Fill Company Working Days</Label>
+                <Label>Fill company workdays</Label>
                 <Select value={bulkShiftId} onValueChange={setBulkShiftId} disabled={disabled || shifts.length === 0}>
                   <SelectTrigger>
                     <SelectValue placeholder="Choose a shift to fill weekdays" />
@@ -135,7 +135,7 @@ export default function MonthlyScheduleEditor({
               <div className="flex gap-2">
                 <Button type="button" variant="outline" className="rounded-2xl" disabled={disabled || !bulkShiftId} onClick={applyCompanyWorkingDays}>
                   <WandSparkles className="mr-2 h-4 w-4" />
-                  Fill Working Days
+                  Fill workdays
                 </Button>
                 <Button type="button" variant="outline" className="rounded-2xl" disabled={disabled} onClick={() => onScheduleChange([])}>
                   Clear Month
@@ -168,7 +168,7 @@ export default function MonthlyScheduleEditor({
                       <p className="text-xs text-slate-500">{day.dateInput}</p>
                     </div>
                     <span className={`rounded-full px-2.5 py-1 text-xs font-medium ${companyDay ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-600"}`}>
-                      {companyDay ? "Working Day" : "Off Day"}
+                      {companyDay ? "Workday" : "Day off"}
                     </span>
                   </div>
                   <Select value={value} onValueChange={(shiftId) => updateDateShift(day.dateInput, shiftId)} disabled={disabled}>

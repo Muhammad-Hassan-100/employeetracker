@@ -21,14 +21,14 @@ import {
 } from "@/components/ui/breadcrumb"
 
 const dashboardPages: Array<{ path: string; title: string }> = [
-  { path: "/dashboard/attendance-monitor", title: "Attendance Monitor" },
-  { path: "/dashboard/employee-list", title: "All Employees" },
+  { path: "/dashboard/attendance-monitor", title: "Attendance monitor" },
+  { path: "/dashboard/employee-list", title: "All employees" },
   { path: "/dashboard/employees", title: "Employee Management" },
-  { path: "/dashboard/history", title: "Attendance History" },
+  { path: "/dashboard/history", title: "Attendance history" },
   { path: "/dashboard/leaves", title: "Leave Management" },
   { path: "/dashboard/reports", title: "Attendance Reports" },
   { path: "/dashboard/settings", title: "Settings" },
-  { path: "/dashboard/shifts", title: "Shifts & Rules" },
+  { path: "/dashboard/shifts", title: "Shifts and rules" },
   { path: "/dashboard/platform/requests", title: "Approval Requests" },
   { path: "/dashboard/platform/companies", title: "Company Workspaces" },
   { path: "/dashboard/platform/employees", title: "Platform Employees" },

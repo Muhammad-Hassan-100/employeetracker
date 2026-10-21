@@ -126,7 +126,7 @@ export function AppSidebar({ user }: AppSidebarProps) {
         <Link href="/dashboard" className="flex items-center gap-3 rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--dashboard-brand)] group-data-[collapsible=icon]:justify-center">
           <BrandMark size={40} className="group-data-[collapsible=icon]:size-8" />
           <span className="min-w-0 group-data-[collapsible=icon]:hidden">
-            <span className="block truncate text-sm font-semibold tracking-tight text-[#1f2a22]">EmployeeTracker</span>
+            <span className="block truncate text-sm font-semibold tracking-tight text-[#17251c]">EmployeeTracker</span>
             <span className="mt-0.5 block truncate text-xs text-[var(--dashboard-subtle)]">{currentUser.companyName}</span>
           </span>
         </Link>
@@ -134,7 +134,7 @@ export function AppSidebar({ user }: AppSidebarProps) {
 
       <SidebarContent className="px-3 py-5 group-data-[collapsible=icon]:px-0">
         <SidebarGroup>
-          <SidebarGroupLabel className="px-3 pb-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-[#8a948c]">
+          <SidebarGroupLabel className="px-3 pb-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-[#69766d]">
             {workspaceLabel}
           </SidebarGroupLabel>
           <SidebarGroupContent>
@@ -145,7 +145,7 @@ export function AppSidebar({ user }: AppSidebarProps) {
                     asChild
                     isActive={pathname === item.url}
                     tooltip={item.title}
-                    className="h-10 rounded-xl px-3 text-[13px] font-medium text-[#5c6860] transition-colors data-[active=true]:bg-[var(--dashboard-green-soft)] data-[active=true]:text-[var(--dashboard-green-text)] data-[active=true]:shadow-[inset_2px_0_0_var(--dashboard-brand)] hover:bg-[var(--dashboard-green-soft)] hover:text-[var(--dashboard-green-text)] focus-visible:ring-2 focus-visible:ring-[var(--dashboard-brand)]"
+                    className="h-10 rounded-xl px-3 text-[13px] font-medium text-[#48564c] transition-colors data-[active=true]:bg-[var(--dashboard-green-soft)] data-[active=true]:text-[var(--dashboard-green-text)] data-[active=true]:shadow-[inset_2px_0_0_var(--dashboard-brand)] hover:bg-[var(--dashboard-green-soft)] hover:text-[var(--dashboard-green-text)] focus-visible:ring-2 focus-visible:ring-[var(--dashboard-brand)]"
                   >
                     <Link href={item.url}>
                       <item.icon className="size-[17px]" aria-hidden="true" />
@@ -165,13 +165,13 @@ export function AppSidebar({ user }: AppSidebarProps) {
             {currentUser.name.split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]).join("").toUpperCase()}
           </span>
           <span className="min-w-0 flex-1 group-data-[collapsible=icon]:hidden">
-            <span className="block truncate text-xs font-semibold text-[#2c382f]">{currentUser.name}</span>
+            <span className="block truncate text-xs font-semibold text-[#223128]">{currentUser.name}</span>
             <span className="mt-0.5 block truncate text-[11px] text-[#849087]">{currentUser.role === "super_admin" ? "Super admin" : currentUser.role}</span>
           </span>
         </div>
         <Button
           variant="ghost"
-          className="mt-1 h-10 w-full justify-start rounded-xl px-3 text-xs font-medium text-[#6e7971] hover:bg-[#f3f4f1] hover:text-[#29372e] focus-visible:ring-2 focus-visible:ring-[#779c61] group-data-[collapsible=icon]:size-8 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0"
+          className="mt-1 h-10 w-full justify-start rounded-xl px-3 text-xs font-medium text-[#536158] hover:bg-[#e8ece6] hover:text-[#203128] focus-visible:ring-2 focus-visible:ring-[#496b4f] group-data-[collapsible=icon]:size-8 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0"
           onClick={handleLogout}
         >
           <LogOut className="mr-2 size-4 group-data-[collapsible=icon]:mr-0" aria-hidden="true" />

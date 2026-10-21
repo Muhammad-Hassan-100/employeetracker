@@ -51,7 +51,7 @@ export default function PlatformRequestsPage() {
             </BreadcrumbItem>
             <BreadcrumbSeparator className="hidden md:block" />
             <BreadcrumbItem>
-              <BreadcrumbPage>Approval Requests</BreadcrumbPage>
+              <BreadcrumbPage>Approval requests</BreadcrumbPage>
             </BreadcrumbItem>
           </BreadcrumbList>
         </Breadcrumb>

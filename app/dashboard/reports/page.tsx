@@ -58,7 +58,7 @@ export default function ReportsPage() {
             </BreadcrumbItem>
             <BreadcrumbSeparator className="hidden md:block" />
             <BreadcrumbItem>
-              <BreadcrumbPage>Attendance Reports</BreadcrumbPage>
+              <BreadcrumbPage>Attendance reports</BreadcrumbPage>
             </BreadcrumbItem>
           </BreadcrumbList>
         </Breadcrumb>
@@ -66,7 +66,7 @@ export default function ReportsPage() {
 
       <div className="flex flex-1 flex-col gap-4 p-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Attendance Reports</h1>
+          <h1 className="text-3xl font-bold tracking-tight">Attendance reports</h1>
           <p className="text-muted-foreground">View comprehensive attendance reports for all employees</p>
         </div>
         <AttendanceReports />

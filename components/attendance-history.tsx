@@ -116,7 +116,7 @@ export default function AttendanceHistory({ user }: AttendanceHistoryProps) {
         </Card>
         <Card className="rounded-3xl shadow-sm">
           <CardContent className="p-5">
-            <p className="text-sm text-slate-500">Avg Hours</p>
+            <p className="text-sm text-slate-500">Average hours</p>
             <p className="text-2xl font-bold">{avgHours}</p>
           </CardContent>
         </Card>
@@ -128,7 +128,7 @@ export default function AttendanceHistory({ user }: AttendanceHistoryProps) {
             <div>
               <CardTitle className="flex items-center gap-2 text-xl tracking-tight">
                 <History className="h-5 w-5 text-sky-600" />
-                Attendance History
+                Attendance history
               </CardTitle>
               <CardDescription>Review your past attendance records by date.</CardDescription>
             </div>
@@ -201,10 +201,10 @@ export default function AttendanceHistory({ user }: AttendanceHistoryProps) {
                         : record.isLate
                           ? "Late"
                           : record.isEarly
-                            ? "Early Exit"
+                            ? "Early departure"
                             : "On Time"}
                   </Badge>
-                  {record.absenceReason === "missing_checkout" && <Badge className="bg-amber-100 text-amber-900">Absent · missing checkout</Badge>}
+                  {record.absenceReason === "missing_checkout" && <Badge className="bg-amber-100 text-amber-900">Absent · missing check-out</Badge>}
                   {record.absenceReason === "no_check_in" && <Badge className="bg-rose-100 text-rose-900">No check-in</Badge>}
                   </div>
                 </div>

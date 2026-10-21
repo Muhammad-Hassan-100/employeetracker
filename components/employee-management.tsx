@@ -246,7 +246,7 @@ export default function EmployeeManagement() {
               </SelectContent>
             </Select>
             <p className="text-xs leading-5 text-[var(--dashboard-muted)]">
-              Applied on company working days when using the default schedule.
+              Applies on company workdays when the default schedule is selected.
             </p>
           </div>
             </div>
@@ -257,7 +257,7 @@ export default function EmployeeManagement() {
               <div className="flex size-8 items-center justify-center rounded-xl bg-[#f2f4ef] text-xs font-semibold text-[var(--dashboard-green-text)]">03</div>
               <div>
                 <h3 id="employee-attendance-heading" className="flex items-center gap-2 text-sm font-semibold text-[var(--dashboard-ink)]"><Clock3 className="size-4 text-[var(--dashboard-green-text)]" />Attendance rules</h3>
-                <p className="mt-0.5 text-xs text-[var(--dashboard-muted)]">Fine-tune check-in and check-out timing for this employee</p>
+                <p className="mt-0.5 text-xs text-[var(--dashboard-muted)]">Set this employee’s check-in and check-out times</p>
               </div>
             </div>
             <div className="grid gap-x-6 gap-y-5 md:grid-cols-2">
@@ -286,7 +286,7 @@ export default function EmployeeManagement() {
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="employee-checkout-grace">Check-out grace <span className="font-normal text-[var(--dashboard-muted)]">(minutes)</span></Label>
+            <Label htmlFor="employee-checkout-grace">Check-out deadline after shift <span className="font-normal text-[var(--dashboard-muted)]">(minutes)</span></Label>
             <Input
               id="employee-checkout-grace"
               type="number"
@@ -297,7 +297,7 @@ export default function EmployeeManagement() {
               required
             />
             <p className="text-xs leading-5 text-[var(--dashboard-muted)]">
-              Without a check-out, status becomes absent after this many minutes past shift end. Check-out closes at that deadline.
+              If the employee has not checked out by this deadline after the shift ends, their status changes to absent and check-out is closed.
             </p>
           </div>
             </div>

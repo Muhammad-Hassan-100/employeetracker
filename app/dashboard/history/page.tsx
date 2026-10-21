@@ -50,7 +50,7 @@ export default function HistoryPage() {
             </BreadcrumbItem>
             <BreadcrumbSeparator className="hidden md:block" />
             <BreadcrumbItem>
-              <BreadcrumbPage>Attendance History</BreadcrumbPage>
+              <BreadcrumbPage>Attendance history</BreadcrumbPage>
             </BreadcrumbItem>
           </BreadcrumbList>
         </Breadcrumb>
@@ -58,7 +58,7 @@ export default function HistoryPage() {
 
       <div className="flex flex-1 flex-col gap-4 p-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Attendance History</h1>
+          <h1 className="text-3xl font-bold tracking-tight">Attendance history</h1>
           <p className="text-muted-foreground">View your complete attendance records and statistics</p>
         </div>
         <AttendanceHistory user={user} />
