@@ -1,0 +1,8 @@
+node_modules/
+.next/
+.git/
+.env
+.env.*
+package-lock.json
+pnpm-lock.yaml
+tsconfig.tsbuildinfo

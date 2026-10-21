@@ -74,11 +74,7 @@ export function normalizeAllowedIPs(value: unknown) {
       : []
 
   return Array.from(
-    new Set(
-      source
-        .map((entry) => normalizeIpAddress(String(entry)))
-        .filter(Boolean),
-    ),
+    new Set(source.map((entry) => normalizeIpAddress(String(entry))).filter(Boolean)),
   )
 }
 
@@ -139,7 +135,12 @@ function toRadians(value: number) {
   return (value * Math.PI) / 180
 }
 
-export function getDistanceInMeters(fromLat: number, fromLng: number, toLat: number, toLng: number) {
+export function getDistanceInMeters(
+  fromLat: number,
+  fromLng: number,
+  toLat: number,
+  toLng: number,
+) {
   const earthRadius = 6_371_000
   const latDistance = toRadians(toLat - fromLat)
   const lngDistance = toRadians(toLng - fromLng)
@@ -193,7 +194,12 @@ export function validateAttendanceActionAccess({
       return "Location access is required for attendance at your company."
     }
 
-    const distance = getDistanceInMeters(normalizedLat, normalizedLng, policy.officeLat!, policy.officeLng!)
+    const distance = getDistanceInMeters(
+      normalizedLat,
+      normalizedLng,
+      policy.officeLat!,
+      policy.officeLng!,
+    )
     if (distance > policy.radiusMeters) {
       if (policy.mode === "hybrid") {
         return `${actionLabel} is only allowed from your approved office network and office location.`

@@ -1,14 +1,28 @@
 "use client"
 
 import { useEffect, useMemo, useState } from "react"
-import { CalendarDays, CheckCircle2, Clock3, Loader2, RefreshCw, Search, XCircle } from "lucide-react"
+import {
+  CalendarDays,
+  CheckCircle2,
+  Clock3,
+  Loader2,
+  RefreshCw,
+  Search,
+  XCircle,
+} from "lucide-react"
 import { toast } from "sonner"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
 import { authFetch } from "@/lib/client-session"
 import type { SessionUser } from "@/lib/session"
@@ -132,7 +146,9 @@ export default function AdminLeaveManagement({ adminUser }: AdminLeaveManagement
       <div className="flex flex-col gap-4 rounded-3xl bg-white p-6 shadow-sm md:flex-row md:items-center md:justify-between">
         <div>
           <h2 className="text-2xl font-bold text-slate-950">Leave requests</h2>
-          <p className="text-slate-600">Review and manage upcoming leave requests from your team.</p>
+          <p className="text-slate-600">
+            Review and manage upcoming leave requests from your team.
+          </p>
         </div>
         <Button variant="outline" className="rounded-2xl" onClick={() => fetchLeaves(true)}>
           <RefreshCw className="mr-2 h-4 w-4" />
@@ -146,7 +162,9 @@ export default function AdminLeaveManagement({ adminUser }: AdminLeaveManagement
             <Clock3 className="h-10 w-10 rounded-2xl bg-amber-100 p-2 text-amber-700" />
             <div>
               <p className="text-sm text-slate-500">Pending</p>
-              <p className="text-2xl font-bold">{leaves.filter((leave) => leave.status === "pending").length}</p>
+              <p className="text-2xl font-bold">
+                {leaves.filter((leave) => leave.status === "pending").length}
+              </p>
             </div>
           </CardContent>
         </Card>
@@ -155,7 +173,9 @@ export default function AdminLeaveManagement({ adminUser }: AdminLeaveManagement
             <CheckCircle2 className="h-10 w-10 rounded-2xl bg-emerald-100 p-2 text-emerald-700" />
             <div>
               <p className="text-sm text-slate-500">Approved</p>
-              <p className="text-2xl font-bold">{leaves.filter((leave) => leave.status === "approved").length}</p>
+              <p className="text-2xl font-bold">
+                {leaves.filter((leave) => leave.status === "approved").length}
+              </p>
             </div>
           </CardContent>
         </Card>
@@ -164,7 +184,9 @@ export default function AdminLeaveManagement({ adminUser }: AdminLeaveManagement
             <XCircle className="h-10 w-10 rounded-2xl bg-rose-100 p-2 text-rose-700" />
             <div>
               <p className="text-sm text-slate-500">Rejected</p>
-              <p className="text-2xl font-bold">{leaves.filter((leave) => leave.status === "rejected").length}</p>
+              <p className="text-2xl font-bold">
+                {leaves.filter((leave) => leave.status === "rejected").length}
+              </p>
             </div>
           </CardContent>
         </Card>
@@ -224,23 +246,42 @@ export default function AdminLeaveManagement({ adminUser }: AdminLeaveManagement
                 <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_340px]">
                   <div className="space-y-4">
                     <div className="flex items-start gap-3">
-                      <div aria-hidden="true" className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-[var(--dashboard-green-soft)] text-sm font-semibold text-[var(--dashboard-green-text)]">
-                        {leave.employeeName.split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]).join("").toUpperCase()}
+                      <div
+                        aria-hidden="true"
+                        className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-[var(--dashboard-green-soft)] text-sm font-semibold text-[var(--dashboard-green-text)]"
+                      >
+                        {leave.employeeName
+                          .split(/\s+/)
+                          .filter(Boolean)
+                          .slice(0, 2)
+                          .map((part) => part[0])
+                          .join("")
+                          .toUpperCase()}
                       </div>
                       <div className="min-w-0">
                         <div className="flex flex-wrap items-center gap-2">
-                          <h3 className="text-base font-semibold tracking-tight text-[var(--dashboard-ink)]">{leave.employeeName}</h3>
+                          <h3 className="text-base font-semibold tracking-tight text-[var(--dashboard-ink)]">
+                            {leave.employeeName}
+                          </h3>
                           {getStatusBadge(leave.status)}
                           <Badge variant="outline">{leave.leaveType}</Badge>
                         </div>
-                        <p className="mt-1 text-xs text-[var(--dashboard-muted)]">Submitted {new Date(leave.appliedDate).toLocaleDateString()}</p>
+                        <p className="mt-1 text-xs text-[var(--dashboard-muted)]">
+                          Submitted {new Date(leave.appliedDate).toLocaleDateString()}
+                        </p>
                       </div>
                     </div>
                     <div className="flex items-start gap-3 rounded-xl bg-[#f7f8f5] p-3.5">
                       <CalendarDays className="mt-0.5 size-4 shrink-0 text-[var(--dashboard-green-text)]" />
                       <div>
-                        <p className="text-sm font-medium text-[var(--dashboard-ink-soft)]">{leave.startDate} <span className="px-1 text-[var(--dashboard-subtle)]">to</span> {leave.endDate}</p>
-                        <p className="mt-1 text-sm leading-5 text-[var(--dashboard-muted)]">{leave.reason}</p>
+                        <p className="text-sm font-medium text-[var(--dashboard-ink-soft)]">
+                          {leave.startDate}{" "}
+                          <span className="px-1 text-[var(--dashboard-subtle)]">to</span>{" "}
+                          {leave.endDate}
+                        </p>
+                        <p className="mt-1 text-sm leading-5 text-[var(--dashboard-muted)]">
+                          {leave.reason}
+                        </p>
                       </div>
                     </div>
                     {leave.reviewComments && (
@@ -259,7 +300,10 @@ export default function AdminLeaveManagement({ adminUser }: AdminLeaveManagement
                           placeholder="Optional comment for the employee..."
                           value={reviewComments[leave.id] || ""}
                           onChange={(event) =>
-                            setReviewComments((prev) => ({ ...prev, [leave.id]: event.target.value }))
+                            setReviewComments((prev) => ({
+                              ...prev,
+                              [leave.id]: event.target.value,
+                            }))
                           }
                         />
                       </div>
@@ -269,7 +313,11 @@ export default function AdminLeaveManagement({ adminUser }: AdminLeaveManagement
                           disabled={isReviewingId === leave.id}
                           className="flex-1 rounded-2xl bg-emerald-600 hover:bg-emerald-700"
                         >
-                          {isReviewingId === leave.id ? <Loader2 className="h-4 w-4 animate-spin" /> : "Approve"}
+                          {isReviewingId === leave.id ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            "Approve"
+                          )}
                         </Button>
                         <Button
                           onClick={() => handleReview(leave.id, "rejected")}
@@ -277,7 +325,11 @@ export default function AdminLeaveManagement({ adminUser }: AdminLeaveManagement
                           variant="destructive"
                           className="flex-1 rounded-2xl"
                         >
-                          {isReviewingId === leave.id ? <Loader2 className="h-4 w-4 animate-spin" /> : "Reject"}
+                          {isReviewingId === leave.id ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            "Reject"
+                          )}
                         </Button>
                       </div>
                     </div>

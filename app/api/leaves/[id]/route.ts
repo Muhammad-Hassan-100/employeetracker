@@ -4,10 +4,7 @@ import { ObjectId } from "mongodb"
 import type { UpdateLeaveData } from "@/lib/models/Leave"
 import { requireAdmin } from "@/lib/session"
 
-export async function PUT(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
   try {
     const { session, response } = requireAdmin(request)
     if (!session) {
@@ -16,17 +13,20 @@ export async function PUT(
 
     const { id } = params
     const updateData: UpdateLeaveData = await request.json()
-    
+
     const db = await getDatabase()
     const leavesCollection = db.collection("leaves")
     const attendanceCollection = db.collection("attendance")
-    
-    const leave = await leavesCollection.findOne({ _id: new ObjectId(id), companyId: session.companyId })
-    
+
+    const leave = await leavesCollection.findOne({
+      _id: new ObjectId(id),
+      companyId: session.companyId,
+    })
+
     if (!leave) {
       return NextResponse.json({ error: "Leave application not found" }, { status: 404 })
     }
-    
+
     const result = await leavesCollection.updateOne(
       { _id: new ObjectId(id), companyId: session.companyId },
       {
@@ -35,38 +35,41 @@ export async function PUT(
           reviewedDate: new Date(),
           updatedAt: new Date(),
         },
-      }
+      },
     )
-    
+
     if (result.matchedCount === 0) {
       return NextResponse.json({ error: "Leave application not found" }, { status: 404 })
     }
-    
+
     if (updateData.status === "approved") {
       const startDate = new Date(leave.startDate)
       const endDate = new Date(leave.endDate)
       const dates = []
       const currentDate = new Date(startDate)
-      
+
       while (currentDate <= endDate) {
         if (currentDate.getDay() !== 0 && currentDate.getDay() !== 6) {
           dates.push(currentDate.toISOString().split("T")[0])
         }
         currentDate.setDate(currentDate.getDate() + 1)
       }
-      
+
       // Create or update attendance records for leave days
       for (const date of dates) {
         const existingRecord = await attendanceCollection.findOne({
           userId: leave.userId,
           companyId: session.companyId,
-          date: date
+          date: date,
         })
 
         if (existingRecord && existingRecord.checkInTime) {
-          return NextResponse.json({ 
-            error: `Cannot approve leave for ${date}. Employee has already checked in.` 
-          }, { status: 400 })
+          return NextResponse.json(
+            {
+              error: `Cannot approve leave for ${date}. Employee has already checked in.`,
+            },
+            { status: 400 },
+          )
         }
 
         await attendanceCollection.updateOne(
@@ -90,35 +93,35 @@ export async function PUT(
             },
             $unset: {
               pendingLeaveId: "",
-            }
+            },
           },
-          { upsert: true }
+          { upsert: true },
         )
       }
     }
-    
+
     if (updateData.status === "rejected") {
       const startDate = new Date(leave.startDate)
       const endDate = new Date(leave.endDate)
       const today = new Date().toISOString().split("T")[0]
       const dates = []
       const currentDate = new Date(startDate)
-      
+
       while (currentDate <= endDate) {
         if (currentDate.getDay() !== 0 && currentDate.getDay() !== 6) {
           dates.push(currentDate.toISOString().split("T")[0])
         }
         currentDate.setDate(currentDate.getDate() + 1)
       }
-      
+
       // Update attendance records from on_leave back to absent if they were marked due to this leave
       for (const date of dates) {
         const existingRecord = await attendanceCollection.findOne({
           userId: leave.userId,
           companyId: session.companyId,
-          date: date
+          date: date,
         })
-        
+
         if (existingRecord) {
           const otherApprovedLeave = await db.collection("leaves").findOne({
             userId: leave.userId,
@@ -126,9 +129,9 @@ export async function PUT(
             status: "approved",
             startDate: { $lte: date },
             endDate: { $gte: date },
-            _id: { $ne: new ObjectId(id) }
+            _id: { $ne: new ObjectId(id) },
           })
-          
+
           if (otherApprovedLeave) {
             // Update to reference the other approved leave
             await attendanceCollection.updateOne(
@@ -137,8 +140,8 @@ export async function PUT(
                 $set: {
                   leaveId: otherApprovedLeave._id.toString(),
                   updatedAt: new Date(),
-                }
-              }
+                },
+              },
             )
           } else {
             if (existingRecord.leaveId !== id || existingRecord.checkInTime) {
@@ -168,7 +171,7 @@ export async function PUT(
         }
       }
     }
-    
+
     return NextResponse.json({ message: "Leave application updated successfully" })
   } catch (error) {
     console.error("Update leave error:", error)
@@ -176,10 +179,7 @@ export async function PUT(
   }
 }
 
-export async function DELETE(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
   try {
     const { session, response } = requireAdmin(request)
     if (!session) {
@@ -187,16 +187,19 @@ export async function DELETE(
     }
 
     const { id } = params
-    
+
     const db = await getDatabase()
     const leavesCollection = db.collection("leaves")
-    
-    const result = await leavesCollection.deleteOne({ _id: new ObjectId(id), companyId: session.companyId })
-    
+
+    const result = await leavesCollection.deleteOne({
+      _id: new ObjectId(id),
+      companyId: session.companyId,
+    })
+
     if (result.deletedCount === 0) {
       return NextResponse.json({ error: "Leave application not found" }, { status: 404 })
     }
-    
+
     return NextResponse.json({ message: "Leave application deleted successfully" })
   } catch (error) {
     console.error("Delete leave error:", error)

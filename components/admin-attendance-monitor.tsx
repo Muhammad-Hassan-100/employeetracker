@@ -8,10 +8,20 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { authFetch } from "@/lib/client-session"
 import { formatTimeString12Hour } from "@/lib/time"
-import { formatDurationMinutes, formatLocalDateInput, getLocalTimeMinutes } from "@/lib/attendance-time"
+import {
+  formatDurationMinutes,
+  formatLocalDateInput,
+  getLocalTimeMinutes,
+} from "@/lib/attendance-time"
 
 interface SnapshotRow {
   employeeId: string
@@ -22,7 +32,16 @@ interface SnapshotRow {
   status: string
   joinDate: string
   selectedDate: string
-  attendanceStatus: "present" | "absent" | "on_leave" | "scheduled" | "no_show" | "weekend" | "off_day" | "not_joined" | "inactive"
+  attendanceStatus:
+    | "present"
+    | "absent"
+    | "on_leave"
+    | "scheduled"
+    | "no_show"
+    | "weekend"
+    | "off_day"
+    | "not_joined"
+    | "inactive"
   checkInTime: string | null
   checkOutTime: string | null
   breakTaken: boolean
@@ -65,10 +84,12 @@ function getStatusBadge(status: SnapshotRow["attendanceStatus"], isLate = false)
     case "inactive":
       return <Badge className="bg-slate-200 text-slate-700">Inactive</Badge>
     case "present":
-      return <>
-        <Badge className="bg-emerald-100 text-emerald-900">Present</Badge>
-        {isLate && <Badge className="bg-orange-100 text-orange-900">Late</Badge>}
-      </>
+      return (
+        <>
+          <Badge className="bg-emerald-100 text-emerald-900">Present</Badge>
+          {isLate && <Badge className="bg-orange-100 text-orange-900">Late</Badge>}
+        </>
+      )
     case "on_leave":
       return <Badge className="bg-amber-100 text-amber-900">On Leave</Badge>
     case "scheduled":
@@ -82,10 +103,12 @@ function getStatusBadge(status: SnapshotRow["attendanceStatus"], isLate = false)
     case "not_joined":
       return <Badge className="bg-slate-200 text-slate-700">Before start date</Badge>
     case "absent":
-      return <>
-        <Badge className="bg-rose-100 text-rose-900">Absent</Badge>
-        {isLate && <Badge className="bg-orange-100 text-orange-900">Late</Badge>}
-      </>
+      return (
+        <>
+          <Badge className="bg-rose-100 text-rose-900">Absent</Badge>
+          {isLate && <Badge className="bg-orange-100 text-orange-900">Late</Badge>}
+        </>
+      )
     default:
       return <Badge className="bg-rose-100 text-rose-900">Absent</Badge>
   }
@@ -160,7 +183,13 @@ export default function AdminAttendanceMonitor() {
           .toLowerCase()
           .includes(searchTerm.toLowerCase()),
       )
-      .filter((row) => (statusFilter === "all" ? true : statusFilter === "late" ? row.status === "active" && row.isLate : row.attendanceStatus === statusFilter))
+      .filter((row) =>
+        statusFilter === "all"
+          ? true
+          : statusFilter === "late"
+            ? row.status === "active" && row.isLate
+            : row.attendanceStatus === statusFilter,
+      )
       .filter((row) => (shiftFilter === "all" ? true : row.shift?.name === shiftFilter))
   }, [rows, searchTerm, shiftFilter, statusFilter])
 
@@ -174,7 +203,9 @@ export default function AdminAttendanceMonitor() {
   const scheduledCount = rows.filter((row) => row.attendanceStatus === "scheduled").length
   const lateCount = rows.filter((row) => row.isLate).length
   const noShowCount = rows.filter((row) => row.attendanceStatus === "no_show").length
-  const missingCheckoutCount = rows.filter((row) => row.status === "active" && row.absenceReason === "missing_checkout").length
+  const missingCheckoutCount = rows.filter(
+    (row) => row.status === "active" && row.absenceReason === "missing_checkout",
+  ).length
   const repeatedLateCount = rows.filter((row) => row.lateOccurrencesLast30Days >= 3).length
 
   return (
@@ -239,7 +270,9 @@ export default function AdminAttendanceMonitor() {
                 <UsersRound className="h-5 w-5 text-emerald-600" />
                 Attendance monitor
               </CardTitle>
-              <CardDescription>Review attendance for every employee on the selected date.</CardDescription>
+              <CardDescription>
+                Review attendance for every employee on the selected date.
+              </CardDescription>
             </div>
             <Button variant="outline" className="rounded-2xl" onClick={() => fetchSnapshot(true)}>
               <RefreshCw className="mr-2 h-4 w-4" />
@@ -253,7 +286,12 @@ export default function AdminAttendanceMonitor() {
               <label className="text-sm font-medium text-slate-700">Date</label>
               <div className="relative">
                 <CalendarDays className="pointer-events-none absolute left-3 top-3.5 h-4 w-4 text-slate-400" />
-                <Input type="date" value={selectedDate} onChange={(event) => setSelectedDate(event.target.value)} className="pl-10" />
+                <Input
+                  type="date"
+                  value={selectedDate}
+                  onChange={(event) => setSelectedDate(event.target.value)}
+                  className="pl-10"
+                />
               </div>
             </div>
             <div className="space-y-2">
@@ -323,11 +361,23 @@ export default function AdminAttendanceMonitor() {
                     <div className="flex flex-wrap items-center gap-2">
                       <h3 className="text-lg font-semibold text-slate-950">{row.name}</h3>
                       {getStatusBadge(row.attendanceStatus, row.isLate)}
-                      {row.status === "active" && row.breakStartTime && !row.breakEndTime && <Badge className="bg-amber-100 text-amber-900">On break</Badge>}
-                      {row.status === "active" && row.isEarly && <Badge className="bg-sky-100 text-sky-900">Early departure</Badge>}
-                      {row.status === "active" && row.absenceReason === "missing_checkout" && <Badge className="bg-amber-100 text-amber-900">Missing check-out</Badge>}
-                      {row.status === "active" && row.absenceReason === "no_check_in" && <Badge className="bg-rose-100 text-rose-900">No check-in</Badge>}
-                      {row.status === "active" && row.lateOccurrencesLast30Days >= 3 && <Badge className="bg-orange-100 text-orange-900">{row.lateOccurrencesLast30Days} late arrivals in 30 days</Badge>}
+                      {row.status === "active" && row.breakStartTime && !row.breakEndTime && (
+                        <Badge className="bg-amber-100 text-amber-900">On break</Badge>
+                      )}
+                      {row.status === "active" && row.isEarly && (
+                        <Badge className="bg-sky-100 text-sky-900">Early departure</Badge>
+                      )}
+                      {row.status === "active" && row.absenceReason === "missing_checkout" && (
+                        <Badge className="bg-amber-100 text-amber-900">Missing check-out</Badge>
+                      )}
+                      {row.status === "active" && row.absenceReason === "no_check_in" && (
+                        <Badge className="bg-rose-100 text-rose-900">No check-in</Badge>
+                      )}
+                      {row.status === "active" && row.lateOccurrencesLast30Days >= 3 && (
+                        <Badge className="bg-orange-100 text-orange-900">
+                          {row.lateOccurrencesLast30Days} late arrivals in 30 days
+                        </Badge>
+                      )}
                     </div>
                     <p className="text-sm text-slate-600">{row.email}</p>
                     <div className="flex flex-wrap gap-x-6 gap-y-1 text-sm text-slate-600">
@@ -346,16 +396,48 @@ export default function AdminAttendanceMonitor() {
                       </span>
                       <span>Check-out: {formatTime(row.checkOutTime)}</span>
                       <span>Hours worked: {formatHoursWorked(row.hoursWorked)}</span>
-                      {row.breakTaken && <span className={row.breakStartTime && !row.breakEndTime ? "font-medium text-amber-800" : ""}>
-                        Break: {row.breakStartTime && !row.breakEndTime ? "In progress" : formatDurationMinutes(Number(row.breakDurationMinutes || 0))}
-                      </span>}
+                      {row.breakTaken && (
+                        <span
+                          className={
+                            row.breakStartTime && !row.breakEndTime
+                              ? "font-medium text-amber-800"
+                              : ""
+                          }
+                        >
+                          Break:{" "}
+                          {row.breakStartTime && !row.breakEndTime
+                            ? "In progress"
+                            : formatDurationMinutes(Number(row.breakDurationMinutes || 0))}
+                        </span>
+                      )}
                     </div>
-                    {(row.lateReason || row.earlyReason || row.lateCheckoutReason || row.leaveReason) && (
+                    {(row.lateReason ||
+                      row.earlyReason ||
+                      row.lateCheckoutReason ||
+                      row.leaveReason) && (
                       <div className="rounded-2xl bg-slate-50 p-3 text-sm text-slate-700">
-                        {row.leaveReason && <p><span className="font-semibold">Leave:</span> {row.leaveType} - {row.leaveReason}</p>}
-                        {row.lateReason && <p><span className="font-semibold">Late:</span> {row.lateReason}</p>}
-                        {row.earlyReason && <p><span className="font-semibold">Early:</span> {row.earlyReason}</p>}
-                        {row.lateCheckoutReason && <p><span className="font-semibold">Late check-out:</span> {row.lateCheckoutReason}</p>}
+                        {row.leaveReason && (
+                          <p>
+                            <span className="font-semibold">Leave:</span> {row.leaveType} -{" "}
+                            {row.leaveReason}
+                          </p>
+                        )}
+                        {row.lateReason && (
+                          <p>
+                            <span className="font-semibold">Late:</span> {row.lateReason}
+                          </p>
+                        )}
+                        {row.earlyReason && (
+                          <p>
+                            <span className="font-semibold">Early:</span> {row.earlyReason}
+                          </p>
+                        )}
+                        {row.lateCheckoutReason && (
+                          <p>
+                            <span className="font-semibold">Late check-out:</span>{" "}
+                            {row.lateCheckoutReason}
+                          </p>
+                        )}
                       </div>
                     )}
                   </div>

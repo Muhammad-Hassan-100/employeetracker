@@ -61,7 +61,9 @@ export default function AttendanceMonitorPage() {
       <div className="flex flex-1 flex-col gap-4 p-4">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Attendance monitor</h1>
-          <p className="text-muted-foreground">Review detailed attendance for the entire team on the selected date.</p>
+          <p className="text-muted-foreground">
+            Review detailed attendance for the entire team on the selected date.
+          </p>
         </div>
         <AdminAttendanceMonitor />
       </div>

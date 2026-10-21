@@ -12,7 +12,10 @@ export async function GET(request: NextRequest) {
     const db = await getDatabase()
     const shiftsCollection = db.collection("shifts")
 
-    const shifts = await shiftsCollection.find({ companyId: session.companyId }).sort({ createdAt: -1 }).toArray()
+    const shifts = await shiftsCollection
+      .find({ companyId: session.companyId })
+      .sort({ createdAt: -1 })
+      .toArray()
 
     const formattedShifts = shifts.map((shift) => ({
       id: shift._id.toString(),

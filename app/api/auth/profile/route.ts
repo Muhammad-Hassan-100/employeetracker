@@ -1,9 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { ObjectId } from "mongodb"
 import { extractEmailDomain } from "@/lib/company-utils"
-import {
-  getCompanyAllowEmployeePasswordChange,
-} from "@/lib/company-settings"
+import { getCompanyAllowEmployeePasswordChange } from "@/lib/company-settings"
 import { getDatabase } from "@/lib/mongodb"
 import { buildSessionUser, forbidden, requireSession } from "@/lib/session"
 
@@ -32,7 +30,10 @@ export async function GET(request: NextRequest) {
     ])
 
     if (!user) {
-      return NextResponse.json({ error: `${session.role === "admin" ? "Admin" : "Employee"} profile not found` }, { status: 404 })
+      return NextResponse.json(
+        { error: `${session.role === "admin" ? "Admin" : "Employee"} profile not found` },
+        { status: 404 },
+      )
     }
 
     const allowEmployeePasswordChange = getCompanyAllowEmployeePasswordChange(company)
@@ -89,7 +90,10 @@ export async function PUT(request: NextRequest) {
       const normalizedPassword = String(password || "")
 
       if (normalizedPassword.length < 6) {
-        return NextResponse.json({ error: "Password must be at least 6 characters" }, { status: 400 })
+        return NextResponse.json(
+          { error: "Password must be at least 6 characters" },
+          { status: 400 },
+        )
       }
 
       const result = await usersCollection.findOneAndUpdate(

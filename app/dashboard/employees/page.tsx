@@ -66,9 +66,15 @@ export default function EmployeesPage() {
       <main className="flex-1 bg-[var(--dashboard-canvas)] px-4 py-7 sm:px-7 sm:py-9 xl:px-10">
         <div className="mx-auto max-w-[1440px] space-y-7">
           <div className="max-w-3xl">
-            <p className="mb-2 text-xs font-semibold uppercase tracking-[0.16em] text-[var(--dashboard-green-text)]">Team setup</p>
-            <h1 className="text-3xl font-semibold tracking-[-0.035em] text-[var(--dashboard-ink)] sm:text-[2.15rem]">Employee management</h1>
-            <p className="mt-2 text-sm leading-6 text-[var(--dashboard-muted)] sm:text-base">Create employee accounts and set their schedule and attendance rules.</p>
+            <p className="mb-2 text-xs font-semibold uppercase tracking-[0.16em] text-[var(--dashboard-green-text)]">
+              Team setup
+            </p>
+            <h1 className="text-3xl font-semibold tracking-[-0.035em] text-[var(--dashboard-ink)] sm:text-[2.15rem]">
+              Employee management
+            </h1>
+            <p className="mt-2 text-sm leading-6 text-[var(--dashboard-muted)] sm:text-base">
+              Create employee accounts and set their schedule and attendance rules.
+            </p>
           </div>
           {/* Employee Management */}
           <EmployeeManagement />

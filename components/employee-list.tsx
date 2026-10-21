@@ -126,19 +126,25 @@ export default function EmployeeList() {
         <Card className="rounded-3xl shadow-sm">
           <CardContent className="p-5">
             <p className="text-sm text-slate-500">Active</p>
-            <p className="text-2xl font-bold">{employees.filter((employee) => employee.status === "active").length}</p>
+            <p className="text-2xl font-bold">
+              {employees.filter((employee) => employee.status === "active").length}
+            </p>
           </CardContent>
         </Card>
         <Card className="rounded-3xl shadow-sm">
           <CardContent className="p-5">
             <p className="text-sm text-slate-500">Inactive</p>
-            <p className="text-2xl font-bold">{employees.filter((employee) => employee.status === "inactive").length}</p>
+            <p className="text-2xl font-bold">
+              {employees.filter((employee) => employee.status === "inactive").length}
+            </p>
           </CardContent>
         </Card>
         <Card className="rounded-3xl shadow-sm">
           <CardContent className="p-5">
             <p className="text-sm text-slate-500">Departments</p>
-            <p className="text-2xl font-bold">{new Set(employees.map((employee) => employee.department)).size}</p>
+            <p className="text-2xl font-bold">
+              {new Set(employees.map((employee) => employee.department)).size}
+            </p>
           </CardContent>
         </Card>
       </div>
@@ -148,7 +154,9 @@ export default function EmployeeList() {
           <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div>
               <CardTitle className="text-xl tracking-tight">Employee directory</CardTitle>
-              <CardDescription>Search, review, and manage employees from one place.</CardDescription>
+              <CardDescription>
+                Search, review, and manage employees from one place.
+              </CardDescription>
             </div>
             <div className="relative w-full md:w-72">
               <Search className="pointer-events-none absolute left-3 top-3.5 h-4 w-4 text-slate-400" />
@@ -175,21 +183,48 @@ export default function EmployeeList() {
               <div key={employee.id} className="rounded-3xl border border-slate-200 p-5">
                 <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_auto] xl:items-center">
                   <div className="flex min-w-0 items-start gap-4">
-                    <div aria-hidden="true" className="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-[var(--dashboard-green-soft)] text-sm font-semibold text-[var(--dashboard-green-text)]">
-                      {employee.name.split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]).join("").toUpperCase()}
+                    <div
+                      aria-hidden="true"
+                      className="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-[var(--dashboard-green-soft)] text-sm font-semibold text-[var(--dashboard-green-text)]"
+                    >
+                      {employee.name
+                        .split(/\s+/)
+                        .filter(Boolean)
+                        .slice(0, 2)
+                        .map((part) => part[0])
+                        .join("")
+                        .toUpperCase()}
                     </div>
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-center gap-2">
-                        <h3 className="truncate text-base font-semibold tracking-tight text-[var(--dashboard-ink)]">{employee.name}</h3>
-                        <Badge className={employee.status === "active" ? "bg-emerald-100 text-emerald-900" : "bg-slate-200 text-slate-700"}>
+                        <h3 className="truncate text-base font-semibold tracking-tight text-[var(--dashboard-ink)]">
+                          {employee.name}
+                        </h3>
+                        <Badge
+                          className={
+                            employee.status === "active"
+                              ? "bg-emerald-100 text-emerald-900"
+                              : "bg-slate-200 text-slate-700"
+                          }
+                        >
                           {employee.status === "active" ? "Active" : "Inactive"}
                         </Badge>
                       </div>
-                      <p className="mt-1 truncate text-sm text-[var(--dashboard-muted)]">{employee.email}</p>
+                      <p className="mt-1 truncate text-sm text-[var(--dashboard-muted)]">
+                        {employee.email}
+                      </p>
                       <div className="mt-3 flex flex-wrap gap-2">
-                        <span className="rounded-lg bg-[#f5f6f3] px-2.5 py-1 text-xs font-medium text-[var(--dashboard-ink-soft)]">{employee.department || "No department"}</span>
-                        <span className="rounded-lg bg-[#f5f6f3] px-2.5 py-1 text-xs text-[var(--dashboard-muted)]">{employee.position || "Position not set"}</span>
-                        <span className="rounded-lg bg-[#f5f6f3] px-2.5 py-1 text-xs text-[var(--dashboard-muted)]">{employee.scheduleMode === "custom_monthly" ? `Custom: ${employee.shift}` : `Shift: ${employee.shift || "Unassigned"}`}</span>
+                        <span className="rounded-lg bg-[#f5f6f3] px-2.5 py-1 text-xs font-medium text-[var(--dashboard-ink-soft)]">
+                          {employee.department || "No department"}
+                        </span>
+                        <span className="rounded-lg bg-[#f5f6f3] px-2.5 py-1 text-xs text-[var(--dashboard-muted)]">
+                          {employee.position || "Position not set"}
+                        </span>
+                        <span className="rounded-lg bg-[#f5f6f3] px-2.5 py-1 text-xs text-[var(--dashboard-muted)]">
+                          {employee.scheduleMode === "custom_monthly"
+                            ? `Custom: ${employee.shift}`
+                            : `Shift: ${employee.shift || "Unassigned"}`}
+                        </span>
                       </div>
                     </div>
                   </div>
@@ -202,11 +237,21 @@ export default function EmployeeList() {
                       <Pencil className="mr-2 h-4 w-4" />
                       Edit
                     </Button>
-                    <Button variant="outline" className="rounded-xl" disabled={busyId === employee.id} onClick={() => handleToggleStatus(employee)}>
+                    <Button
+                      variant="outline"
+                      className="rounded-xl"
+                      disabled={busyId === employee.id}
+                      onClick={() => handleToggleStatus(employee)}
+                    >
                       <ToggleLeft className="mr-2 h-4 w-4" />
                       {employee.status === "active" ? "Deactivate" : "Activate"}
                     </Button>
-                    <Button variant="outline" className="rounded-xl text-rose-700" disabled={busyId === employee.id} onClick={() => handleDelete(employee)}>
+                    <Button
+                      variant="outline"
+                      className="rounded-xl text-rose-700"
+                      disabled={busyId === employee.id}
+                      onClick={() => handleDelete(employee)}
+                    >
                       {busyId === employee.id ? (
                         <Loader2 className="h-4 w-4 animate-spin" />
                       ) : (

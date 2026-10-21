@@ -7,7 +7,11 @@ import {
   getTimeStringMinutes,
   formatLocalDateInput,
 } from "@/lib/attendance-time"
-import { getDateDayOfWeek, normalizeEmployeeCustomSchedule, normalizeEmployeeScheduleMode } from "@/lib/employee-schedule"
+import {
+  getDateDayOfWeek,
+  normalizeEmployeeCustomSchedule,
+  normalizeEmployeeScheduleMode,
+} from "@/lib/employee-schedule"
 import { requireAdmin } from "@/lib/session"
 
 function dateInput(date: Date) {
@@ -83,28 +87,41 @@ export async function GET(request: NextRequest) {
     const leavesCollection = db.collection("leaves")
 
     const [employees, company, shifts, attendanceRecords, approvedLeaves] = await Promise.all([
-      usersCollection.find({ role: "employee", status: "active", companyId: session.companyId }).toArray(),
+      usersCollection
+        .find({ role: "employee", status: "active", companyId: session.companyId })
+        .toArray(),
       companiesCollection.findOne({ companyId: session.companyId }),
       shiftsCollection.find({ companyId: session.companyId }).toArray(),
-      attendanceCollection.find({
-        companyId: session.companyId,
-        date: { $gte: startInput, $lte: endInput },
-      }).toArray(),
-      leavesCollection.find({
-        companyId: session.companyId,
-        status: "approved",
-        startDate: { $lte: endInput },
-        endDate: { $gte: startInput },
-      }).toArray(),
+      attendanceCollection
+        .find({
+          companyId: session.companyId,
+          date: { $gte: startInput, $lte: endInput },
+        })
+        .toArray(),
+      leavesCollection
+        .find({
+          companyId: session.companyId,
+          status: "approved",
+          startDate: { $lte: endInput },
+          endDate: { $gte: startInput },
+        })
+        .toArray(),
     ])
 
     const workingDays = getCompanyWorkingDays(company)
     const shiftByReference = new Map<string, (typeof shifts)[number]>()
     for (const shift of shifts) {
       shiftByReference.set(shift._id.toString(), shift)
-      shiftByReference.set(String(shift.name || "").trim().toLowerCase(), shift)
+      shiftByReference.set(
+        String(shift.name || "")
+          .trim()
+          .toLowerCase(),
+        shift,
+      )
     }
-    const attendanceByEmployeeDate = new Map(attendanceRecords.map((record) => [`${record.userId}:${record.date}`, record]))
+    const attendanceByEmployeeDate = new Map(
+      attendanceRecords.map((record) => [`${record.userId}:${record.date}`, record]),
+    )
 
     const reports = employees.map((employee) => {
       const employeeId = employee._id.toString()
@@ -124,30 +141,40 @@ export async function GET(request: NextRequest) {
       for (const date of dates) {
         if (date < employeeStartInput || date > todayInput) continue
 
-        const scheduledReference = scheduleMode === "custom_monthly"
-          ? customSchedule.find((entry) => entry.date === date)?.shiftId
-          : workingDays.includes(getDateDayOfWeek(date))
-            ? String(employee.shiftId || "")
-            : ""
-        const shift = shiftByReference.get(String(scheduledReference || "").trim())
-          || shiftByReference.get(String(scheduledReference || "").trim().toLowerCase())
+        const scheduledReference =
+          scheduleMode === "custom_monthly"
+            ? customSchedule.find((entry) => entry.date === date)?.shiftId
+            : workingDays.includes(getDateDayOfWeek(date))
+              ? String(employee.shiftId || "")
+              : ""
+        const shift =
+          shiftByReference.get(String(scheduledReference || "").trim()) ||
+          shiftByReference.get(
+            String(scheduledReference || "")
+              .trim()
+              .toLowerCase(),
+          )
         if (!shift?.startTime || !shift?.endTime) continue
 
         const record = attendanceByEmployeeDate.get(`${employeeId}:${date}`)
-        const approvedLeave = approvedEmployeeLeaves.some((leave) => leave.startDate <= date && leave.endDate >= date)
+        const approvedLeave = approvedEmployeeLeaves.some(
+          (leave) => leave.startDate <= date && leave.endDate >= date,
+        )
         if (approvedLeave) {
           leaveDays += 1
           continue
         }
 
         const dayDifference = getLocalDateDifference(date, todayInput)
-        const absoluteCurrentMinutes = dayDifference * 1440 + new Date().getHours() * 60 + new Date().getMinutes()
+        const absoluteCurrentMinutes =
+          dayDifference * 1440 + new Date().getHours() * 60 + new Date().getMinutes()
         const shiftEndMinutes = getShiftEndAbsoluteMinutes(
           getTimeStringMinutes(shift.startTime),
           getTimeStringMinutes(shift.endTime),
         )
         const completedByCheckout = Boolean(record?.checkInTime && record?.checkOutTime)
-        const completedByDeadline = absoluteCurrentMinutes >= shiftEndMinutes + (Number(employee.checkOutGraceMinutes) || 0)
+        const completedByDeadline =
+          absoluteCurrentMinutes >= shiftEndMinutes + (Number(employee.checkOutGraceMinutes) || 0)
         const completedNoShow = !record?.checkInTime && absoluteCurrentMinutes >= shiftEndMinutes
         if (!completedByCheckout && !completedByDeadline && !completedNoShow) continue
 

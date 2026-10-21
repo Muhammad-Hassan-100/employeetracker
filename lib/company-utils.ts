@@ -20,9 +20,7 @@ const PUBLIC_EMAIL_DOMAINS = new Set([
 
 export function normalizeCompanyDomain(value: string) {
   const trimmed = value.toLowerCase().trim().replace(/^@/, "")
-  return trimmed
-    .replace(/^https?:\/\//, "")
-    .replace(/\/.*$/, "")
+  return trimmed.replace(/^https?:\/\//, "").replace(/\/.*$/, "")
 }
 
 export function isCompanyDomainValid(domain: string) {
@@ -53,4 +51,3 @@ export function buildPreviewEmail(name: string, domain: string) {
   const localPart = buildEmailLocalPart(name)
   return localPart && domain ? `${localPart}@${domain}` : ""
 }
-

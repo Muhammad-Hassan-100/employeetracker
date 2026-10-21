@@ -67,7 +67,9 @@ export default function ShiftsPage() {
       <div className="flex flex-1 flex-col gap-4 p-4">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Shifts and rules</h1>
-          <p className="text-muted-foreground">Manage work shifts, company workdays, and departments.</p>
+          <p className="text-muted-foreground">
+            Manage work shifts, company workdays, and departments.
+          </p>
         </div>
         <ShiftManagement />
       </div>

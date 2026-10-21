@@ -6,7 +6,13 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { formatTimeString12Hour } from "@/lib/time"
 
 interface ShiftOption {
@@ -65,7 +71,10 @@ export default function MonthlyScheduleEditor({
 }: MonthlyScheduleEditorProps) {
   const [bulkShiftId, setBulkShiftId] = useState("")
   const monthDays = useMemo(() => getMonthDays(month), [month])
-  const scheduleMap = useMemo(() => new Map(schedule.map((entry) => [entry.date, entry.shiftId])), [schedule])
+  const scheduleMap = useMemo(
+    () => new Map(schedule.map((entry) => [entry.date, entry.shiftId])),
+    [schedule],
+  )
 
   const updateDateShift = (date: string, shiftId: string) => {
     const nextEntries = schedule.filter((entry) => entry.date !== date)
@@ -100,7 +109,8 @@ export default function MonthlyScheduleEditor({
           Custom monthly schedule
         </CardTitle>
         <CardDescription>
-          Choose a month and assign any shift to any day. Days left as off will not allow attendance.
+          Choose a month and assign any shift to any day. Days left as off will not allow
+          attendance.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-5">
@@ -119,31 +129,49 @@ export default function MonthlyScheduleEditor({
             <div className="flex flex-col gap-3 lg:flex-row lg:items-end">
               <div className="min-w-[220px] flex-1 space-y-2">
                 <Label>Fill company workdays</Label>
-                <Select value={bulkShiftId} onValueChange={setBulkShiftId} disabled={disabled || shifts.length === 0}>
+                <Select
+                  value={bulkShiftId}
+                  onValueChange={setBulkShiftId}
+                  disabled={disabled || shifts.length === 0}
+                >
                   <SelectTrigger>
                     <SelectValue placeholder="Choose a shift to fill weekdays" />
                   </SelectTrigger>
                   <SelectContent>
                     {shifts.map((shift) => (
                       <SelectItem key={shift.id} value={shift.id}>
-                        {shift.name} ({formatTimeString12Hour(shift.startTime)} to {formatTimeString12Hour(shift.endTime)})
+                        {shift.name} ({formatTimeString12Hour(shift.startTime)} to{" "}
+                        {formatTimeString12Hour(shift.endTime)})
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
               <div className="flex gap-2">
-                <Button type="button" variant="outline" className="rounded-2xl" disabled={disabled || !bulkShiftId} onClick={applyCompanyWorkingDays}>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="rounded-2xl"
+                  disabled={disabled || !bulkShiftId}
+                  onClick={applyCompanyWorkingDays}
+                >
                   <WandSparkles className="mr-2 h-4 w-4" />
                   Fill workdays
                 </Button>
-                <Button type="button" variant="outline" className="rounded-2xl" disabled={disabled} onClick={() => onScheduleChange([])}>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="rounded-2xl"
+                  disabled={disabled}
+                  onClick={() => onScheduleChange([])}
+                >
                   Clear Month
                 </Button>
               </div>
             </div>
             <p className="mt-3 text-xs text-slate-500">
-              Quick fill uses your company working days as a starting point. You can still change any individual day below.
+              Quick fill uses your company working days as a starting point. You can still change
+              any individual day below.
             </p>
           </div>
         </div>
@@ -167,11 +195,17 @@ export default function MonthlyScheduleEditor({
                       </p>
                       <p className="text-xs text-slate-500">{day.dateInput}</p>
                     </div>
-                    <span className={`rounded-full px-2.5 py-1 text-xs font-medium ${companyDay ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-600"}`}>
+                    <span
+                      className={`rounded-full px-2.5 py-1 text-xs font-medium ${companyDay ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-600"}`}
+                    >
                       {companyDay ? "Workday" : "Day off"}
                     </span>
                   </div>
-                  <Select value={value} onValueChange={(shiftId) => updateDateShift(day.dateInput, shiftId)} disabled={disabled}>
+                  <Select
+                    value={value}
+                    onValueChange={(shiftId) => updateDateShift(day.dateInput, shiftId)}
+                    disabled={disabled}
+                  >
                     <SelectTrigger>
                       <SelectValue placeholder="Select shift or off" />
                     </SelectTrigger>
@@ -179,7 +213,8 @@ export default function MonthlyScheduleEditor({
                       <SelectItem value="off">Off</SelectItem>
                       {shifts.map((shift) => (
                         <SelectItem key={shift.id} value={shift.id}>
-                          {shift.name} ({formatTimeString12Hour(shift.startTime)} to {formatTimeString12Hour(shift.endTime)})
+                          {shift.name} ({formatTimeString12Hour(shift.startTime)} to{" "}
+                          {formatTimeString12Hour(shift.endTime)})
                         </SelectItem>
                       ))}
                     </SelectContent>

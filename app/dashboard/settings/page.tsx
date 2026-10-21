@@ -70,7 +70,11 @@ export default function SettingsPage() {
         {user.role === "admin" ? (
           <AdminSettings user={user} onUserUpdate={setUser} />
         ) : (
-          <EmployeeSettings user={user} onUserUpdate={setUser} onAccessDenied={() => router.replace("/dashboard/attendance")} />
+          <EmployeeSettings
+            user={user}
+            onUserUpdate={setUser}
+            onAccessDenied={() => router.replace("/dashboard/attendance")}
+          />
         )}
       </div>
     </>

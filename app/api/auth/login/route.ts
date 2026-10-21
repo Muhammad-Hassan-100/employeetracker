@@ -30,11 +30,17 @@ export async function POST(request: NextRequest) {
 
     if (user.role === "admin") {
       if (user.approvalStatus === "pending") {
-        return NextResponse.json({ error: "Your admin account is waiting for super admin approval" }, { status: 403 })
+        return NextResponse.json(
+          { error: "Your admin account is waiting for super admin approval" },
+          { status: 403 },
+        )
       }
 
       if (user.approvalStatus === "rejected") {
-        return NextResponse.json({ error: "Your admin signup request has been rejected" }, { status: 403 })
+        return NextResponse.json(
+          { error: "Your admin signup request has been rejected" },
+          { status: 403 },
+        )
       }
     }
 
@@ -50,11 +56,19 @@ export async function POST(request: NextRequest) {
       : null
 
     if (user.role === "admin" && company?.approvalStatus && company.approvalStatus !== "approved") {
-      return NextResponse.json({ error: "Your company is waiting for super admin approval" }, { status: 403 })
+      return NextResponse.json(
+        { error: "Your company is waiting for super admin approval" },
+        { status: 403 },
+      )
     }
 
     return NextResponse.json({
-      user: buildSessionUser(user, company?.name, company?.domain, getCompanyAllowEmployeePasswordChange(company)),
+      user: buildSessionUser(
+        user,
+        company?.name,
+        company?.domain,
+        getCompanyAllowEmployeePasswordChange(company),
+      ),
       message: "Login successful",
     })
   } catch (error) {

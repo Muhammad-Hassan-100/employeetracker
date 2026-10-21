@@ -16,7 +16,11 @@ interface EmployeeSettingsProps {
   onAccessDenied?: () => void
 }
 
-export default function EmployeeSettings({ user, onUserUpdate, onAccessDenied }: EmployeeSettingsProps) {
+export default function EmployeeSettings({
+  user,
+  onUserUpdate,
+  onAccessDenied,
+}: EmployeeSettingsProps) {
   const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
   const [profile, setProfile] = useState({
@@ -183,11 +187,17 @@ export default function EmployeeSettings({ user, onUserUpdate, onAccessDenied }:
               minLength={6}
               placeholder="Re-enter the new password"
               value={form.confirmPassword}
-              onChange={(event) => setForm((prev) => ({ ...prev, confirmPassword: event.target.value }))}
+              onChange={(event) =>
+                setForm((prev) => ({ ...prev, confirmPassword: event.target.value }))
+              }
             />
           </div>
           <div className="md:col-span-2">
-            <Button onClick={handleSave} disabled={isSaving} className="rounded-2xl bg-slate-950 text-white hover:bg-slate-800">
+            <Button
+              onClick={handleSave}
+              disabled={isSaving}
+              className="rounded-2xl bg-slate-950 text-white hover:bg-slate-800"
+            >
               {isSaving ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />

@@ -59,7 +59,9 @@ export default function HistoryPage() {
       <div className="flex flex-1 flex-col gap-4 p-4">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Attendance history</h1>
-          <p className="text-muted-foreground">View your complete attendance records and statistics</p>
+          <p className="text-muted-foreground">
+            View your complete attendance records and statistics
+          </p>
         </div>
         <AttendanceHistory user={user} />
       </div>

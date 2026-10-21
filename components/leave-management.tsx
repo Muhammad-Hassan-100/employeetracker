@@ -8,7 +8,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
 import { authFetch } from "@/lib/client-session"
 import type { SessionUser } from "@/lib/session"
@@ -159,7 +165,10 @@ export default function LeaveManagement({ user }: LeaveManagementProps) {
           <h2 className="text-2xl font-bold text-slate-950">Leave Requests</h2>
           <p className="text-slate-600">You can request leave for upcoming dates only.</p>
         </div>
-        <Button onClick={() => setShowForm((prev) => !prev)} className="rounded-2xl bg-slate-950 text-white hover:bg-slate-800">
+        <Button
+          onClick={() => setShowForm((prev) => !prev)}
+          className="rounded-2xl bg-slate-950 text-white hover:bg-slate-800"
+        >
           <Plus className="mr-2 h-4 w-4" />
           {showForm ? "Hide Form" : "Request Leave"}
         </Button>
@@ -171,7 +180,9 @@ export default function LeaveManagement({ user }: LeaveManagementProps) {
             <FileClock className="h-10 w-10 rounded-2xl bg-amber-100 p-2 text-amber-700" />
             <div>
               <p className="text-sm text-slate-500">Pending</p>
-              <p className="text-2xl font-bold">{leaves.filter((leave) => leave.status === "pending").length}</p>
+              <p className="text-2xl font-bold">
+                {leaves.filter((leave) => leave.status === "pending").length}
+              </p>
             </div>
           </CardContent>
         </Card>
@@ -180,7 +191,9 @@ export default function LeaveManagement({ user }: LeaveManagementProps) {
             <FileCheck2 className="h-10 w-10 rounded-2xl bg-emerald-100 p-2 text-emerald-700" />
             <div>
               <p className="text-sm text-slate-500">Approved</p>
-              <p className="text-2xl font-bold">{leaves.filter((leave) => leave.status === "approved").length}</p>
+              <p className="text-2xl font-bold">
+                {leaves.filter((leave) => leave.status === "approved").length}
+              </p>
             </div>
           </CardContent>
         </Card>
@@ -205,7 +218,10 @@ export default function LeaveManagement({ user }: LeaveManagementProps) {
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
                 <Label>Leave Type</Label>
-                <Select value={form.leaveType} onValueChange={(value) => setForm((prev) => ({ ...prev, leaveType: value }))}>
+                <Select
+                  value={form.leaveType}
+                  onValueChange={(value) => setForm((prev) => ({ ...prev, leaveType: value }))}
+                >
                   <SelectTrigger>
                     <SelectValue placeholder="Choose leave type" />
                   </SelectTrigger>
@@ -230,7 +246,9 @@ export default function LeaveManagement({ user }: LeaveManagementProps) {
                   type="date"
                   min={tomorrow}
                   value={form.startDate}
-                  onChange={(event) => setForm((prev) => ({ ...prev, startDate: event.target.value }))}
+                  onChange={(event) =>
+                    setForm((prev) => ({ ...prev, startDate: event.target.value }))
+                  }
                 />
               </div>
               <div className="space-y-2">
@@ -239,7 +257,9 @@ export default function LeaveManagement({ user }: LeaveManagementProps) {
                   type="date"
                   min={form.startDate || tomorrow}
                   value={form.endDate}
-                  onChange={(event) => setForm((prev) => ({ ...prev, endDate: event.target.value }))}
+                  onChange={(event) =>
+                    setForm((prev) => ({ ...prev, endDate: event.target.value }))
+                  }
                 />
               </div>
             </div>
@@ -252,7 +272,11 @@ export default function LeaveManagement({ user }: LeaveManagementProps) {
                 onChange={(event) => setForm((prev) => ({ ...prev, reason: event.target.value }))}
               />
             </div>
-            <Button onClick={handleSubmit} disabled={isSubmitting} className="rounded-2xl bg-emerald-600 text-white hover:bg-emerald-700">
+            <Button
+              onClick={handleSubmit}
+              disabled={isSubmitting}
+              className="rounded-2xl bg-emerald-600 text-white hover:bg-emerald-700"
+            >
               {isSubmitting ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -291,15 +315,23 @@ export default function LeaveManagement({ user }: LeaveManagementProps) {
                         </h3>
                         {getStatusBadge(leave.status)}
                       </div>
-                      <p className="mt-1.5 text-sm text-[var(--dashboard-muted)]">{leave.startDate} <span className="px-1">to</span> {leave.endDate}</p>
-                      <p className="mt-2 text-sm leading-6 text-[var(--dashboard-ink-soft)]">{leave.reason}</p>
+                      <p className="mt-1.5 text-sm text-[var(--dashboard-muted)]">
+                        {leave.startDate} <span className="px-1">to</span> {leave.endDate}
+                      </p>
+                      <p className="mt-2 text-sm leading-6 text-[var(--dashboard-ink-soft)]">
+                        {leave.reason}
+                      </p>
                     </div>
                   </div>
-                  <div className="text-xs text-[var(--dashboard-muted)] sm:text-right">Submitted {new Date(leave.appliedDate).toLocaleDateString()}</div>
+                  <div className="text-xs text-[var(--dashboard-muted)] sm:text-right">
+                    Submitted {new Date(leave.appliedDate).toLocaleDateString()}
+                  </div>
                 </div>
                 {leave.reviewComments && (
                   <div className="mt-4 rounded-xl border border-[var(--dashboard-border-soft)] bg-[#f8f9f6] p-4 text-sm leading-6 text-[var(--dashboard-ink-soft)]">
-                    <span className="font-semibold">Admin note</span><span className="px-2 text-[var(--dashboard-subtle)]">/</span>{leave.reviewComments}
+                    <span className="font-semibold">Admin note</span>
+                    <span className="px-2 text-[var(--dashboard-subtle)]">/</span>
+                    {leave.reviewComments}
                   </div>
                 )}
               </div>

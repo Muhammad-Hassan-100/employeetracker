@@ -1,7 +1,11 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { getDatabase } from "@/lib/mongodb"
 import { ObjectId } from "mongodb"
-import { getCompanyAttendancePolicy, requiresAttendanceLocation, requiresAttendanceOfficeIp } from "@/lib/attendance-policy"
+import {
+  getCompanyAttendancePolicy,
+  requiresAttendanceLocation,
+  requiresAttendanceOfficeIp,
+} from "@/lib/attendance-policy"
 import {
   formatLocalDateInput,
   getAttendanceWindowState,
@@ -25,13 +29,15 @@ export async function GET(request: NextRequest) {
     const userId = searchParams.get("userId")
     const now = new Date()
     const localDateInput = searchParams.get("localDate")
-    const currentDateInput = typeof localDateInput === "string" && /^\d{4}-\d{2}-\d{2}$/.test(localDateInput)
-      ? localDateInput
-      : formatLocalDateInput(now)
+    const currentDateInput =
+      typeof localDateInput === "string" && /^\d{4}-\d{2}-\d{2}$/.test(localDateInput)
+        ? localDateInput
+        : formatLocalDateInput(now)
     const requestedMinutes = Number(searchParams.get("localTimeMinutes"))
-    const currentMinutes = Number.isFinite(requestedMinutes) && requestedMinutes >= 0 && requestedMinutes < 1440
-      ? requestedMinutes
-      : getLocalTimeMinutes(now)
+    const currentMinutes =
+      Number.isFinite(requestedMinutes) && requestedMinutes >= 0 && requestedMinutes < 1440
+        ? requestedMinutes
+        : getLocalTimeMinutes(now)
 
     if (!userId) {
       return NextResponse.json({ error: "User ID is required" }, { status: 400 })
@@ -97,13 +103,15 @@ export async function GET(request: NextRequest) {
     const shift = shiftAssignment.shift
 
     return NextResponse.json({
-      shift: shift ? {
-        id: shift._id?.toString(),
-        name: shift.name,
-        startTime: shift.startTime,
-        endTime: shift.endTime,
-        description: shift.description,
-      } : null,
+      shift: shift
+        ? {
+            id: shift._id?.toString(),
+            name: shift.name,
+            startTime: shift.startTime,
+            endTime: shift.endTime,
+            description: shift.description,
+          }
+        : null,
       shiftDate,
       user: {
         hasShiftAssigned: shiftAssignment.isScheduled,

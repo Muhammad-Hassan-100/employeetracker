@@ -24,8 +24,17 @@ export async function POST(request: NextRequest) {
       return response
     }
 
-    const { userId, checkInTime, isLate, lateReason, latitude, longitude, clientPublicIp, localDate, localTimeMinutes } =
-      await request.json()
+    const {
+      userId,
+      checkInTime,
+      isLate,
+      lateReason,
+      latitude,
+      longitude,
+      clientPublicIp,
+      localDate,
+      localTimeMinutes,
+    } = await request.json()
     const accessError = assertSelfOrAdmin(session, userId)
     if (accessError) {
       return accessError
@@ -55,8 +64,13 @@ export async function POST(request: NextRequest) {
     }
 
     const now = new Date(checkInTime)
-    const today = typeof localDate === "string" && /^\d{4}-\d{2}-\d{2}$/.test(localDate) ? localDate : formatLocalDateInput(now)
-    const actionTimeMinutes = Number.isFinite(Number(localTimeMinutes)) ? Number(localTimeMinutes) : getLocalTimeMinutes(now)
+    const today =
+      typeof localDate === "string" && /^\d{4}-\d{2}-\d{2}$/.test(localDate)
+        ? localDate
+        : formatLocalDateInput(now)
+    const actionTimeMinutes = Number.isFinite(Number(localTimeMinutes))
+      ? Number(localTimeMinutes)
+      : getLocalTimeMinutes(now)
     let computedIsLate = false
     let employeeCheckInBeforeMinutes = 5
     let todayShiftHasEnded = false
@@ -64,10 +78,17 @@ export async function POST(request: NextRequest) {
     let selectedShiftAssignment: any = null
 
     try {
-      const user = await usersCollection.findOne({ _id: new ObjectId(userId), companyId: session.companyId })
+      const user = await usersCollection.findOne({
+        _id: new ObjectId(userId),
+        companyId: session.companyId,
+      })
       if (user) {
-        employeeCheckInBeforeMinutes = Number.isInteger(user.checkInBeforeMinutes) ? user.checkInBeforeMinutes : 5
-        const employeeLateGraceMinutes = Number.isInteger(user.lateGraceMinutes) ? user.lateGraceMinutes : 5
+        employeeCheckInBeforeMinutes = Number.isInteger(user.checkInBeforeMinutes)
+          ? user.checkInBeforeMinutes
+          : 5
+        const employeeLateGraceMinutes = Number.isInteger(user.lateGraceMinutes)
+          ? user.lateGraceMinutes
+          : 5
 
         const todayShiftAssignment = await getEmployeeShiftAssignmentForDate({
           user,
@@ -93,7 +114,9 @@ export async function POST(request: NextRequest) {
             const previousWindow = getAttendanceWindowState({
               currentDateInput: today,
               currentMinutes: actionTimeMinutes,
-              graceMinutes: Number.isInteger(user.checkOutGraceMinutes) ? user.checkOutGraceMinutes : 0,
+              graceMinutes: Number.isInteger(user.checkOutGraceMinutes)
+                ? user.checkOutGraceMinutes
+                : 0,
               recordDateInput: previousDate,
               startMinutes,
               endMinutes,
@@ -114,7 +137,10 @@ export async function POST(request: NextRequest) {
             companyId: session.companyId,
           })
 
-          if (!candidateShiftAssignment.shift?.startTime || !candidateShiftAssignment.shift?.endTime) {
+          if (
+            !candidateShiftAssignment.shift?.startTime ||
+            !candidateShiftAssignment.shift?.endTime
+          ) {
             continue
           }
 
@@ -184,10 +210,13 @@ export async function POST(request: NextRequest) {
             endMinutes: shiftEndMinutes,
           })
 
-          const elapsedShiftMinutes = getLocalDateDifference(attendanceDate, today) * 1440 + actionTimeMinutes
+          const elapsedShiftMinutes =
+            getLocalDateDifference(attendanceDate, today) * 1440 + actionTimeMinutes
           if (elapsedShiftMinutes < earliestCheckInMinutes) {
             return NextResponse.json(
-              { error: `Check-in allowed only ${employeeCheckInBeforeMinutes} minutes before shift start` },
+              {
+                error: `Check-in allowed only ${employeeCheckInBeforeMinutes} minutes before shift start`,
+              },
               { status: 400 },
             )
           }
@@ -199,7 +228,10 @@ export async function POST(request: NextRequest) {
     } catch {}
 
     if (computedIsLate && !lateReason) {
-      return NextResponse.json({ error: "Late reason is required for late check-in" }, { status: 400 })
+      return NextResponse.json(
+        { error: "Late reason is required for late check-in" },
+        { status: 400 },
+      )
     }
 
     // Check the record belonging to the active shift date.
@@ -211,14 +243,23 @@ export async function POST(request: NextRequest) {
 
     if (existingRecord) {
       if (existingRecord.status === "on_leave") {
-        return NextResponse.json({ error: "Cannot check in while on approved leave" }, { status: 400 })
+        return NextResponse.json(
+          { error: "Cannot check in while on approved leave" },
+          { status: 400 },
+        )
       }
       if (existingRecord.status === "absent") {
         if (existingRecord.autoAbsent && !todayShiftHasEnded) {
-          await attendanceCollection.deleteOne({ _id: existingRecord._id, companyId: session.companyId })
+          await attendanceCollection.deleteOne({
+            _id: existingRecord._id,
+            companyId: session.companyId,
+          })
           existingRecord = null
         } else {
-          return NextResponse.json({ error: "Shift has ended. You were marked absent for this shift." }, { status: 400 })
+          return NextResponse.json(
+            { error: "Shift has ended. You were marked absent for this shift." },
+            { status: 400 },
+          )
         }
       }
       if (existingRecord?.checkInTime) {
@@ -235,7 +276,10 @@ export async function POST(request: NextRequest) {
     })
 
     if (hasLeave) {
-      return NextResponse.json({ error: "Cannot check in while on approved leave" }, { status: 400 })
+      return NextResponse.json(
+        { error: "Cannot check in while on approved leave" },
+        { status: 400 },
+      )
     }
 
     const record = {

@@ -57,11 +57,14 @@ export async function PUT(request: NextRequest) {
       return response
     }
 
-    const { workingDays, departments, attendancePolicy, allowEmployeePasswordChange } = await request.json()
+    const { workingDays, departments, attendancePolicy, allowEmployeePasswordChange } =
+      await request.json()
     const normalizedWorkingDays = normalizeWorkingDays(workingDays)
     const normalizedDepartments = normalizeDepartments(departments)
     const normalizedAttendancePolicy = normalizeAttendancePolicy(attendancePolicy)
-    const normalizedAllowEmployeePasswordChange = normalizeAllowEmployeePasswordChange(allowEmployeePasswordChange)
+    const normalizedAllowEmployeePasswordChange = normalizeAllowEmployeePasswordChange(
+      allowEmployeePasswordChange,
+    )
 
     if (!normalizedWorkingDays.length) {
       return NextResponse.json({ error: "Select at least one working day" }, { status: 400 })

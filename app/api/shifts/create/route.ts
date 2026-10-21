@@ -11,7 +11,10 @@ export async function POST(request: NextRequest) {
 
     const { name, startTime, endTime, description } = await request.json()
     if (!name || !startTime || !endTime) {
-      return NextResponse.json({ error: "Name, start time, and end time are required" }, { status: 400 })
+      return NextResponse.json(
+        { error: "Name, start time, and end time are required" },
+        { status: 400 },
+      )
     }
 
     const db = await getDatabase()

@@ -6,11 +6,11 @@ This document records the site's current behavior as implemented in the reposito
 
 EmployeeTracker Pro is a multi-company workforce app. It supports three roles:
 
-| Role | Scope | Main job |
-| --- | --- | --- |
-| `super_admin` | Entire platform | Review company signup requests and manage companies and employees across workspaces |
-| `admin` | One company (`companyId`) | Manage employees, schedules, shifts, company rules, leave reviews, attendance visibility, and reports |
-| `employee` | Own account and records | Check in/out, request leave, review attendance, and optionally change password |
+| Role          | Scope                     | Main job                                                                                              |
+| ------------- | ------------------------- | ----------------------------------------------------------------------------------------------------- |
+| `super_admin` | Entire platform           | Review company signup requests and manage companies and employees across workspaces                   |
+| `admin`       | One company (`companyId`) | Manage employees, schedules, shifts, company rules, leave reviews, attendance visibility, and reports |
+| `employee`    | Own account and records   | Check in/out, request leave, review attendance, and optionally change password                        |
 
 Company-facing records are generally queried with the signed-in session's `companyId`. The app uses MongoDB collections `users`, `companies`, `shifts`, `attendance`, and `leaves`.
 
@@ -144,38 +144,38 @@ Attendance statuses include `present`, `absent`, `on_leave`, and the monitor's d
 
 All routes are under `app/api`. Protected calls receive session headers through `authFetch`; handlers use session/role helpers in `lib/session.ts` and commonly scope data by `companyId`.
 
-| Route | Methods | Purpose / access |
-| --- | --- | --- |
-| `/api/auth/login` | POST | Sign in and return session user |
-| `/api/auth/signup` | POST | Create pending company and admin request |
-| `/api/auth/profile` | GET, PUT | Read/update admin profile or employee password (employee changes gated by company setting) |
-| `/api/company/settings` | GET, PUT | Read/update company rules; admin only |
-| `/api/company/branding` | GET | Read the current company's dashboard color; authenticated company users |
-| `/api/company/branding` | PUT | Update the company's dashboard color; admin only |
-| `/api/employees/create` | POST | Create employee; admin only |
-| `/api/employees` | GET | List employees in the admin's company |
-| `/api/employees/[id]` | GET, PUT, DELETE | Read/edit/delete a company employee; admin only |
-| `/api/employees/[id]/details` | GET | Employee detail data |
-| `/api/employees/[id]/status` | PUT | Activate/deactivate employee; admin only |
-| `/api/employees/shift` | GET | Resolve employee's shift and attendance policy for attendance UI |
-| `/api/employees/status` | GET | Resolve current employee day status |
-| `/api/shifts` | GET | List company shifts; admin only |
-| `/api/shifts/create` | POST | Create company shift; admin only |
-| `/api/shifts/[id]` | PUT, DELETE | Update/delete company shift; admin only |
-| `/api/attendance/today` | GET | Read today's state and lazily finalize eligible absence/expired records; self/admin access |
-| `/api/attendance/checkin` | POST | Validate and record check-in; self/admin access |
-| `/api/attendance/checkout` | POST | Validate and record check-out; self/admin access |
-| `/api/attendance/break` | POST | Start or end a one-time break on an open shift; self/admin access |
-| `/api/attendance/history` | GET | Read attendance history; self/admin access |
-| `/api/attendance/admin` | GET | Selected-date company snapshot; admin only |
-| `/api/reports/attendance` | GET | Period attendance summaries; admin only |
-| `/api/leaves` | GET, POST | List own/company requests or submit leave; admin can list company queue |
-| `/api/leaves/active` | GET | Read active leave data |
-| `/api/leaves/[id]` | PUT, DELETE | Review/delete leave; admin only |
-| `/api/super-admin/companies` | GET | List platform companies; super admin only |
-| `/api/super-admin/companies/[companyId]` | GET, PUT, DELETE | Read/update/delete company and related data; super admin only |
-| `/api/super-admin/employees` | GET | List platform employees; super admin only |
-| `/api/super-admin/employees/[id]` | PUT, DELETE | Activate/deactivate/delete platform employee; super admin only |
+| Route                                    | Methods          | Purpose / access                                                                           |
+| ---------------------------------------- | ---------------- | ------------------------------------------------------------------------------------------ |
+| `/api/auth/login`                        | POST             | Sign in and return session user                                                            |
+| `/api/auth/signup`                       | POST             | Create pending company and admin request                                                   |
+| `/api/auth/profile`                      | GET, PUT         | Read/update admin profile or employee password (employee changes gated by company setting) |
+| `/api/company/settings`                  | GET, PUT         | Read/update company rules; admin only                                                      |
+| `/api/company/branding`                  | GET              | Read the current company's dashboard color; authenticated company users                    |
+| `/api/company/branding`                  | PUT              | Update the company's dashboard color; admin only                                           |
+| `/api/employees/create`                  | POST             | Create employee; admin only                                                                |
+| `/api/employees`                         | GET              | List employees in the admin's company                                                      |
+| `/api/employees/[id]`                    | GET, PUT, DELETE | Read/edit/delete a company employee; admin only                                            |
+| `/api/employees/[id]/details`            | GET              | Employee detail data                                                                       |
+| `/api/employees/[id]/status`             | PUT              | Activate/deactivate employee; admin only                                                   |
+| `/api/employees/shift`                   | GET              | Resolve employee's shift and attendance policy for attendance UI                           |
+| `/api/employees/status`                  | GET              | Resolve current employee day status                                                        |
+| `/api/shifts`                            | GET              | List company shifts; admin only                                                            |
+| `/api/shifts/create`                     | POST             | Create company shift; admin only                                                           |
+| `/api/shifts/[id]`                       | PUT, DELETE      | Update/delete company shift; admin only                                                    |
+| `/api/attendance/today`                  | GET              | Read today's state and lazily finalize eligible absence/expired records; self/admin access |
+| `/api/attendance/checkin`                | POST             | Validate and record check-in; self/admin access                                            |
+| `/api/attendance/checkout`               | POST             | Validate and record check-out; self/admin access                                           |
+| `/api/attendance/break`                  | POST             | Start or end a one-time break on an open shift; self/admin access                          |
+| `/api/attendance/history`                | GET              | Read attendance history; self/admin access                                                 |
+| `/api/attendance/admin`                  | GET              | Selected-date company snapshot; admin only                                                 |
+| `/api/reports/attendance`                | GET              | Period attendance summaries; admin only                                                    |
+| `/api/leaves`                            | GET, POST        | List own/company requests or submit leave; admin can list company queue                    |
+| `/api/leaves/active`                     | GET              | Read active leave data                                                                     |
+| `/api/leaves/[id]`                       | PUT, DELETE      | Review/delete leave; admin only                                                            |
+| `/api/super-admin/companies`             | GET              | List platform companies; super admin only                                                  |
+| `/api/super-admin/companies/[companyId]` | GET, PUT, DELETE | Read/update/delete company and related data; super admin only                              |
+| `/api/super-admin/employees`             | GET              | List platform employees; super admin only                                                  |
+| `/api/super-admin/employees/[id]`        | PUT, DELETE      | Activate/deactivate/delete platform employee; super admin only                             |
 
 ## 7. Data and code map
 

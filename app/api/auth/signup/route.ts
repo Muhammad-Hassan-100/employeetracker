@@ -35,7 +35,10 @@ export async function POST(request: NextRequest) {
     }
 
     if (!isCompanyDomainValid(normalizedDomain)) {
-      return NextResponse.json({ error: "Enter a valid company domain like company.com" }, { status: 400 })
+      return NextResponse.json(
+        { error: "Enter a valid company domain like company.com" },
+        { status: 400 },
+      )
     }
 
     if (isPublicEmailDomain(normalizedDomain)) {
@@ -63,7 +66,10 @@ export async function POST(request: NextRequest) {
 
     const existingCompany = await companiesCollection.findOne({ domain: normalizedDomain })
     if (existingCompany) {
-      return NextResponse.json({ error: "This company domain is already registered" }, { status: 400 })
+      return NextResponse.json(
+        { error: "This company domain is already registered" },
+        { status: 400 },
+      )
     }
 
     const companyId = `${slugifyCompanyName(trimmedCompany) || "company"}-${Date.now().toString(36)}`

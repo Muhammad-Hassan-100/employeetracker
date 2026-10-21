@@ -9,7 +9,13 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { authFetch } from "@/lib/client-session"
 
 interface CompanyDetail {
@@ -119,7 +125,11 @@ export default function SuperAdminCompanyDetail({ companyId }: { companyId: stri
   }
 
   const handleDelete = async () => {
-    if (!window.confirm("Delete this company and all of its users, shifts, leaves, and attendance data?")) {
+    if (
+      !window.confirm(
+        "Delete this company and all of its users, shifts, leaves, and attendance data?",
+      )
+    ) {
       return
     }
 
@@ -185,7 +195,10 @@ export default function SuperAdminCompanyDetail({ companyId }: { companyId: stri
             </Link>
           </Button>
           {!isEditing ? (
-            <Button className="rounded-2xl bg-slate-950 text-white hover:bg-slate-800" onClick={() => setIsEditing(true)}>
+            <Button
+              className="rounded-2xl bg-slate-950 text-white hover:bg-slate-800"
+              onClick={() => setIsEditing(true)}
+            >
               <Pencil className="mr-2 h-4 w-4" />
               Edit company
             </Button>
@@ -195,8 +208,16 @@ export default function SuperAdminCompanyDetail({ companyId }: { companyId: stri
                 <X className="mr-2 h-4 w-4" />
                 Cancel
               </Button>
-              <Button className="rounded-2xl bg-slate-950 text-white hover:bg-slate-800" disabled={isSaving} onClick={handleSave}>
-                {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+              <Button
+                className="rounded-2xl bg-slate-950 text-white hover:bg-slate-800"
+                disabled={isSaving}
+                onClick={handleSave}
+              >
+                {isSaving ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <Save className="mr-2 h-4 w-4" />
+                )}
                 Save changes
               </Button>
             </>
@@ -212,7 +233,13 @@ export default function SuperAdminCompanyDetail({ companyId }: { companyId: stri
         <CardContent className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
           <div className="space-y-2">
             <Label>Company name</Label>
-            <Input value={form.companyName} readOnly={!isEditing} onChange={(event) => setForm((prev) => prev ? { ...prev, companyName: event.target.value } : prev)} />
+            <Input
+              value={form.companyName}
+              readOnly={!isEditing}
+              onChange={(event) =>
+                setForm((prev) => (prev ? { ...prev, companyName: event.target.value } : prev))
+              }
+            />
           </div>
           <div className="space-y-2">
             <Label>Company domain</Label>
@@ -220,16 +247,37 @@ export default function SuperAdminCompanyDetail({ companyId }: { companyId: stri
           </div>
           <div className="space-y-2">
             <Label>Administrator name</Label>
-            <Input value={form.adminName} readOnly={!isEditing} onChange={(event) => setForm((prev) => prev ? { ...prev, adminName: event.target.value } : prev)} />
+            <Input
+              value={form.adminName}
+              readOnly={!isEditing}
+              onChange={(event) =>
+                setForm((prev) => (prev ? { ...prev, adminName: event.target.value } : prev))
+              }
+            />
           </div>
           <div className="space-y-2">
             <Label>Administrator email</Label>
-            <Input value={form.adminEmail} readOnly={!isEditing} onChange={(event) => setForm((prev) => prev ? { ...prev, adminEmail: event.target.value } : prev)} />
+            <Input
+              value={form.adminEmail}
+              readOnly={!isEditing}
+              onChange={(event) =>
+                setForm((prev) => (prev ? { ...prev, adminEmail: event.target.value } : prev))
+              }
+            />
           </div>
           <div className="space-y-2">
             <Label>Administrator status</Label>
             {isEditing ? (
-              <Select value={form.adminStatus} onValueChange={(value) => setForm((prev) => prev ? { ...prev, adminStatus: value as CompanyFormState["adminStatus"] } : prev)}>
+              <Select
+                value={form.adminStatus}
+                onValueChange={(value) =>
+                  setForm((prev) =>
+                    prev
+                      ? { ...prev, adminStatus: value as CompanyFormState["adminStatus"] }
+                      : prev,
+                  )
+                }
+              >
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
@@ -245,7 +293,16 @@ export default function SuperAdminCompanyDetail({ companyId }: { companyId: stri
           <div className="space-y-2 md:col-span-2 xl:col-span-2">
             <Label>Approval status</Label>
             {isEditing ? (
-              <Select value={form.approvalStatus} onValueChange={(value) => setForm((prev) => prev ? { ...prev, approvalStatus: value as CompanyFormState["approvalStatus"] } : prev)}>
+              <Select
+                value={form.approvalStatus}
+                onValueChange={(value) =>
+                  setForm((prev) =>
+                    prev
+                      ? { ...prev, approvalStatus: value as CompanyFormState["approvalStatus"] }
+                      : prev,
+                  )
+                }
+              >
                 <SelectTrigger className="w-full md:w-72">
                   <SelectValue />
                 </SelectTrigger>
@@ -265,11 +322,23 @@ export default function SuperAdminCompanyDetail({ companyId }: { companyId: stri
       <Card className="rounded-3xl shadow-sm">
         <CardHeader>
           <CardTitle>Delete company</CardTitle>
-          <CardDescription>Deleting a company removes all related users, shifts, leave requests, and attendance records.</CardDescription>
+          <CardDescription>
+            Deleting a company removes all related users, shifts, leave requests, and attendance
+            records.
+          </CardDescription>
         </CardHeader>
         <CardContent>
-          <Button variant="outline" className="rounded-2xl text-rose-700" disabled={isDeleting} onClick={handleDelete}>
-            {isDeleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="mr-2 h-4 w-4" />}
+          <Button
+            variant="outline"
+            className="rounded-2xl text-rose-700"
+            disabled={isDeleting}
+            onClick={handleDelete}
+          >
+            {isDeleting ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Trash2 className="mr-2 h-4 w-4" />
+            )}
             Delete Company
           </Button>
         </CardContent>

@@ -8,7 +8,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input"
 import { authFetch } from "@/lib/client-session"
 import type { SessionUser } from "@/lib/session"
-import { formatDurationMinutes, formatLocalDateInput, getLocalTimeMinutes } from "@/lib/attendance-time"
+import {
+  formatDurationMinutes,
+  formatLocalDateInput,
+  getLocalTimeMinutes,
+} from "@/lib/attendance-time"
 
 interface AttendanceRecord {
   id: string
@@ -69,7 +73,9 @@ export default function AttendanceHistory({ user }: AttendanceHistoryProps) {
   useEffect(() => {
     const loadRecords = async () => {
       try {
-        const response = await authFetch(`/api/attendance/history?userId=${user.id}&nowDate=${formatLocalDateInput()}&nowMinutes=${getLocalTimeMinutes()}`)
+        const response = await authFetch(
+          `/api/attendance/history?userId=${user.id}&nowDate=${formatLocalDateInput()}&nowMinutes=${getLocalTimeMinutes()}`,
+        )
         const data = await response.json()
         if (response.ok) {
           setRecords(data)
@@ -88,9 +94,13 @@ export default function AttendanceHistory({ user }: AttendanceHistoryProps) {
     return dateFilter ? records.filter((record) => record.date.includes(dateFilter)) : records
   }, [records, dateFilter])
 
-  const onTimeCount = records.filter((record) => record.status === "present" && !record.isLate && !record.isEarly).length
+  const onTimeCount = records.filter(
+    (record) => record.status === "present" && !record.isLate && !record.isEarly,
+  ).length
   const avgHours = records.length
-    ? (records.reduce((sum, record) => sum + (Number(record.hoursWorked) || 0), 0) / records.length).toFixed(1)
+    ? (
+        records.reduce((sum, record) => sum + (Number(record.hoursWorked) || 0), 0) / records.length
+      ).toFixed(1)
     : "0.0"
 
   return (
@@ -133,7 +143,12 @@ export default function AttendanceHistory({ user }: AttendanceHistoryProps) {
               <CardDescription>Review your past attendance records by date.</CardDescription>
             </div>
             <div className="flex gap-2">
-              <Input type="date" value={dateFilter} onChange={(event) => setDateFilter(event.target.value)} className="w-full md:w-auto" />
+              <Input
+                type="date"
+                value={dateFilter}
+                onChange={(event) => setDateFilter(event.target.value)}
+                className="w-full md:w-auto"
+              />
               <Button variant="outline" className="rounded-2xl" onClick={() => setDateFilter("")}>
                 Clear
               </Button>
@@ -158,64 +173,133 @@ export default function AttendanceHistory({ user }: AttendanceHistoryProps) {
                       <CalendarDays className="size-5" />
                     </div>
                     <div className="min-w-0">
-                      <h3 className="text-sm font-semibold text-[var(--dashboard-ink)]">{new Date(record.date).toLocaleDateString("en-US", { weekday: "short" })}</h3>
-                      <p className="mt-0.5 text-sm text-[var(--dashboard-muted)]">{new Date(record.date).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}</p>
+                      <h3 className="text-sm font-semibold text-[var(--dashboard-ink)]">
+                        {new Date(record.date).toLocaleDateString("en-US", { weekday: "short" })}
+                      </h3>
+                      <p className="mt-0.5 text-sm text-[var(--dashboard-muted)]">
+                        {new Date(record.date).toLocaleDateString("en-US", {
+                          month: "long",
+                          day: "numeric",
+                          year: "numeric",
+                        })}
+                      </p>
                     </div>
                   </div>
                   <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
                     <div className="rounded-xl bg-[#f7f8f5] px-3 py-2.5">
-                      <p className="text-[11px] font-medium uppercase tracking-wide text-[var(--dashboard-muted)]">Check in</p>
-                      <p className="mt-1 flex items-center gap-1.5 text-sm font-semibold text-[var(--dashboard-ink)]"><Clock3 className="size-3.5 text-[var(--dashboard-green-text)]" />{formatTime(record.checkInTime)}</p>
+                      <p className="text-[11px] font-medium uppercase tracking-wide text-[var(--dashboard-muted)]">
+                        Check in
+                      </p>
+                      <p className="mt-1 flex items-center gap-1.5 text-sm font-semibold text-[var(--dashboard-ink)]">
+                        <Clock3 className="size-3.5 text-[var(--dashboard-green-text)]" />
+                        {formatTime(record.checkInTime)}
+                      </p>
                     </div>
                     <div className="rounded-xl bg-[#f7f8f5] px-3 py-2.5">
-                      <p className="text-[11px] font-medium uppercase tracking-wide text-[var(--dashboard-muted)]">Check out</p>
-                      <p className="mt-1 text-sm font-semibold text-[var(--dashboard-ink)]">{formatTime(record.checkOutTime)}</p>
+                      <p className="text-[11px] font-medium uppercase tracking-wide text-[var(--dashboard-muted)]">
+                        Check out
+                      </p>
+                      <p className="mt-1 text-sm font-semibold text-[var(--dashboard-ink)]">
+                        {formatTime(record.checkOutTime)}
+                      </p>
                     </div>
                     <div className="rounded-xl bg-[#f7f8f5] px-3 py-2.5">
-                      <p className="text-[11px] font-medium uppercase tracking-wide text-[var(--dashboard-muted)]">Hours</p>
-                      <p className="mt-1 text-sm font-semibold text-[var(--dashboard-ink)]">{formatHoursWorked(record.hoursWorked)}</p>
+                      <p className="text-[11px] font-medium uppercase tracking-wide text-[var(--dashboard-muted)]">
+                        Hours
+                      </p>
+                      <p className="mt-1 text-sm font-semibold text-[var(--dashboard-ink)]">
+                        {formatHoursWorked(record.hoursWorked)}
+                      </p>
                     </div>
-                    {record.breakTaken && <div className="rounded-xl bg-[#f7f8f5] px-3 py-2.5">
-                      <p className="text-[11px] font-medium uppercase tracking-wide text-[var(--dashboard-muted)]">Break</p>
-                      <p className="mt-1 text-sm font-semibold text-[var(--dashboard-ink)]">{record.breakEndTime ? formatDurationMinutes(Number(record.breakDurationMinutes || 0)) : "In progress"}</p>
-                    </div>}
+                    {record.breakTaken && (
+                      <div className="rounded-xl bg-[#f7f8f5] px-3 py-2.5">
+                        <p className="text-[11px] font-medium uppercase tracking-wide text-[var(--dashboard-muted)]">
+                          Break
+                        </p>
+                        <p className="mt-1 text-sm font-semibold text-[var(--dashboard-ink)]">
+                          {record.breakEndTime
+                            ? formatDurationMinutes(Number(record.breakDurationMinutes || 0))
+                            : "In progress"}
+                        </p>
+                      </div>
+                    )}
                   </div>
                   <div className="flex flex-wrap gap-2">
-                  <Badge
-                    className={
-                      record.status === "on_leave"
-                        ? "bg-amber-100 text-amber-900"
+                    <Badge
+                      className={
+                        record.status === "on_leave"
+                          ? "bg-amber-100 text-amber-900"
+                          : record.status === "absent"
+                            ? "bg-rose-100 text-rose-900"
+                            : record.isLate
+                              ? "bg-orange-100 text-orange-900"
+                              : record.isEarly
+                                ? "bg-sky-100 text-sky-900"
+                                : "bg-emerald-100 text-emerald-900"
+                      }
+                    >
+                      {record.status === "on_leave"
+                        ? "On Leave"
                         : record.status === "absent"
-                          ? "bg-rose-100 text-rose-900"
+                          ? "Absent"
                           : record.isLate
-                            ? "bg-orange-100 text-orange-900"
+                            ? "Late"
                             : record.isEarly
-                              ? "bg-sky-100 text-sky-900"
-                              : "bg-emerald-100 text-emerald-900"
-                    }
-                  >
-                    {record.status === "on_leave"
-                      ? "On Leave"
-                      : record.status === "absent"
-                        ? "Absent"
-                        : record.isLate
-                          ? "Late"
-                          : record.isEarly
-                            ? "Early departure"
-                            : "On Time"}
-                  </Badge>
-                  {record.absenceReason === "missing_checkout" && <Badge className="bg-amber-100 text-amber-900">Absent · missing check-out</Badge>}
-                  {record.absenceReason === "no_check_in" && <Badge className="bg-rose-100 text-rose-900">No check-in</Badge>}
+                              ? "Early departure"
+                              : "On Time"}
+                    </Badge>
+                    {record.absenceReason === "missing_checkout" && (
+                      <Badge className="bg-amber-100 text-amber-900">
+                        Absent · missing check-out
+                      </Badge>
+                    )}
+                    {record.absenceReason === "no_check_in" && (
+                      <Badge className="bg-rose-100 text-rose-900">No check-in</Badge>
+                    )}
                   </div>
                 </div>
-                {(record.lateReason || record.earlyReason || record.lateCheckoutReason || record.leaveReason) && (
+                {(record.lateReason ||
+                  record.earlyReason ||
+                  record.lateCheckoutReason ||
+                  record.leaveReason) && (
                   <div className="mt-4 border-t border-[var(--dashboard-border-soft)] pt-3 text-sm text-[var(--dashboard-muted)]">
-                    {(record.lateReason || record.earlyReason || record.lateCheckoutReason || record.leaveReason) && (
+                    {(record.lateReason ||
+                      record.earlyReason ||
+                      record.lateCheckoutReason ||
+                      record.leaveReason) && (
                       <>
-                        {record.leaveReason && <p><span className="font-medium text-[var(--dashboard-ink-soft)]">Leave:</span> {record.leaveType || "Approved"} - {record.leaveReason}</p>}
-                        {record.lateReason && <p><span className="font-medium text-[var(--dashboard-ink-soft)]">Late:</span> {record.lateReason}</p>}
-                        {record.earlyReason && <p><span className="font-medium text-[var(--dashboard-ink-soft)]">Early:</span> {record.earlyReason}</p>}
-                        {record.lateCheckoutReason && <p><span className="font-medium text-[var(--dashboard-ink-soft)]">Late check-out:</span> {record.lateCheckoutReason}</p>}
+                        {record.leaveReason && (
+                          <p>
+                            <span className="font-medium text-[var(--dashboard-ink-soft)]">
+                              Leave:
+                            </span>{" "}
+                            {record.leaveType || "Approved"} - {record.leaveReason}
+                          </p>
+                        )}
+                        {record.lateReason && (
+                          <p>
+                            <span className="font-medium text-[var(--dashboard-ink-soft)]">
+                              Late:
+                            </span>{" "}
+                            {record.lateReason}
+                          </p>
+                        )}
+                        {record.earlyReason && (
+                          <p>
+                            <span className="font-medium text-[var(--dashboard-ink-soft)]">
+                              Early:
+                            </span>{" "}
+                            {record.earlyReason}
+                          </p>
+                        )}
+                        {record.lateCheckoutReason && (
+                          <p>
+                            <span className="font-medium text-[var(--dashboard-ink-soft)]">
+                              Late check-out:
+                            </span>{" "}
+                            {record.lateCheckoutReason}
+                          </p>
+                        )}
                       </>
                     )}
                   </div>

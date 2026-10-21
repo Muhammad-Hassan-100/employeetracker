@@ -273,7 +273,10 @@ button:disabled {
   border-radius: 1.15rem;
   background: #fff;
   box-shadow: 0 7px 22px -21px rgb(30 45 32 / 35%);
-  transition: border-color 180ms ease, box-shadow 180ms ease, transform 180ms ease;
+  transition:
+    border-color 180ms ease,
+    box-shadow 180ms ease,
+    transform 180ms ease;
 }
 
 .dashboard-layout-content [data-dashboard-view] .rounded-3xl.border.border-slate-200:hover {
@@ -386,7 +389,9 @@ button:disabled {
   }
   body {
     @apply bg-background text-foreground;
-    font-feature-settings: "rlig" 1, "calt" 1;
+    font-feature-settings:
+      "rlig" 1,
+      "calt" 1;
     font-family: "Segoe UI", "Helvetica Neue", sans-serif;
   }
 }

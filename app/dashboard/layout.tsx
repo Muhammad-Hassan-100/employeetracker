@@ -59,23 +59,27 @@ function DashboardTopbar({ pathname }: { pathname: string }) {
           {pageTitle !== "Overview" && (
             <>
               <BreadcrumbSeparator className="hidden sm:block" />
-              <BreadcrumbItem><BreadcrumbPage>{pageTitle}</BreadcrumbPage></BreadcrumbItem>
+              <BreadcrumbItem>
+                <BreadcrumbPage>{pageTitle}</BreadcrumbPage>
+              </BreadcrumbItem>
             </>
           )}
-          {pageTitle === "Overview" && <BreadcrumbItem><BreadcrumbPage>Overview</BreadcrumbPage></BreadcrumbItem>}
+          {pageTitle === "Overview" && (
+            <BreadcrumbItem>
+              <BreadcrumbPage>Overview</BreadcrumbPage>
+            </BreadcrumbItem>
+          )}
         </BreadcrumbList>
       </Breadcrumb>
     </header>
   )
 }
 
-export default function DashboardLayout({
-  children,
-}: {
-  children: React.ReactNode
-}) {
+export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<SessionUser | null>(null)
-  const [dashboardPrimaryColor, setDashboardPrimaryColor] = useState(DEFAULT_DASHBOARD_PRIMARY_COLOR)
+  const [dashboardPrimaryColor, setDashboardPrimaryColor] = useState(
+    DEFAULT_DASHBOARD_PRIMARY_COLOR,
+  )
   const [isLoading, setIsLoading] = useState(true)
   const router = useRouter()
   const pathname = usePathname()
@@ -98,7 +102,11 @@ export default function DashboardLayout({
       try {
         const response = await authFetch("/api/company/branding")
         const data = await response.json()
-        if (isCurrent && response.ok && /^#[0-9a-fA-F]{6}$/.test(data.dashboardPrimaryColor || "")) {
+        if (
+          isCurrent &&
+          response.ok &&
+          /^#[0-9a-fA-F]{6}$/.test(data.dashboardPrimaryColor || "")
+        ) {
           setDashboardPrimaryColor(data.dashboardPrimaryColor.toLowerCase())
         }
       } catch {
@@ -137,7 +145,10 @@ export default function DashboardLayout({
   }
 
   return (
-      <SidebarProvider className="bg-[var(--dashboard-canvas)]" style={getDashboardThemeVariables(dashboardPrimaryColor) as React.CSSProperties}>
+    <SidebarProvider
+      className="bg-[var(--dashboard-canvas)]"
+      style={getDashboardThemeVariables(dashboardPrimaryColor) as React.CSSProperties}
+    >
       <AppSidebar user={user} />
       <SidebarInset className="dashboard-layout-content min-w-0 flex-1 bg-[var(--dashboard-canvas)]">
         <DashboardTopbar pathname={pathname || "/dashboard"} />

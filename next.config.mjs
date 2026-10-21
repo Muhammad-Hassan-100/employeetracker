@@ -13,12 +13,12 @@ const nextConfig = {
     // Avoid bundling optional native deps pulled in by mongodb
     // These packages provide native .node binaries that break Webpack on Vercel
     const ignoreModules = [
-      'snappy',
-      '@mongodb-js/zstd',
-      'gcp-metadata',
-      'kerberos',
-      'mongodb-client-encryption',
-      'socks',
+      "snappy",
+      "@mongodb-js/zstd",
+      "gcp-metadata",
+      "kerberos",
+      "mongodb-client-encryption",
+      "socks",
     ]
 
     config.resolve = config.resolve || {}

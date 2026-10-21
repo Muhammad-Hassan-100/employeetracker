@@ -19,8 +19,17 @@ export async function POST(request: NextRequest) {
       return response
     }
 
-    const { userId, checkOutTime, isEarly, earlyReason, latitude, longitude, clientPublicIp, localDate, localTimeMinutes } =
-      await request.json()
+    const {
+      userId,
+      checkOutTime,
+      isEarly,
+      earlyReason,
+      latitude,
+      longitude,
+      clientPublicIp,
+      localDate,
+      localTimeMinutes,
+    } = await request.json()
     const accessError = assertSelfOrAdmin(session, userId)
     if (accessError) {
       return accessError
@@ -49,8 +58,12 @@ export async function POST(request: NextRequest) {
     }
     const checkOutMoment = new Date(checkOutTime)
     const localDateInput =
-      typeof localDate === "string" && /^\d{4}-\d{2}-\d{2}$/.test(localDate) ? localDate : formatLocalDateInput(checkOutMoment)
-    const actionTimeMinutes = Number.isFinite(Number(localTimeMinutes)) ? Number(localTimeMinutes) : getLocalTimeMinutes(checkOutMoment)
+      typeof localDate === "string" && /^\d{4}-\d{2}-\d{2}$/.test(localDate)
+        ? localDate
+        : formatLocalDateInput(checkOutMoment)
+    const actionTimeMinutes = Number.isFinite(Number(localTimeMinutes))
+      ? Number(localTimeMinutes)
+      : getLocalTimeMinutes(checkOutMoment)
     let computedIsEarly = false
     let employeeCheckOutGraceMinutes = 0
     let employee: any = null
@@ -61,21 +74,26 @@ export async function POST(request: NextRequest) {
         companyId: session.companyId,
       })
       if (employee) {
-        employeeCheckOutGraceMinutes = Number.isInteger(employee.checkOutGraceMinutes) ? employee.checkOutGraceMinutes : 0
+        employeeCheckOutGraceMinutes = Number.isInteger(employee.checkOutGraceMinutes)
+          ? employee.checkOutGraceMinutes
+          : 0
       }
     } catch {}
 
     // Find the latest open attendance record for this employee.
-    const record = await attendanceCollection.findOne({
-      companyId: session.companyId,
-      userId: userId,
-      checkInTime: { $ne: null },
-      checkOutTime: null,
-      status: { $ne: "on_leave" },
-      checkoutWindowExpired: { $ne: true },
-    }, {
-      sort: { date: -1, updatedAt: -1 },
-    })
+    const record = await attendanceCollection.findOne(
+      {
+        companyId: session.companyId,
+        userId: userId,
+        checkInTime: { $ne: null },
+        checkOutTime: null,
+        status: { $ne: "on_leave" },
+        checkoutWindowExpired: { $ne: true },
+      },
+      {
+        sort: { date: -1, updatedAt: -1 },
+      },
+    )
 
     if (!record) {
       return NextResponse.json({ error: "No check-in record found for today" }, { status: 404 })
@@ -91,17 +109,19 @@ export async function POST(request: NextRequest) {
 
     const checkInTime = new Date(record.checkInTime)
     const checkOutTimeDate = checkOutMoment
-    const hoursWorked = Math.max(0, (checkOutTimeDate.getTime() - checkInTime.getTime()) / (1000 * 60 * 60))
-    const shiftAssignment =
-      employee
-        ? await getEmployeeShiftAssignmentForDate({
-            user: employee,
-            dateInput: record.date,
-            workingDays,
-            shiftsCollection,
-            companyId: session.companyId,
-          })
-        : null
+    const hoursWorked = Math.max(
+      0,
+      (checkOutTimeDate.getTime() - checkInTime.getTime()) / (1000 * 60 * 60),
+    )
+    const shiftAssignment = employee
+      ? await getEmployeeShiftAssignmentForDate({
+          user: employee,
+          dateInput: record.date,
+          workingDays,
+          shiftsCollection,
+          companyId: session.companyId,
+        })
+      : null
 
     if (shiftAssignment?.shift?.startTime && shiftAssignment.shift?.endTime) {
       const shiftStartMinutes = getTimeStringMinutes(shiftAssignment.shift.startTime)
@@ -135,16 +155,25 @@ export async function POST(request: NextRequest) {
         )
 
         return NextResponse.json(
-          { error: "The normal checkout deadline has passed. This shift is marked absent and can no longer be checked out." },
+          {
+            error:
+              "The normal checkout deadline has passed. This shift is marked absent and can no longer be checked out.",
+          },
           { status: 400 },
         )
       }
     } else {
-      return NextResponse.json({ error: "No shift is assigned for this attendance day" }, { status: 400 })
+      return NextResponse.json(
+        { error: "No shift is assigned for this attendance day" },
+        { status: 400 },
+      )
     }
 
     if ((computedIsEarly || isEarly) && !String(earlyReason || "").trim()) {
-      return NextResponse.json({ error: "Early checkout reason is required before shift end" }, { status: 400 })
+      return NextResponse.json(
+        { error: "Early checkout reason is required before shift end" },
+        { status: 400 },
+      )
     }
 
     const updateResult = await attendanceCollection.updateOne(

@@ -18,7 +18,7 @@ export async function GET(request: NextRequest) {
     let query: any = {
       status: "approved",
       startDate: { $lte: date },
-      endDate: { $gte: date }
+      endDate: { $gte: date },
     }
 
     if (userId) {
@@ -45,21 +45,18 @@ export async function GET(request: NextRequest) {
           reviewedBy: leave.reviewedBy,
           reviewedDate: leave.reviewedDate,
           reviewComments: leave.reviewComments,
-          isActiveToday: true
+          isActiveToday: true,
         }
-      })
+      }),
     )
 
     return NextResponse.json({
       date,
       totalOnLeave: enrichedLeaves.length,
-      leaves: enrichedLeaves
+      leaves: enrichedLeaves,
     })
   } catch (error) {
     console.error("Get active leaves error:", error)
-    return NextResponse.json(
-      { error: "Failed to fetch active leaves" },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: "Failed to fetch active leaves" }, { status: 500 })
   }
 }

@@ -43,13 +43,15 @@ export async function GET(request: NextRequest) {
 
     const now = new Date()
     const requestedDate = searchParams.get("localDate")
-    const localDateInput = typeof requestedDate === "string" && /^\d{4}-\d{2}-\d{2}$/.test(requestedDate)
-      ? requestedDate
-      : formatLocalDateInput(now)
+    const localDateInput =
+      typeof requestedDate === "string" && /^\d{4}-\d{2}-\d{2}$/.test(requestedDate)
+        ? requestedDate
+        : formatLocalDateInput(now)
     const requestedMinutes = Number(searchParams.get("localTimeMinutes"))
-    const currentMinutes = Number.isFinite(requestedMinutes) && requestedMinutes >= 0 && requestedMinutes < 1440
-      ? requestedMinutes
-      : getLocalTimeMinutes(now)
+    const currentMinutes =
+      Number.isFinite(requestedMinutes) && requestedMinutes >= 0 && requestedMinutes < 1440
+        ? requestedMinutes
+        : getLocalTimeMinutes(now)
     let activeOpenRecord: any = null
     let todayHasScheduledShift = false
     let todayShiftHasEnded = false
@@ -89,7 +91,9 @@ export async function GET(request: NextRequest) {
             const previousWindow = getAttendanceWindowState({
               currentDateInput: localDateInput,
               currentMinutes,
-              graceMinutes: Number.isInteger(user.checkOutGraceMinutes) ? user.checkOutGraceMinutes : 0,
+              graceMinutes: Number.isInteger(user.checkOutGraceMinutes)
+                ? user.checkOutGraceMinutes
+                : 0,
               recordDateInput: previousDate,
               startMinutes,
               endMinutes,
@@ -199,8 +203,12 @@ export async function GET(request: NextRequest) {
             const windowState = getAttendanceWindowState({
               currentDateInput: localDateInput,
               currentMinutes,
-              graceMinutes: Number.isInteger(user.checkOutGraceMinutes) ? user.checkOutGraceMinutes : 0,
-              lateCheckoutGraceMinutes: Number.isInteger(user.checkOutGraceMinutes) ? user.checkOutGraceMinutes : 0,
+              graceMinutes: Number.isInteger(user.checkOutGraceMinutes)
+                ? user.checkOutGraceMinutes
+                : 0,
+              lateCheckoutGraceMinutes: Number.isInteger(user.checkOutGraceMinutes)
+                ? user.checkOutGraceMinutes
+                : 0,
               recordDateInput: openRecord.date,
               startMinutes: getTimeStringMinutes(recordShiftAssignment.shift.startTime),
               endMinutes: getTimeStringMinutes(recordShiftAssignment.shift.endTime),
@@ -224,10 +232,17 @@ export async function GET(request: NextRequest) {
                 },
               )
               if (!windowState.isCheckoutExpired) {
-                activeOpenRecord = { ...openRecord, status: "absent", absenceReason: "missing_checkout" }
+                activeOpenRecord = {
+                  ...openRecord,
+                  status: "absent",
+                  absenceReason: "missing_checkout",
+                }
               }
             } else {
-              if (openRecord.status === "absent" && openRecord.absenceReason === "missing_checkout") {
+              if (
+                openRecord.status === "absent" &&
+                openRecord.absenceReason === "missing_checkout"
+              ) {
                 await attendanceCollection.updateOne(
                   { _id: openRecord._id, companyId: session.companyId },
                   { $set: { status: "present", absenceReason: null, updatedAt: new Date() } },
@@ -250,14 +265,21 @@ export async function GET(request: NextRequest) {
         date: effectiveRecordDate,
       }))
 
-    if (todayRecord?.status === "absent" && todayRecord.autoAbsent && (!todayHasScheduledShift || !todayShiftHasEnded)) {
+    if (
+      todayRecord?.status === "absent" &&
+      todayRecord.autoAbsent &&
+      (!todayHasScheduledShift || !todayShiftHasEnded)
+    ) {
       await attendanceCollection.deleteOne({ _id: todayRecord._id, companyId: session.companyId })
       todayRecord = null
     }
 
     return NextResponse.json({
       isCheckedIn:
-        !!todayRecord && !!todayRecord.checkInTime && !todayRecord.checkOutTime && !todayRecord.checkoutWindowExpired,
+        !!todayRecord &&
+        !!todayRecord.checkInTime &&
+        !todayRecord.checkOutTime &&
+        !todayRecord.checkoutWindowExpired,
       record: todayRecord
         ? {
             id: todayRecord._id.toString(),

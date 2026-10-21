@@ -37,23 +37,40 @@ export async function POST(request: NextRequest) {
 
     const normalizedScheduleMode = normalizeEmployeeScheduleMode(scheduleMode)
     const normalizedCustomSchedule = normalizeEmployeeCustomSchedule(customSchedule)
-    const normalizedCustomScheduleMonth = typeof customScheduleMonth === "string" ? customScheduleMonth.trim() : ""
+    const normalizedCustomScheduleMonth =
+      typeof customScheduleMonth === "string" ? customScheduleMonth.trim() : ""
 
     if (normalizedScheduleMode === "company_default" && !shift) {
-      return NextResponse.json({ error: "Select a default shift for company-rule scheduling" }, { status: 400 })
+      return NextResponse.json(
+        { error: "Select a default shift for company-rule scheduling" },
+        { status: 400 },
+      )
     }
 
     if (normalizedScheduleMode === "custom_monthly") {
       if (!/^\d{4}-\d{2}$/.test(normalizedCustomScheduleMonth)) {
-        return NextResponse.json({ error: "Select a valid month for the custom schedule" }, { status: 400 })
+        return NextResponse.json(
+          { error: "Select a valid month for the custom schedule" },
+          { status: 400 },
+        )
       }
 
       if (!normalizedCustomSchedule.length) {
-        return NextResponse.json({ error: "Add at least one scheduled day for the custom month" }, { status: 400 })
+        return NextResponse.json(
+          { error: "Add at least one scheduled day for the custom month" },
+          { status: 400 },
+        )
       }
 
-      if (normalizedCustomSchedule.some((entry) => !isDateWithinMonth(entry.date, normalizedCustomScheduleMonth))) {
-        return NextResponse.json({ error: "Each custom shift must belong to the selected schedule month" }, { status: 400 })
+      if (
+        normalizedCustomSchedule.some(
+          (entry) => !isDateWithinMonth(entry.date, normalizedCustomScheduleMonth),
+        )
+      ) {
+        return NextResponse.json(
+          { error: "Each custom shift must belong to the selected schedule month" },
+          { status: 400 },
+        )
       }
     }
 
@@ -73,7 +90,10 @@ export async function POST(request: NextRequest) {
       parsedCheckOutGrace < 0
     ) {
       return NextResponse.json(
-        { error: "Check-in before, late relaxation, and normal check-out minutes must be whole non-negative numbers" },
+        {
+          error:
+            "Check-in before, late relaxation, and normal check-out minutes must be whole non-negative numbers",
+        },
         { status: 400 },
       )
     }
@@ -97,16 +117,24 @@ export async function POST(request: NextRequest) {
       }
 
       if (!assignedShift) {
-        return NextResponse.json({ error: "Selected shift was not found in this workspace" }, { status: 400 })
+        return NextResponse.json(
+          { error: "Selected shift was not found in this workspace" },
+          { status: 400 },
+        )
       }
     }
 
     if (normalizedScheduleMode === "custom_monthly") {
       let uniqueShiftIds: ObjectId[] = []
       try {
-        uniqueShiftIds = Array.from(new Set(normalizedCustomSchedule.map((entry) => entry.shiftId))).map((entry) => new ObjectId(entry))
+        uniqueShiftIds = Array.from(
+          new Set(normalizedCustomSchedule.map((entry) => entry.shiftId)),
+        ).map((entry) => new ObjectId(entry))
       } catch {
-        return NextResponse.json({ error: "One or more custom schedule shifts are invalid" }, { status: 400 })
+        return NextResponse.json(
+          { error: "One or more custom schedule shifts are invalid" },
+          { status: 400 },
+        )
       }
 
       const validShiftCount = await shiftsCollection.countDocuments({
@@ -115,13 +143,19 @@ export async function POST(request: NextRequest) {
       })
 
       if (validShiftCount !== uniqueShiftIds.length) {
-        return NextResponse.json({ error: "One or more custom schedule shifts are not available in this workspace" }, { status: 400 })
+        return NextResponse.json(
+          { error: "One or more custom schedule shifts are not available in this workspace" },
+          { status: 400 },
+        )
       }
     }
 
     const availableDepartments = getCompanyDepartments(company)
     if (!availableDepartments.includes(String(department))) {
-      return NextResponse.json({ error: "Choose a department from your company settings" }, { status: 400 })
+      return NextResponse.json(
+        { error: "Choose a department from your company settings" },
+        { status: 400 },
+      )
     }
 
     const emailLocalPart = buildEmailLocalPart(String(name))

@@ -39,7 +39,8 @@ export function buildSessionUser(
   allowEmployeePasswordChange?: boolean,
 ): SessionUser {
   const fallbackCompanyName = user.role === "super_admin" ? "Platform Control" : "Workspace"
-  const fallbackCompanyDomain = user.role === "super_admin" ? "hassan.com" : extractEmailDomain(user.email)
+  const fallbackCompanyDomain =
+    user.role === "super_admin" ? "hassan.com" : extractEmailDomain(user.email)
 
   return {
     id: user._id.toString(),
@@ -54,7 +55,8 @@ export function buildSessionUser(
     shiftId: user.shiftId,
     status: user.status,
     approvalStatus: user.approvalStatus,
-    allowEmployeePasswordChange: allowEmployeePasswordChange ?? user.allowEmployeePasswordChange ?? false,
+    allowEmployeePasswordChange:
+      allowEmployeePasswordChange ?? user.allowEmployeePasswordChange ?? false,
   }
 }
 
@@ -73,7 +75,16 @@ export function readRequestSession(request: NextRequest): RequestSession | null 
 
   const approvalStatus = request.headers.get("x-approval-status") as ApprovalStatus | null
 
-  return { userId, companyId, companyName, companyDomain, role, name, email, approvalStatus: approvalStatus || undefined }
+  return {
+    userId,
+    companyId,
+    companyName,
+    companyDomain,
+    role,
+    name,
+    email,
+    approvalStatus: approvalStatus || undefined,
+  }
 }
 
 export function unauthorized(message = "Authentication required") {

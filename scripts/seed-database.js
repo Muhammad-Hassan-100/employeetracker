@@ -1,4 +1,4 @@
-require('dotenv').config();
+require("dotenv").config()
 const { MongoClient } = require("mongodb")
 
 const MONGODB_URI = process.env.MONGODB_URI
@@ -156,7 +156,9 @@ async function seedDatabase() {
           const checkOutTime = new Date(date)
           checkOutTime.setHours(17, Math.floor(Math.random() * 30), 0) // 5:00-5:30 PM
 
-          const isLate = checkInTime.getHours() > 9 || (checkInTime.getHours() === 9 && checkInTime.getMinutes() > 15)
+          const isLate =
+            checkInTime.getHours() > 9 ||
+            (checkInTime.getHours() === 9 && checkInTime.getMinutes() > 15)
           const isEarly = checkOutTime.getHours() < 17
 
           const hoursWorked = (checkOutTime.getTime() - checkInTime.getTime()) / (1000 * 60 * 60)

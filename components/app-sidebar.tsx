@@ -77,7 +77,9 @@ export function AppSidebar({ user }: AppSidebarProps) {
     }
 
     syncCurrentUser()
-    return () => { isCancelled = true }
+    return () => {
+      isCancelled = true
+    }
   }, [user])
 
   const handleLogout = () => {
@@ -86,48 +88,64 @@ export function AppSidebar({ user }: AppSidebarProps) {
     router.push("/")
   }
 
-  const menuItems = currentUser.role === "super_admin"
-    ? [
-        { title: "Overview", url: "/dashboard", icon: Home },
-        { title: "Approval requests", url: "/dashboard/platform/requests", icon: ShieldCheck },
-        { title: "Companies", url: "/dashboard/platform/companies", icon: Building2 },
-        { title: "Employees", url: "/dashboard/platform/employees", icon: UsersRound },
-      ]
-    : currentUser.role === "admin"
+  const menuItems =
+    currentUser.role === "super_admin"
       ? [
           { title: "Overview", url: "/dashboard", icon: Home },
-          { title: "Add employee", url: "/dashboard/employees", icon: UserPlus2 },
-          { title: "All employees", url: "/dashboard/employee-list", icon: UsersRound },
-          { title: "Attendance monitor", url: "/dashboard/attendance-monitor", icon: ClipboardList },
-          { title: "Leave queue", url: "/dashboard/leaves", icon: CalendarClock },
-          { title: "Shifts & rules", url: "/dashboard/shifts", icon: CalendarClock },
-          { title: "Reports", url: "/dashboard/reports", icon: BarChart3 },
-          { title: "Settings", url: "/dashboard/settings", icon: Settings2 },
+          { title: "Approval requests", url: "/dashboard/platform/requests", icon: ShieldCheck },
+          { title: "Companies", url: "/dashboard/platform/companies", icon: Building2 },
+          { title: "Employees", url: "/dashboard/platform/employees", icon: UsersRound },
         ]
-      : [
-          { title: "Overview", url: "/dashboard", icon: Home },
-          { title: "Attendance", url: "/dashboard/attendance", icon: ClipboardList },
-          { title: "Leave requests", url: "/dashboard/leaves", icon: CalendarClock },
-          { title: "My history", url: "/dashboard/history", icon: BarChart3 },
-          ...(currentUser.allowEmployeePasswordChange
-            ? [{ title: "Settings", url: "/dashboard/settings", icon: Settings2 }]
-            : []),
-        ]
+      : currentUser.role === "admin"
+        ? [
+            { title: "Overview", url: "/dashboard", icon: Home },
+            { title: "Add employee", url: "/dashboard/employees", icon: UserPlus2 },
+            { title: "All employees", url: "/dashboard/employee-list", icon: UsersRound },
+            {
+              title: "Attendance monitor",
+              url: "/dashboard/attendance-monitor",
+              icon: ClipboardList,
+            },
+            { title: "Leave queue", url: "/dashboard/leaves", icon: CalendarClock },
+            { title: "Shifts & rules", url: "/dashboard/shifts", icon: CalendarClock },
+            { title: "Reports", url: "/dashboard/reports", icon: BarChart3 },
+            { title: "Settings", url: "/dashboard/settings", icon: Settings2 },
+          ]
+        : [
+            { title: "Overview", url: "/dashboard", icon: Home },
+            { title: "Attendance", url: "/dashboard/attendance", icon: ClipboardList },
+            { title: "Leave requests", url: "/dashboard/leaves", icon: CalendarClock },
+            { title: "My history", url: "/dashboard/history", icon: BarChart3 },
+            ...(currentUser.allowEmployeePasswordChange
+              ? [{ title: "Settings", url: "/dashboard/settings", icon: Settings2 }]
+              : []),
+          ]
 
-  const workspaceLabel = currentUser.role === "super_admin"
-    ? "Platform control"
-    : currentUser.role === "admin"
-      ? "Company workspace"
-      : "Employee workspace"
+  const workspaceLabel =
+    currentUser.role === "super_admin"
+      ? "Platform control"
+      : currentUser.role === "admin"
+        ? "Company workspace"
+        : "Employee workspace"
 
   return (
-    <Sidebar collapsible="icon" className="border-r border-[#e6e9e2] bg-[var(--dashboard-sidebar)] text-[var(--dashboard-ink-soft)]">
+    <Sidebar
+      collapsible="icon"
+      className="border-r border-[#e6e9e2] bg-[var(--dashboard-sidebar)] text-[var(--dashboard-ink-soft)]"
+    >
       <SidebarHeader className="border-b border-[var(--dashboard-border)] px-4 py-5 group-data-[collapsible=icon]:items-center group-data-[collapsible=icon]:px-2">
-        <Link href="/dashboard" className="flex items-center gap-3 rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--dashboard-brand)] group-data-[collapsible=icon]:justify-center">
+        <Link
+          href="/dashboard"
+          className="flex items-center gap-3 rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--dashboard-brand)] group-data-[collapsible=icon]:justify-center"
+        >
           <BrandMark size={40} className="group-data-[collapsible=icon]:size-8" />
           <span className="min-w-0 group-data-[collapsible=icon]:hidden">
-            <span className="block truncate text-sm font-semibold tracking-tight text-[#17251c]">EmployeeTracker</span>
-            <span className="mt-0.5 block truncate text-xs text-[var(--dashboard-subtle)]">{currentUser.companyName}</span>
+            <span className="block truncate text-sm font-semibold tracking-tight text-[#17251c]">
+              EmployeeTracker
+            </span>
+            <span className="mt-0.5 block truncate text-xs text-[var(--dashboard-subtle)]">
+              {currentUser.companyName}
+            </span>
           </span>
         </Link>
       </SidebarHeader>
@@ -162,11 +180,21 @@ export function AppSidebar({ user }: AppSidebarProps) {
       <SidebarFooter className="border-t border-[var(--dashboard-border)] p-3 group-data-[collapsible=icon]:items-center group-data-[collapsible=icon]:p-1">
         <div className="flex items-center gap-3 rounded-xl px-2 py-2 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0">
           <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-[var(--dashboard-green-soft)] text-xs font-semibold text-[var(--dashboard-green-text)] group-data-[collapsible=icon]:size-8">
-            {currentUser.name.split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]).join("").toUpperCase()}
+            {currentUser.name
+              .split(/\s+/)
+              .filter(Boolean)
+              .slice(0, 2)
+              .map((part) => part[0])
+              .join("")
+              .toUpperCase()}
           </span>
           <span className="min-w-0 flex-1 group-data-[collapsible=icon]:hidden">
-            <span className="block truncate text-xs font-semibold text-[#223128]">{currentUser.name}</span>
-            <span className="mt-0.5 block truncate text-[11px] text-[#849087]">{currentUser.role === "super_admin" ? "Super admin" : currentUser.role}</span>
+            <span className="block truncate text-xs font-semibold text-[#223128]">
+              {currentUser.name}
+            </span>
+            <span className="mt-0.5 block truncate text-[11px] text-[#849087]">
+              {currentUser.role === "super_admin" ? "Super admin" : currentUser.role}
+            </span>
           </span>
         </div>
         <Button

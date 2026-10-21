@@ -143,7 +143,9 @@ export default function SuperAdminEmployees() {
               <UsersRound className="h-5 w-5 text-violet-600" />
               All employees
             </CardTitle>
-            <CardDescription>Review employee data across all companies without opening attendance tools.</CardDescription>
+            <CardDescription>
+              Review employee data across all companies without opening attendance tools.
+            </CardDescription>
           </div>
           <Input
             value={search}
@@ -163,21 +165,46 @@ export default function SuperAdminEmployees() {
             <div key={employee.id} className="rounded-3xl border border-slate-200 p-5">
               <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_auto] xl:items-center">
                 <div className="flex items-start gap-4">
-                  <div aria-hidden="true" className="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-[var(--dashboard-green-soft)] text-sm font-semibold text-[var(--dashboard-green-text)]">
-                    {employee.name.split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]).join("").toUpperCase()}
+                  <div
+                    aria-hidden="true"
+                    className="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-[var(--dashboard-green-soft)] text-sm font-semibold text-[var(--dashboard-green-text)]"
+                  >
+                    {employee.name
+                      .split(/\s+/)
+                      .filter(Boolean)
+                      .slice(0, 2)
+                      .map((part) => part[0])
+                      .join("")
+                      .toUpperCase()}
                   </div>
                   <div className="min-w-0 space-y-1.5">
                     <div className="flex flex-wrap items-center gap-2">
-                      <h3 className="text-base font-semibold tracking-tight text-[var(--dashboard-ink)]">{employee.name}</h3>
-                      <Badge className={employee.status === "active" ? "bg-emerald-100 text-emerald-900" : "bg-slate-200 text-slate-700"}>
+                      <h3 className="text-base font-semibold tracking-tight text-[var(--dashboard-ink)]">
+                        {employee.name}
+                      </h3>
+                      <Badge
+                        className={
+                          employee.status === "active"
+                            ? "bg-emerald-100 text-emerald-900"
+                            : "bg-slate-200 text-slate-700"
+                        }
+                      >
                         {employee.status}
                       </Badge>
                     </div>
-                    <p className="truncate text-sm text-[var(--dashboard-muted)]">{employee.email}</p>
+                    <p className="truncate text-sm text-[var(--dashboard-muted)]">
+                      {employee.email}
+                    </p>
                     <div className="flex flex-wrap gap-2 pt-1 text-xs">
-                      <span className="rounded-lg bg-[#f5f6f3] px-2.5 py-1 font-medium text-[var(--dashboard-ink-soft)]">{employee.companyName}</span>
-                      <span className="rounded-lg bg-[#f5f6f3] px-2.5 py-1 text-[var(--dashboard-muted)]">{employee.department || "No department"}</span>
-                      <span className="rounded-lg bg-[#f5f6f3] px-2.5 py-1 text-[var(--dashboard-muted)]">{employee.position || "No position"}</span>
+                      <span className="rounded-lg bg-[#f5f6f3] px-2.5 py-1 font-medium text-[var(--dashboard-ink-soft)]">
+                        {employee.companyName}
+                      </span>
+                      <span className="rounded-lg bg-[#f5f6f3] px-2.5 py-1 text-[var(--dashboard-muted)]">
+                        {employee.department || "No department"}
+                      </span>
+                      <span className="rounded-lg bg-[#f5f6f3] px-2.5 py-1 text-[var(--dashboard-muted)]">
+                        {employee.position || "No position"}
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -188,7 +215,13 @@ export default function SuperAdminEmployees() {
                     disabled={busyKey === `status-${employee.id}`}
                     onClick={() => toggleEmployeeStatus(employee)}
                   >
-                    {busyKey === `status-${employee.id}` ? <Loader2 className="h-4 w-4 animate-spin" /> : employee.status === "active" ? "Deactivate" : "Activate"}
+                    {busyKey === `status-${employee.id}` ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : employee.status === "active" ? (
+                      "Deactivate"
+                    ) : (
+                      "Activate"
+                    )}
                   </Button>
                   <Button
                     variant="outline"
@@ -196,7 +229,11 @@ export default function SuperAdminEmployees() {
                     disabled={busyKey === `delete-${employee.id}`}
                     onClick={() => deleteEmployee(employee)}
                   >
-                    {busyKey === `delete-${employee.id}` ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="mr-2 h-4 w-4" />}
+                    {busyKey === `delete-${employee.id}` ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Trash2 className="mr-2 h-4 w-4" />
+                    )}
                     Delete
                   </Button>
                 </div>

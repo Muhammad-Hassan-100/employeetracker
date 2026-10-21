@@ -33,7 +33,12 @@ export function getRecentShiftDateInputs(dateInput: string) {
   return [getPreviousLocalDateInput(dateInput), dateInput]
 }
 
-export function resolveAttendanceRecordDate(dateInput: string, currentMinutes: number, startMinutes: number, endMinutes: number) {
+export function resolveAttendanceRecordDate(
+  dateInput: string,
+  currentMinutes: number,
+  startMinutes: number,
+  endMinutes: number,
+) {
   if (shiftSpansMidnight(startMinutes, endMinutes) && currentMinutes < endMinutes) {
     return getPreviousLocalDateInput(dateInput)
   }
@@ -134,18 +139,27 @@ export function getNoCheckInShiftStatus({
   return absoluteCurrentMinutes >= noShowCutoff ? "no_show" : "scheduled"
 }
 
-export function normalizeShiftTimeline(currentMinutes: number, startMinutes: number, endMinutes: number) {
+export function normalizeShiftTimeline(
+  currentMinutes: number,
+  startMinutes: number,
+  endMinutes: number,
+) {
   const isOvernight = shiftSpansMidnight(startMinutes, endMinutes)
 
   return {
     isOvernight,
-    adjustedCurrentMinutes: isOvernight && currentMinutes < startMinutes ? currentMinutes + 1440 : currentMinutes,
+    adjustedCurrentMinutes:
+      isOvernight && currentMinutes < startMinutes ? currentMinutes + 1440 : currentMinutes,
     adjustedEndMinutes: isOvernight ? endMinutes + 1440 : endMinutes,
   }
 }
 
 export function isBeforeShiftEnd(currentMinutes: number, startMinutes: number, endMinutes: number) {
-  const { adjustedCurrentMinutes, adjustedEndMinutes } = normalizeShiftTimeline(currentMinutes, startMinutes, endMinutes)
+  const { adjustedCurrentMinutes, adjustedEndMinutes } = normalizeShiftTimeline(
+    currentMinutes,
+    startMinutes,
+    endMinutes,
+  )
   return adjustedCurrentMinutes < adjustedEndMinutes
 }
 

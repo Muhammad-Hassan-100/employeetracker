@@ -13,10 +13,7 @@ export async function GET(request: NextRequest) {
     const companiesCollection = db.collection("companies")
     const usersCollection = db.collection("users")
 
-    const companies = await companiesCollection
-      .find({})
-      .sort({ createdAt: -1 })
-      .toArray()
+    const companies = await companiesCollection.find({}).sort({ createdAt: -1 }).toArray()
 
     const companyIds = companies.map((company) => company.companyId)
     const [admins, employees] = await Promise.all([

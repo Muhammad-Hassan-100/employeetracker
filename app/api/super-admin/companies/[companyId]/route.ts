@@ -76,14 +76,22 @@ export async function PUT(request: NextRequest, { params }: RouteContext) {
 
     const trimmedCompanyName = String(companyName || "").trim()
     const trimmedAdminName = String(adminName || "").trim()
-    const normalizedAdminEmail = String(adminEmail || "").toLowerCase().trim()
+    const normalizedAdminEmail = String(adminEmail || "")
+      .toLowerCase()
+      .trim()
 
     if (!trimmedCompanyName || !trimmedAdminName || !normalizedAdminEmail) {
-      return NextResponse.json({ error: "Company name, admin name, and admin email are required" }, { status: 400 })
+      return NextResponse.json(
+        { error: "Company name, admin name, and admin email are required" },
+        { status: 400 },
+      )
     }
 
     if (extractEmailDomain(normalizedAdminEmail) !== company.domain) {
-      return NextResponse.json({ error: `Admin email must stay on @${company.domain}` }, { status: 400 })
+      return NextResponse.json(
+        { error: `Admin email must stay on @${company.domain}` },
+        { status: 400 },
+      )
     }
 
     const duplicateAdmin = await usersCollection.findOne({

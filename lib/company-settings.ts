@@ -96,9 +96,7 @@ export function normalizeWorkingDays(value: unknown): number[] {
 
 export function normalizeDepartments(value: unknown): string[] {
   const source = Array.isArray(value) ? value : DEFAULT_DEPARTMENTS
-  const items = source
-    .map((entry) => String(entry).trim())
-    .filter(Boolean)
+  const items = source.map((entry) => String(entry).trim()).filter(Boolean)
 
   return Array.from(new Set(items))
 }

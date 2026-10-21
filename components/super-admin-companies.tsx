@@ -67,7 +67,11 @@ export default function SuperAdminCompanies() {
   }, [])
 
   const deleteCompany = async (companyId: string) => {
-    if (!window.confirm("Delete this company and all of its users, shifts, leaves, and attendance data?")) {
+    if (
+      !window.confirm(
+        "Delete this company and all of its users, shifts, leaves, and attendance data?",
+      )
+    ) {
       return
     }
 
@@ -106,62 +110,75 @@ export default function SuperAdminCompanies() {
     <Card className="rounded-3xl shadow-sm" data-dashboard-view="platform-companies">
       <CardHeader>
         <CardTitle>Company Workspaces</CardTitle>
-        <CardDescription>Select a company to view its details. Edit fields only open on the detail page.</CardDescription>
+        <CardDescription>
+          Select a company to view its details. Edit fields only open on the detail page.
+        </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         {companies.length === 0 ? (
           <div className="rounded-2xl border border-dashed border-[var(--dashboard-border)] bg-[#fbfcfa] px-6 py-12 text-center">
             <Building2 className="mx-auto mb-3 size-8 text-[var(--dashboard-green-text)]" />
             <p className="font-medium text-[var(--dashboard-ink)]">No company workspaces yet</p>
-            <p className="mt-1 text-sm text-[var(--dashboard-muted)]">New workspaces will appear here when an administrator signs up.</p>
+            <p className="mt-1 text-sm text-[var(--dashboard-muted)]">
+              New workspaces will appear here when an administrator signs up.
+            </p>
           </div>
-        ) : companies.map((company) => (
-          <div key={company.companyId} className="rounded-3xl border border-slate-200 p-5">
-            <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
-              <div className="space-y-2">
-                <div className="flex flex-wrap items-center gap-2">
-                  <Building2 className="size-9 rounded-xl bg-[var(--dashboard-green-soft)] p-2 text-[var(--dashboard-green-text)]" />
-                  <h3 className="text-base font-semibold tracking-tight text-[var(--dashboard-ink)]">{company.name}</h3>
-                  <Badge variant="outline">{company.domain}</Badge>
-                  <Badge
-                    className={
-                      company.approvalStatus === "approved"
-                        ? "bg-emerald-100 text-emerald-900"
-                        : company.approvalStatus === "rejected"
-                          ? "bg-rose-100 text-rose-900"
-                          : "bg-amber-100 text-amber-900"
-                    }
-                  >
-                    {company.approvalStatus}
-                  </Badge>
+        ) : (
+          companies.map((company) => (
+            <div key={company.companyId} className="rounded-3xl border border-slate-200 p-5">
+              <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+                <div className="space-y-2">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Building2 className="size-9 rounded-xl bg-[var(--dashboard-green-soft)] p-2 text-[var(--dashboard-green-text)]" />
+                    <h3 className="text-base font-semibold tracking-tight text-[var(--dashboard-ink)]">
+                      {company.name}
+                    </h3>
+                    <Badge variant="outline">{company.domain}</Badge>
+                    <Badge
+                      className={
+                        company.approvalStatus === "approved"
+                          ? "bg-emerald-100 text-emerald-900"
+                          : company.approvalStatus === "rejected"
+                            ? "bg-rose-100 text-rose-900"
+                            : "bg-amber-100 text-amber-900"
+                      }
+                    >
+                      {company.approvalStatus}
+                    </Badge>
+                  </div>
+                  <p className="text-sm text-slate-600">
+                    Admin: {company.admin?.name || "Not found"} •{" "}
+                    {company.admin?.email || "No email"}
+                  </p>
+                  <p className="text-sm text-slate-600">
+                    {company.employeeCount} employees • Created {formatDate(company.createdAt)}
+                  </p>
                 </div>
-                <p className="text-sm text-slate-600">
-                  Admin: {company.admin?.name || "Not found"} • {company.admin?.email || "No email"}
-                </p>
-                <p className="text-sm text-slate-600">
-                  {company.employeeCount} employees • Created {formatDate(company.createdAt)}
-                </p>
-              </div>
-              <div className="flex flex-wrap gap-3">
-                <Button asChild variant="outline" className="rounded-xl">
-                  <Link href={`/dashboard/platform/companies/${company.companyId}`}>
-                    <ExternalLink className="mr-2 h-4 w-4" />
-                    View Details
-                  </Link>
-                </Button>
-                <Button
-                  variant="outline"
-                  className="rounded-xl text-rose-700"
-                  disabled={busyCompanyId === company.companyId}
-                  onClick={() => deleteCompany(company.companyId)}
-                >
-                  {busyCompanyId === company.companyId ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="mr-2 h-4 w-4" />}
-                  Delete
-                </Button>
+                <div className="flex flex-wrap gap-3">
+                  <Button asChild variant="outline" className="rounded-xl">
+                    <Link href={`/dashboard/platform/companies/${company.companyId}`}>
+                      <ExternalLink className="mr-2 h-4 w-4" />
+                      View Details
+                    </Link>
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className="rounded-xl text-rose-700"
+                    disabled={busyCompanyId === company.companyId}
+                    onClick={() => deleteCompany(company.companyId)}
+                  >
+                    {busyCompanyId === company.companyId ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Trash2 className="mr-2 h-4 w-4" />
+                    )}
+                    Delete
+                  </Button>
+                </div>
               </div>
             </div>
-          </div>
-        ))}
+          ))
+        )}
       </CardContent>
     </Card>
   )

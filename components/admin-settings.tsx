@@ -44,7 +44,10 @@ export default function AdminSettings({ user, onUserUpdate }: AdminSettingsProps
           authFetch("/api/auth/profile"),
           authFetch("/api/company/branding"),
         ])
-        const [profileData, brandingData] = await Promise.all([profileResponse.json(), brandingResponse.json()])
+        const [profileData, brandingData] = await Promise.all([
+          profileResponse.json(),
+          brandingResponse.json(),
+        ])
 
         if (!profileResponse.ok) {
           toast.error("Unable to load settings", {
@@ -60,7 +63,10 @@ export default function AdminSettings({ user, onUserUpdate }: AdminSettingsProps
           companyName: profileData.profile.companyName,
           companyDomain: profileData.profile.companyDomain,
         })
-        if (brandingResponse.ok && /^#[0-9a-fA-F]{6}$/.test(brandingData.dashboardPrimaryColor || "")) {
+        if (
+          brandingResponse.ok &&
+          /^#[0-9a-fA-F]{6}$/.test(brandingData.dashboardPrimaryColor || "")
+        ) {
           setDashboardPrimaryColor(brandingData.dashboardPrimaryColor.toLowerCase())
         }
       } catch {
@@ -118,18 +124,24 @@ export default function AdminSettings({ user, onUserUpdate }: AdminSettingsProps
       })
       const data = await response.json()
       if (!response.ok) {
-        toast.error("Unable to update brand color", { description: data.error || "Please try again." })
+        toast.error("Unable to update brand color", {
+          description: data.error || "Please try again.",
+        })
         return
       }
 
       setDashboardPrimaryColor(data.dashboardPrimaryColor)
-      window.dispatchEvent(new CustomEvent("dashboard-brand-updated", { detail: data.dashboardPrimaryColor }))
+      window.dispatchEvent(
+        new CustomEvent("dashboard-brand-updated", { detail: data.dashboardPrimaryColor }),
+      )
       try {
         localStorage.setItem("dashboard-brand-updated", String(Date.now()))
       } catch {
         // The current dashboard already received the color through the custom event.
       }
-      toast.success("Brand color updated", { description: "The organization’s dashboards now use this color." })
+      toast.success("Brand color updated", {
+        description: "The organization’s dashboards now use this color.",
+      })
     } catch {
       toast.error("Unable to update brand color")
     } finally {
@@ -170,8 +182,13 @@ export default function AdminSettings({ user, onUserUpdate }: AdminSettingsProps
 
       <Card className="rounded-3xl shadow-sm">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-xl"><Palette className="size-5 text-[var(--dashboard-green-text)]" />Organization dashboard color</CardTitle>
-          <CardDescription>Choose the primary accent used by dashboards for your whole organization.</CardDescription>
+          <CardTitle className="flex items-center gap-2 text-xl">
+            <Palette className="size-5 text-[var(--dashboard-green-text)]" />
+            Organization dashboard color
+          </CardTitle>
+          <CardDescription>
+            Choose the primary accent used by dashboards for your whole organization.
+          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-5">
           <div className="flex flex-wrap items-center gap-3">
@@ -189,7 +206,12 @@ export default function AdminSettings({ user, onUserUpdate }: AdminSettingsProps
               </div>
             ))}
             <div className="flex items-center gap-3 rounded-xl border border-[var(--dashboard-border-soft)] px-3 py-2">
-              <label htmlFor="dashboard-primary-color" className="text-sm font-medium text-[var(--dashboard-ink-soft)]">Custom</label>
+              <label
+                htmlFor="dashboard-primary-color"
+                className="text-sm font-medium text-[var(--dashboard-ink-soft)]"
+              >
+                Custom
+              </label>
               <input
                 id="dashboard-primary-color"
                 type="color"
@@ -197,19 +219,39 @@ export default function AdminSettings({ user, onUserUpdate }: AdminSettingsProps
                 onChange={(event) => setDashboardPrimaryColor(event.target.value.toLowerCase())}
                 className="h-9 w-12 cursor-pointer rounded-md border-0 bg-transparent p-0"
               />
-              <span className="min-w-16 font-mono text-xs uppercase text-[var(--dashboard-muted)]">{dashboardPrimaryColor}</span>
+              <span className="min-w-16 font-mono text-xs uppercase text-[var(--dashboard-muted)]">
+                {dashboardPrimaryColor}
+              </span>
             </div>
           </div>
           <div className="flex flex-wrap items-center justify-between gap-4 rounded-2xl bg-[#f7f8f5] p-4">
             <div className="flex items-center gap-3">
-              <span className="size-9 rounded-xl shadow-sm" style={{ backgroundColor: dashboardPrimaryColor }} />
+              <span
+                className="size-9 rounded-xl shadow-sm"
+                style={{ backgroundColor: dashboardPrimaryColor }}
+              />
               <div>
-                <p className="text-sm font-semibold text-[var(--dashboard-ink)]">Brand color preview</p>
-                <p className="text-xs text-[var(--dashboard-muted)]">Used for primary actions, active navigation, and dashboard accents.</p>
+                <p className="text-sm font-semibold text-[var(--dashboard-ink)]">
+                  Brand color preview
+                </p>
+                <p className="text-xs text-[var(--dashboard-muted)]">
+                  Used for primary actions, active navigation, and dashboard accents.
+                </p>
               </div>
             </div>
-            <Button onClick={handleBrandSave} disabled={isSavingBrand} className="min-h-11 rounded-xl bg-[var(--dashboard-green)] px-5 text-white hover:bg-[var(--dashboard-green-hover)]">
-              {isSavingBrand ? <><Loader2 className="mr-2 size-4 animate-spin" />Saving...</> : "Save brand color"}
+            <Button
+              onClick={handleBrandSave}
+              disabled={isSavingBrand}
+              className="min-h-11 rounded-xl bg-[var(--dashboard-green)] px-5 text-white hover:bg-[var(--dashboard-green-hover)]"
+            >
+              {isSavingBrand ? (
+                <>
+                  <Loader2 className="mr-2 size-4 animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                "Save brand color"
+              )}
             </Button>
           </div>
         </CardContent>
@@ -223,11 +265,17 @@ export default function AdminSettings({ user, onUserUpdate }: AdminSettingsProps
         <CardContent className="grid gap-4 md:grid-cols-2">
           <div className="space-y-2">
             <Label>Full name</Label>
-            <Input value={form.name} onChange={(event) => setForm((prev) => ({ ...prev, name: event.target.value }))} />
+            <Input
+              value={form.name}
+              onChange={(event) => setForm((prev) => ({ ...prev, name: event.target.value }))}
+            />
           </div>
           <div className="space-y-2">
             <Label>Work email</Label>
-            <Input value={form.email} onChange={(event) => setForm((prev) => ({ ...prev, email: event.target.value }))} />
+            <Input
+              value={form.email}
+              onChange={(event) => setForm((prev) => ({ ...prev, email: event.target.value }))}
+            />
           </div>
           <div className="space-y-2">
             <Label>New password</Label>
@@ -245,7 +293,9 @@ export default function AdminSettings({ user, onUserUpdate }: AdminSettingsProps
           <div className="space-y-2 md:col-span-2">
             <Label>Company domain</Label>
             <Input value={form.companyDomain} readOnly />
-            <p className="text-xs text-slate-500">The company domain cannot be changed for security reasons.</p>
+            <p className="text-xs text-slate-500">
+              The company domain cannot be changed for security reasons.
+            </p>
           </div>
           <div className="md:col-span-2">
             <Button

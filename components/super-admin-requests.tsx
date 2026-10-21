@@ -70,7 +70,10 @@ export default function SuperAdminRequests() {
     [companies],
   )
 
-  const updateApproval = async (company: CompanyRecord, approvalStatus: "approved" | "rejected") => {
+  const updateApproval = async (
+    company: CompanyRecord,
+    approvalStatus: "approved" | "rejected",
+  ) => {
     setBusyKey(`${company.companyId}-${approvalStatus}`)
     try {
       const response = await authFetch(`/api/super-admin/companies/${company.companyId}`, {
@@ -127,7 +130,9 @@ export default function SuperAdminRequests() {
             <CheckCircle2 className="h-10 w-10 rounded-2xl bg-emerald-100 p-2 text-emerald-700" />
             <div>
               <p className="text-sm text-slate-500">Approved companies</p>
-              <p className="text-2xl font-bold">{companies.filter((company) => company.approvalStatus === "approved").length}</p>
+              <p className="text-2xl font-bold">
+                {companies.filter((company) => company.approvalStatus === "approved").length}
+              </p>
             </div>
           </CardContent>
         </Card>
@@ -136,7 +141,9 @@ export default function SuperAdminRequests() {
             <XCircle className="h-10 w-10 rounded-2xl bg-rose-100 p-2 text-rose-700" />
             <div>
               <p className="text-sm text-slate-500">Rejected companies</p>
-              <p className="text-2xl font-bold">{companies.filter((company) => company.approvalStatus === "rejected").length}</p>
+              <p className="text-2xl font-bold">
+                {companies.filter((company) => company.approvalStatus === "rejected").length}
+              </p>
             </div>
           </CardContent>
         </Card>
@@ -145,7 +152,9 @@ export default function SuperAdminRequests() {
       <Card className="rounded-3xl shadow-sm">
         <CardHeader>
           <CardTitle>Organization signup requests</CardTitle>
-          <CardDescription>Approve or reject requests before organization administrators can sign in.</CardDescription>
+          <CardDescription>
+            Approve or reject requests before organization administrators can sign in.
+          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           {pendingCompanies.length === 0 ? (
@@ -165,7 +174,8 @@ export default function SuperAdminRequests() {
                       @{company.domain} • Created {formatDate(company.createdAt)}
                     </p>
                     <p className="text-sm text-slate-700">
-                      Admin: {company.admin?.name || "Not found"} ({company.admin?.email || "No email"})
+                      Admin: {company.admin?.name || "Not found"} (
+                      {company.admin?.email || "No email"})
                     </p>
                   </div>
                   <div className="flex flex-wrap gap-3">
@@ -174,7 +184,11 @@ export default function SuperAdminRequests() {
                       disabled={busyKey === `${company.companyId}-approved`}
                       onClick={() => updateApproval(company, "approved")}
                     >
-                      {busyKey === `${company.companyId}-approved` ? <Loader2 className="h-4 w-4 animate-spin" /> : "Approve"}
+                      {busyKey === `${company.companyId}-approved` ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        "Approve"
+                      )}
                     </Button>
                     <Button
                       variant="destructive"
@@ -182,7 +196,11 @@ export default function SuperAdminRequests() {
                       disabled={busyKey === `${company.companyId}-rejected`}
                       onClick={() => updateApproval(company, "rejected")}
                     >
-                      {busyKey === `${company.companyId}-rejected` ? <Loader2 className="h-4 w-4 animate-spin" /> : "Reject"}
+                      {busyKey === `${company.companyId}-rejected` ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        "Reject"
+                      )}
                     </Button>
                   </div>
                 </div>

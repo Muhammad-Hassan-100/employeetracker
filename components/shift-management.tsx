@@ -9,7 +9,13 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
 import { authFetch } from "@/lib/client-session"
 import { ATTENDANCE_POLICY_OPTIONS, type AttendancePolicyMode } from "@/lib/attendance-policy"
@@ -83,7 +89,10 @@ export default function ShiftManagement() {
         authFetch("/api/shifts"),
         authFetch("/api/company/settings"),
       ])
-      const [shiftsData, settingsData] = await Promise.all([shiftsResponse.json(), settingsResponse.json()])
+      const [shiftsData, settingsData] = await Promise.all([
+        shiftsResponse.json(),
+        settingsResponse.json(),
+      ])
 
       if (!shiftsResponse.ok) {
         toast.error("Unable to load shifts", {
@@ -266,19 +275,28 @@ export default function ShiftManagement() {
               <Plus className="h-5 w-5 text-emerald-600" />
               {editingShiftId ? "Edit Shift" : "Create Shift"}
             </CardTitle>
-            <CardDescription>Keep shift timing accurate so attendance rules work correctly.</CardDescription>
+            <CardDescription>
+              Keep shift timing accurate so attendance rules work correctly.
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
                 <Label>Shift Name</Label>
-                <Input value={form.name} onChange={(event) => setForm((prev) => ({ ...prev, name: event.target.value }))} required />
+                <Input
+                  value={form.name}
+                  onChange={(event) => setForm((prev) => ({ ...prev, name: event.target.value }))}
+                  required
+                />
               </div>
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
                   <Label>Start Time</Label>
                   <div className="grid gap-2 sm:grid-cols-3">
-                    <Select value={getTimeParts(form.startTime).hour} onValueChange={(value) => handleTimePartChange("startTime", "hour", value)}>
+                    <Select
+                      value={getTimeParts(form.startTime).hour}
+                      onValueChange={(value) => handleTimePartChange("startTime", "hour", value)}
+                    >
                       <SelectTrigger>
                         <SelectValue placeholder="Hour" />
                       </SelectTrigger>
@@ -318,12 +336,17 @@ export default function ShiftManagement() {
                       </SelectContent>
                     </Select>
                   </div>
-                  <p className="text-xs text-slate-500">Selected time: {formatTimeString12Hour(form.startTime)}</p>
+                  <p className="text-xs text-slate-500">
+                    Selected time: {formatTimeString12Hour(form.startTime)}
+                  </p>
                 </div>
                 <div className="space-y-2">
                   <Label>End Time</Label>
                   <div className="grid gap-2 sm:grid-cols-3">
-                    <Select value={getTimeParts(form.endTime).hour} onValueChange={(value) => handleTimePartChange("endTime", "hour", value)}>
+                    <Select
+                      value={getTimeParts(form.endTime).hour}
+                      onValueChange={(value) => handleTimePartChange("endTime", "hour", value)}
+                    >
                       <SelectTrigger>
                         <SelectValue placeholder="Hour" />
                       </SelectTrigger>
@@ -363,7 +386,9 @@ export default function ShiftManagement() {
                       </SelectContent>
                     </Select>
                   </div>
-                  <p className="text-xs text-slate-500">Selected time: {formatTimeString12Hour(form.endTime)}</p>
+                  <p className="text-xs text-slate-500">
+                    Selected time: {formatTimeString12Hour(form.endTime)}
+                  </p>
                 </div>
               </div>
               <div className="space-y-2">
@@ -372,11 +397,17 @@ export default function ShiftManagement() {
                   rows={4}
                   placeholder="Optional notes about this shift..."
                   value={form.description}
-                  onChange={(event) => setForm((prev) => ({ ...prev, description: event.target.value }))}
+                  onChange={(event) =>
+                    setForm((prev) => ({ ...prev, description: event.target.value }))
+                  }
                 />
               </div>
               <div className="flex gap-3">
-                <Button type="submit" disabled={isSubmitting} className="rounded-2xl bg-slate-950 text-white hover:bg-slate-800">
+                <Button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="rounded-2xl bg-slate-950 text-white hover:bg-slate-800"
+                >
                   {isSubmitting ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -389,7 +420,12 @@ export default function ShiftManagement() {
                   )}
                 </Button>
                 {editingShiftId && (
-                  <Button type="button" variant="outline" className="rounded-2xl" onClick={resetForm}>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="rounded-2xl"
+                    onClick={resetForm}
+                  >
                     Cancel
                   </Button>
                 )}
@@ -404,7 +440,9 @@ export default function ShiftManagement() {
               <CalendarClock className="h-5 w-5 text-sky-600" />
               Saved shifts
             </CardTitle>
-            <CardDescription>All saved shifts appear here for quick review and editing.</CardDescription>
+            <CardDescription>
+              All saved shifts appear here for quick review and editing.
+            </CardDescription>
           </CardHeader>
           <CardContent className="grid gap-3 sm:grid-cols-2">
             {isLoading ? (
@@ -425,17 +463,33 @@ export default function ShiftManagement() {
                     <div className="min-w-0 flex-1">
                       <h3 className="font-semibold text-[var(--dashboard-ink)]">{shift.name}</h3>
                       <p className="mt-1 text-sm font-medium text-[var(--dashboard-green-text)]">
-                        {formatTimeString12Hour(shift.startTime)} <span className="px-1 text-[var(--dashboard-subtle)]">to</span> {formatTimeString12Hour(shift.endTime)}
+                        {formatTimeString12Hour(shift.startTime)}{" "}
+                        <span className="px-1 text-[var(--dashboard-subtle)]">to</span>{" "}
+                        {formatTimeString12Hour(shift.endTime)}
                       </p>
-                      {shift.description && <p className="mt-2 line-clamp-2 text-xs leading-5 text-[var(--dashboard-muted)]">{shift.description}</p>}
+                      {shift.description && (
+                        <p className="mt-2 line-clamp-2 text-xs leading-5 text-[var(--dashboard-muted)]">
+                          {shift.description}
+                        </p>
+                      )}
                     </div>
                   </div>
                   <div className="mt-4 flex gap-2 border-t border-[var(--dashboard-border-soft)] pt-3">
-                    <Button variant="outline" className="flex-1 rounded-xl" onClick={() => handleEdit(shift)}>
-                      <Pencil className="mr-2 size-4" />Edit
+                    <Button
+                      variant="outline"
+                      className="flex-1 rounded-xl"
+                      onClick={() => handleEdit(shift)}
+                    >
+                      <Pencil className="mr-2 size-4" />
+                      Edit
                     </Button>
-                    <Button variant="outline" className="flex-1 rounded-xl text-rose-700" onClick={() => handleDelete(shift.id)}>
-                      <Trash2 className="mr-2 size-4" />Delete
+                    <Button
+                      variant="outline"
+                      className="flex-1 rounded-xl text-rose-700"
+                      onClick={() => handleDelete(shift.id)}
+                    >
+                      <Trash2 className="mr-2 size-4" />
+                      Delete
                     </Button>
                   </div>
                 </div>
@@ -449,7 +503,8 @@ export default function ShiftManagement() {
         <CardHeader>
           <CardTitle className="text-2xl">Work Rules and Attendance Access</CardTitle>
           <CardDescription>
-            Choose weekly working days, define department options, and control where employees can check in and check out.
+            Choose weekly working days, define department options, and control where employees can
+            check in and check out.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
@@ -481,10 +536,15 @@ export default function ShiftManagement() {
             <Label>Departments</Label>
             <Input
               value={companyRules.departmentsInput}
-              onChange={(event) => setCompanyRules((prev) => ({ ...prev, departmentsInput: event.target.value }))}
+              onChange={(event) =>
+                setCompanyRules((prev) => ({ ...prev, departmentsInput: event.target.value }))
+              }
               placeholder="HR, Finance, Sales, Engineering"
             />
-            <p className="text-xs text-slate-500">Enter department names separated by commas. These options will appear in employee forms.</p>
+            <p className="text-xs text-slate-500">
+              Enter department names separated by commas. These options will appear in employee
+              forms.
+            </p>
           </div>
 
           <div className="space-y-3">
@@ -497,7 +557,9 @@ export default function ShiftManagement() {
                   <button
                     key={option.value}
                     type="button"
-                    onClick={() => setCompanyRules((prev) => ({ ...prev, attendancePolicyMode: option.value }))}
+                    onClick={() =>
+                      setCompanyRules((prev) => ({ ...prev, attendancePolicyMode: option.value }))
+                    }
                     className={`rounded-2xl border px-4 py-4 text-left transition ${
                       selected
                         ? "border-sky-300 bg-sky-50 text-sky-950"
@@ -518,11 +580,14 @@ export default function ShiftManagement() {
               <Textarea
                 rows={4}
                 value={companyRules.allowedIPsInput}
-                onChange={(event) => setCompanyRules((prev) => ({ ...prev, allowedIPsInput: event.target.value }))}
+                onChange={(event) =>
+                  setCompanyRules((prev) => ({ ...prev, allowedIPsInput: event.target.value }))
+                }
                 placeholder="39.60.10.15, 39.60.10.16"
               />
               <p className="text-xs text-slate-500">
-                Add one or more office public IP addresses. Separate them with commas or line breaks.
+                Add one or more office public IP addresses. Separate them with commas or line
+                breaks.
               </p>
             </div>
           )}
@@ -547,7 +612,8 @@ export default function ShiftManagement() {
               </SelectContent>
             </Select>
             <p className="text-xs text-slate-500">
-              Admin creates the initial employee password. Employees can only update it later if this permission is enabled.
+              Admin creates the initial employee password. Employees can only update it later if
+              this permission is enabled.
             </p>
           </div>
 

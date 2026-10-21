@@ -5,19 +5,36 @@ import { useParams, useRouter } from "next/navigation"
 import { Eye, EyeOff, Loader2, Mail, Pencil, Save, UserRound, X } from "lucide-react"
 import { toast } from "sonner"
 import { Badge } from "@/components/ui/badge"
-import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from "@/components/ui/breadcrumb"
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import MonthlyScheduleEditor from "@/components/monthly-schedule-editor"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { Separator } from "@/components/ui/separator"
 import { SidebarTrigger } from "@/components/ui/sidebar"
 import { authFetch, getStoredUser } from "@/lib/client-session"
 import type { SessionUser } from "@/lib/session"
 import { formatTimeString12Hour } from "@/lib/time"
-import { formatDurationMinutes, formatLocalDateInput, getLocalTimeMinutes } from "@/lib/attendance-time"
+import {
+  formatDurationMinutes,
+  formatLocalDateInput,
+  getLocalTimeMinutes,
+} from "@/lib/attendance-time"
 
 interface Employee {
   id: string
@@ -139,7 +156,9 @@ function normalizeAttendanceRecords(value: unknown): AttendanceRecord[] {
       breakTaken: Boolean(entry.breakTaken),
       breakStartTime: entry.breakStartTime ? String(entry.breakStartTime) : null,
       breakEndTime: entry.breakEndTime ? String(entry.breakEndTime) : null,
-      breakDurationMinutes: Number.isFinite(Number(entry.breakDurationMinutes)) ? Number(entry.breakDurationMinutes) : 0,
+      breakDurationMinutes: Number.isFinite(Number(entry.breakDurationMinutes))
+        ? Number(entry.breakDurationMinutes)
+        : 0,
       isLate: Boolean(entry.isLate),
       isEarly: Boolean(entry.isEarly),
       needsCheckoutReview: Boolean(entry.needsCheckoutReview),
@@ -205,7 +224,9 @@ export default function EmployeeDetailPage() {
 
       const [employeeRes, attendanceRes, shiftsRes, settingsRes] = await Promise.all([
         authFetch(`/api/employees/${employeeId}`),
-        authFetch(`/api/attendance/history?userId=${employeeId}&nowDate=${formatLocalDateInput()}&nowMinutes=${getLocalTimeMinutes()}`),
+        authFetch(
+          `/api/attendance/history?userId=${employeeId}&nowDate=${formatLocalDateInput()}&nowMinutes=${getLocalTimeMinutes()}`,
+        ),
         authFetch("/api/shifts"),
         authFetch("/api/company/settings"),
       ])
@@ -218,7 +239,9 @@ export default function EmployeeDetailPage() {
       ])
 
       if (!employeeRes.ok) {
-        toast.error("Unable to load employee", { description: employeeData.error || "Please go back and try again." })
+        toast.error("Unable to load employee", {
+          description: employeeData.error || "Please go back and try again.",
+        })
         router.push("/dashboard/employee-list")
         return
       }
@@ -240,7 +263,11 @@ export default function EmployeeDetailPage() {
       }
       if (settingsRes.ok) {
         setDepartments(normalizeDepartments(settingsData?.settings?.departments))
-        setWorkingDays(Array.isArray(settingsData?.settings?.workingDays) ? settingsData.settings.workingDays : [1, 2, 3, 4, 5])
+        setWorkingDays(
+          Array.isArray(settingsData?.settings?.workingDays)
+            ? settingsData.settings.workingDays
+            : [1, 2, 3, 4, 5],
+        )
       }
     } catch {
       toast.error("Unable to load employee detail", {
@@ -325,7 +352,11 @@ export default function EmployeeDetailPage() {
             </BreadcrumbItem>
             <BreadcrumbSeparator className="hidden md:block" />
             <BreadcrumbItem className="hidden md:block">
-              <BreadcrumbLink href={pageMode === "edit" ? "/dashboard/employee-list" : "/dashboard/attendance-monitor"}>
+              <BreadcrumbLink
+                href={
+                  pageMode === "edit" ? "/dashboard/employee-list" : "/dashboard/attendance-monitor"
+                }
+              >
                 {pageMode === "edit" ? "All employees" : "Attendance monitor"}
               </BreadcrumbLink>
             </BreadcrumbItem>
@@ -354,17 +385,32 @@ export default function EmployeeDetailPage() {
               {pageMode === "edit" ? (
                 <>
                   {!isEditing ? (
-                    <Button className="rounded-2xl bg-slate-950 text-white hover:bg-slate-800" onClick={() => setIsEditing(true)}>
+                    <Button
+                      className="rounded-2xl bg-slate-950 text-white hover:bg-slate-800"
+                      onClick={() => setIsEditing(true)}
+                    >
                       <Pencil className="mr-2 h-4 w-4" />
                       Edit Employee
                     </Button>
                   ) : (
                     <>
-                      <Button className="rounded-2xl bg-emerald-600 text-white hover:bg-emerald-700" onClick={handleSave} disabled={isSaving}>
-                        {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+                      <Button
+                        className="rounded-2xl bg-emerald-600 text-white hover:bg-emerald-700"
+                        onClick={handleSave}
+                        disabled={isSaving}
+                      >
+                        {isSaving ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <Save className="mr-2 h-4 w-4" />
+                        )}
                         Save
                       </Button>
-                      <Button variant="outline" className="rounded-2xl" onClick={() => setIsEditing(false)}>
+                      <Button
+                        variant="outline"
+                        className="rounded-2xl"
+                        onClick={() => setIsEditing(false)}
+                      >
                         <X className="mr-2 h-4 w-4" />
                         Cancel
                       </Button>
@@ -372,7 +418,11 @@ export default function EmployeeDetailPage() {
                   )}
                 </>
               ) : (
-                <Button variant="outline" className="rounded-2xl" onClick={() => router.push("/dashboard/attendance-monitor")}>
+                <Button
+                  variant="outline"
+                  className="rounded-2xl"
+                  onClick={() => router.push("/dashboard/attendance-monitor")}
+                >
                   <X className="mr-2 h-4 w-4" />
                   Back to Monitor
                 </Button>
@@ -383,305 +433,405 @@ export default function EmployeeDetailPage() {
           <div className={pageMode === "edit" ? "grid gap-6" : "grid gap-6"}>
             {pageMode === "edit" && (
               <Card className="rounded-3xl shadow-sm">
-              <CardHeader>
-                <CardTitle>Profile information</CardTitle>
-              </CardHeader>
-              <CardContent className="grid gap-4 md:grid-cols-2">
-                <div className="space-y-2">
-                  <Label>Full name</Label>
-                  {isEditing ? (
-                    <Input value={editForm.name || ""} onChange={(event) => setEditForm((prev) => ({ ...prev, name: event.target.value }))} />
-                  ) : (
-                    <div className="rounded-2xl bg-slate-50 px-4 py-3 font-medium">{employee.name}</div>
-                  )}
-                </div>
-                <div className="space-y-2">
-                  <Label>Email</Label>
-                  {isEditing ? (
-                    <Input
-                      type="email"
-                      value={editForm.email || ""}
-                      onChange={(event) => setEditForm((prev) => ({ ...prev, email: event.target.value }))}
-                    />
-                  ) : (
-                    <div className="flex items-center gap-2 rounded-2xl bg-slate-50 px-4 py-3">
-                      <Mail className="h-4 w-4 text-slate-500" />
-                      {employee.email}
-                    </div>
-                  )}
-                </div>
-                <div className="space-y-2">
-                  <Label>Password</Label>
-                  <div className="flex gap-2">
-                    <Input
-                      type={showPassword ? "text" : "password"}
-                      value={isEditing ? editForm.password || "" : employee.password || ""}
-                      readOnly={!isEditing}
-                      onChange={(event) => setEditForm((prev) => ({ ...prev, password: event.target.value }))}
-                    />
-                    <Button type="button" variant="outline" className="rounded-2xl" onClick={() => setShowPassword((prev) => !prev)}>
-                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                    </Button>
+                <CardHeader>
+                  <CardTitle>Profile information</CardTitle>
+                </CardHeader>
+                <CardContent className="grid gap-4 md:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label>Full name</Label>
+                    {isEditing ? (
+                      <Input
+                        value={editForm.name || ""}
+                        onChange={(event) =>
+                          setEditForm((prev) => ({ ...prev, name: event.target.value }))
+                        }
+                      />
+                    ) : (
+                      <div className="rounded-2xl bg-slate-50 px-4 py-3 font-medium">
+                        {employee.name}
+                      </div>
+                    )}
                   </div>
-                </div>
-                <div className="space-y-2">
-                  <Label>Department</Label>
-                  {isEditing ? (
-                    <Select value={editForm.department || ""} onValueChange={(value) => setEditForm((prev) => ({ ...prev, department: value }))}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Choose department" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {departments.map((department) => (
-                          <SelectItem key={department} value={department}>
-                            {department}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  ) : (
-                    <div className="rounded-2xl bg-slate-50 px-4 py-3">{employee.department}</div>
-                  )}
-                </div>
-                <div className="space-y-2">
-                  <Label>Position</Label>
-                  {isEditing ? (
-                    <Input value={editForm.position || ""} onChange={(event) => setEditForm((prev) => ({ ...prev, position: event.target.value }))} />
-                  ) : (
-                    <div className="rounded-2xl bg-slate-50 px-4 py-3">{employee.position}</div>
-                  )}
-                </div>
-                <div className="space-y-2">
-                  <Label>Schedule Type</Label>
-                  {isEditing ? (
-                    <Select
-                      value={editForm.scheduleMode || "company_default"}
-                      onValueChange={(value) =>
-                        setEditForm((prev) => ({
-                          ...prev,
-                          scheduleMode: value as Employee["scheduleMode"],
-                          customSchedule:
-                            value === "company_default" ? [] : Array.isArray(prev.customSchedule) ? prev.customSchedule : [],
-                        }))
-                      }
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Choose schedule type" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="company_default">Use company working days</SelectItem>
-                        <SelectItem value="custom_monthly">Use custom monthly schedule</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  ) : (
-                    <div className="rounded-2xl bg-slate-50 px-4 py-3">
-                      {employee.scheduleMode === "custom_monthly" ? "Custom monthly schedule" : "Company working days"}
-                    </div>
-                  )}
-                </div>
-                <div className="space-y-2">
-                  <Label>Default Shift</Label>
-                  {isEditing ? (
-                    <Select
-                      value={editForm.shift || ""}
-                      onValueChange={(value) => setEditForm((prev) => ({ ...prev, shift: value }))}
-                      disabled={editForm.scheduleMode === "custom_monthly"}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Choose shift" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {shifts.map((shift) => (
-                          <SelectItem key={shift.id} value={shift.id}>
-                            {shift.name} ({formatTimeString12Hour(shift.startTime)} to {formatTimeString12Hour(shift.endTime)})
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  ) : (
-                    <div className="rounded-2xl bg-slate-50 px-4 py-3">
-                      {employee.scheduleMode === "custom_monthly"
-                        ? "Used only when the employee follows company working days"
-                        : shifts.find((shift) => shift.id === employee.shift)?.name || employee.shift || "Unassigned"}
-                    </div>
-                  )}
-                </div>
-                <div className="space-y-2">
-                  <Label>Status</Label>
-                  <div className="rounded-2xl bg-slate-50 px-4 py-3">{employee.status}</div>
-                </div>
-                <div className="space-y-2">
-                  <Label>Early check-in window (minutes)</Label>
-                  {isEditing ? (
-                    <Input
-                      type="number"
-                      min={0}
-                      step={1}
-                      value={String(editForm.checkInBeforeMinutes ?? 0)}
-                      onChange={(event) =>
-                        setEditForm((prev) => ({ ...prev, checkInBeforeMinutes: Number(event.target.value) }))
-                      }
-                    />
-                  ) : (
-                    <div className="rounded-2xl bg-slate-50 px-4 py-3">{employee.checkInBeforeMinutes}</div>
-                  )}
-                </div>
-                <div className="space-y-2">
-                  <Label>Late arrival grace period (minutes)</Label>
-                  {isEditing ? (
-                    <Input
-                      type="number"
-                      min={0}
-                      step={1}
-                      value={String(editForm.lateGraceMinutes ?? 0)}
-                      onChange={(event) =>
-                        setEditForm((prev) => ({ ...prev, lateGraceMinutes: Number(event.target.value) }))
-                      }
-                    />
-                  ) : (
-                    <div className="rounded-2xl bg-slate-50 px-4 py-3">{employee.lateGraceMinutes}</div>
-                  )}
-                </div>
-                <div className="space-y-2">
-                  <Label>Check-out deadline after shift (minutes)</Label>
-                  {isEditing ? (
-                    <Input
-                      type="number"
-                      min={0}
-                      step={1}
-                      value={String(editForm.checkOutGraceMinutes ?? 0)}
-                      onChange={(event) =>
-                        setEditForm((prev) => ({ ...prev, checkOutGraceMinutes: Number(event.target.value) }))
-                      }
-                    />
-                  ) : (
-                    <div className="rounded-2xl bg-slate-50 px-4 py-3">{employee.checkOutGraceMinutes}</div>
-                  )}
-                  <p className="text-xs leading-5 text-slate-500">
-                    If the employee has not checked out by this deadline after the shift ends, their status changes to absent and check-out is closed.
-                  </p>
-                </div>
-                <div className="space-y-2">
-                  <Label>Joined On</Label>
-                  <div className="rounded-2xl bg-slate-50 px-4 py-3">{formatDate(employee.joinDate)}</div>
-                </div>
-                {(isEditing ? editForm.scheduleMode : employee.scheduleMode) === "custom_monthly" && (
-                  <div className="md:col-span-2">
-                    <MonthlyScheduleEditor
-                      month={String(editForm.customScheduleMonth || employee.customScheduleMonth || "")}
-                      onMonthChange={(value) =>
-                        setEditForm((prev) => ({
-                          ...prev,
-                          customScheduleMonth: value,
-                          customSchedule: [],
-                        }))
-                      }
-                      schedule={Array.isArray(editForm.customSchedule) ? editForm.customSchedule : employee.customSchedule}
-                      onScheduleChange={(value) => setEditForm((prev) => ({ ...prev, customSchedule: value }))}
-                      shifts={shifts}
-                      workingDays={workingDays}
-                      disabled={!isEditing}
-                    />
+                  <div className="space-y-2">
+                    <Label>Email</Label>
+                    {isEditing ? (
+                      <Input
+                        type="email"
+                        value={editForm.email || ""}
+                        onChange={(event) =>
+                          setEditForm((prev) => ({ ...prev, email: event.target.value }))
+                        }
+                      />
+                    ) : (
+                      <div className="flex items-center gap-2 rounded-2xl bg-slate-50 px-4 py-3">
+                        <Mail className="h-4 w-4 text-slate-500" />
+                        {employee.email}
+                      </div>
+                    )}
                   </div>
-                )}
-              </CardContent>
+                  <div className="space-y-2">
+                    <Label>Password</Label>
+                    <div className="flex gap-2">
+                      <Input
+                        type={showPassword ? "text" : "password"}
+                        value={isEditing ? editForm.password || "" : employee.password || ""}
+                        readOnly={!isEditing}
+                        onChange={(event) =>
+                          setEditForm((prev) => ({ ...prev, password: event.target.value }))
+                        }
+                      />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="rounded-2xl"
+                        onClick={() => setShowPassword((prev) => !prev)}
+                      >
+                        {showPassword ? (
+                          <EyeOff className="h-4 w-4" />
+                        ) : (
+                          <Eye className="h-4 w-4" />
+                        )}
+                      </Button>
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Department</Label>
+                    {isEditing ? (
+                      <Select
+                        value={editForm.department || ""}
+                        onValueChange={(value) =>
+                          setEditForm((prev) => ({ ...prev, department: value }))
+                        }
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Choose department" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {departments.map((department) => (
+                            <SelectItem key={department} value={department}>
+                              {department}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    ) : (
+                      <div className="rounded-2xl bg-slate-50 px-4 py-3">{employee.department}</div>
+                    )}
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Position</Label>
+                    {isEditing ? (
+                      <Input
+                        value={editForm.position || ""}
+                        onChange={(event) =>
+                          setEditForm((prev) => ({ ...prev, position: event.target.value }))
+                        }
+                      />
+                    ) : (
+                      <div className="rounded-2xl bg-slate-50 px-4 py-3">{employee.position}</div>
+                    )}
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Schedule Type</Label>
+                    {isEditing ? (
+                      <Select
+                        value={editForm.scheduleMode || "company_default"}
+                        onValueChange={(value) =>
+                          setEditForm((prev) => ({
+                            ...prev,
+                            scheduleMode: value as Employee["scheduleMode"],
+                            customSchedule:
+                              value === "company_default"
+                                ? []
+                                : Array.isArray(prev.customSchedule)
+                                  ? prev.customSchedule
+                                  : [],
+                          }))
+                        }
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Choose schedule type" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="company_default">Use company working days</SelectItem>
+                          <SelectItem value="custom_monthly">
+                            Use custom monthly schedule
+                          </SelectItem>
+                        </SelectContent>
+                      </Select>
+                    ) : (
+                      <div className="rounded-2xl bg-slate-50 px-4 py-3">
+                        {employee.scheduleMode === "custom_monthly"
+                          ? "Custom monthly schedule"
+                          : "Company working days"}
+                      </div>
+                    )}
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Default Shift</Label>
+                    {isEditing ? (
+                      <Select
+                        value={editForm.shift || ""}
+                        onValueChange={(value) =>
+                          setEditForm((prev) => ({ ...prev, shift: value }))
+                        }
+                        disabled={editForm.scheduleMode === "custom_monthly"}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Choose shift" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {shifts.map((shift) => (
+                            <SelectItem key={shift.id} value={shift.id}>
+                              {shift.name} ({formatTimeString12Hour(shift.startTime)} to{" "}
+                              {formatTimeString12Hour(shift.endTime)})
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    ) : (
+                      <div className="rounded-2xl bg-slate-50 px-4 py-3">
+                        {employee.scheduleMode === "custom_monthly"
+                          ? "Used only when the employee follows company working days"
+                          : shifts.find((shift) => shift.id === employee.shift)?.name ||
+                            employee.shift ||
+                            "Unassigned"}
+                      </div>
+                    )}
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Status</Label>
+                    <div className="rounded-2xl bg-slate-50 px-4 py-3">{employee.status}</div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Early check-in window (minutes)</Label>
+                    {isEditing ? (
+                      <Input
+                        type="number"
+                        min={0}
+                        step={1}
+                        value={String(editForm.checkInBeforeMinutes ?? 0)}
+                        onChange={(event) =>
+                          setEditForm((prev) => ({
+                            ...prev,
+                            checkInBeforeMinutes: Number(event.target.value),
+                          }))
+                        }
+                      />
+                    ) : (
+                      <div className="rounded-2xl bg-slate-50 px-4 py-3">
+                        {employee.checkInBeforeMinutes}
+                      </div>
+                    )}
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Late arrival grace period (minutes)</Label>
+                    {isEditing ? (
+                      <Input
+                        type="number"
+                        min={0}
+                        step={1}
+                        value={String(editForm.lateGraceMinutes ?? 0)}
+                        onChange={(event) =>
+                          setEditForm((prev) => ({
+                            ...prev,
+                            lateGraceMinutes: Number(event.target.value),
+                          }))
+                        }
+                      />
+                    ) : (
+                      <div className="rounded-2xl bg-slate-50 px-4 py-3">
+                        {employee.lateGraceMinutes}
+                      </div>
+                    )}
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Check-out deadline after shift (minutes)</Label>
+                    {isEditing ? (
+                      <Input
+                        type="number"
+                        min={0}
+                        step={1}
+                        value={String(editForm.checkOutGraceMinutes ?? 0)}
+                        onChange={(event) =>
+                          setEditForm((prev) => ({
+                            ...prev,
+                            checkOutGraceMinutes: Number(event.target.value),
+                          }))
+                        }
+                      />
+                    ) : (
+                      <div className="rounded-2xl bg-slate-50 px-4 py-3">
+                        {employee.checkOutGraceMinutes}
+                      </div>
+                    )}
+                    <p className="text-xs leading-5 text-slate-500">
+                      If the employee has not checked out by this deadline after the shift ends,
+                      their status changes to absent and check-out is closed.
+                    </p>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Joined On</Label>
+                    <div className="rounded-2xl bg-slate-50 px-4 py-3">
+                      {formatDate(employee.joinDate)}
+                    </div>
+                  </div>
+                  {(isEditing ? editForm.scheduleMode : employee.scheduleMode) ===
+                    "custom_monthly" && (
+                    <div className="md:col-span-2">
+                      <MonthlyScheduleEditor
+                        month={String(
+                          editForm.customScheduleMonth || employee.customScheduleMonth || "",
+                        )}
+                        onMonthChange={(value) =>
+                          setEditForm((prev) => ({
+                            ...prev,
+                            customScheduleMonth: value,
+                            customSchedule: [],
+                          }))
+                        }
+                        schedule={
+                          Array.isArray(editForm.customSchedule)
+                            ? editForm.customSchedule
+                            : employee.customSchedule
+                        }
+                        onScheduleChange={(value) =>
+                          setEditForm((prev) => ({ ...prev, customSchedule: value }))
+                        }
+                        shifts={shifts}
+                        workingDays={workingDays}
+                        disabled={!isEditing}
+                      />
+                    </div>
+                  )}
+                </CardContent>
               </Card>
             )}
 
             {pageMode === "view" && (
               <Card className="rounded-3xl shadow-sm">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <UserRound className="h-5 w-5 text-sky-600" />
-                  Attendance Timeline
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-                  <p className="text-sm text-slate-500">Filter by an exact date to review today's, yesterday's, or any earlier attendance record.</p>
-                  <div className="flex gap-2">
-                    <Input
-                      type="date"
-                      value={attendanceDateFilter}
-                      onChange={(event) => setAttendanceDateFilter(event.target.value)}
-                      className="w-full md:w-auto"
-                    />
-                    <Button variant="outline" className="rounded-2xl" onClick={() => setAttendanceDateFilter("")}>
-                      Clear
-                    </Button>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <UserRound className="h-5 w-5 text-sky-600" />
+                    Attendance Timeline
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                    <p className="text-sm text-slate-500">
+                      Filter by an exact date to review today's, yesterday's, or any earlier
+                      attendance record.
+                    </p>
+                    <div className="flex gap-2">
+                      <Input
+                        type="date"
+                        value={attendanceDateFilter}
+                        onChange={(event) => setAttendanceDateFilter(event.target.value)}
+                        className="w-full md:w-auto"
+                      />
+                      <Button
+                        variant="outline"
+                        className="rounded-2xl"
+                        onClick={() => setAttendanceDateFilter("")}
+                      >
+                        Clear
+                      </Button>
+                    </div>
                   </div>
-                </div>
-                {filteredAttendance.length === 0 ? (
-                  <div className="rounded-3xl border border-dashed border-slate-300 p-8 text-center text-slate-500">
-                    No attendance found for the selected filter.
-                  </div>
-                ) : (
-                  filteredAttendance.map((record) => (
-                    <div key={record.id} className="rounded-3xl border border-slate-200 p-4">
-                      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-                        <div>
-                          <p className="font-semibold text-slate-950">{formatDate(record.date)}</p>
-                          <p className="mt-1 text-sm text-slate-600">
-                            Check-in: {formatTime(record.checkInTime)} | Check-out: {formatTime(record.checkOutTime)} | Hours worked: {formatHoursWorked(record.hoursWorked)}
-                          </p>
-                          {record.breakTaken && <p className="mt-1 text-sm text-slate-600">Break: {record.breakEndTime ? formatDurationMinutes(Number(record.breakDurationMinutes || 0)) : "In progress"}</p>}
-                          {(record.lateReason || record.earlyReason || record.lateCheckoutReason || record.leaveReason) && (
-                            <div className="mt-3 rounded-2xl bg-slate-50 p-3 text-sm text-slate-700">
-                              {record.leaveReason && (
-                                <p>
-                                  <span className="font-semibold">Leave:</span> {record.leaveType || "Approved"} - {record.leaveReason}
-                                </p>
-                              )}
-                              {record.lateReason && (
-                                <p>
-                                  <span className="font-semibold">Late:</span> {record.lateReason}
-                                </p>
-                              )}
-                              {record.earlyReason && (
-                                <p>
-                                  <span className="font-semibold">Early:</span> {record.earlyReason}
-                                </p>
-                              )}
-                              {record.lateCheckoutReason && (
-                                <p>
-                                  <span className="font-semibold">Late check-out:</span> {record.lateCheckoutReason}
-                                </p>
-                              )}
-                            </div>
-                          )}
-                        </div>
-                        <div className="flex flex-wrap gap-2">
-                        <Badge
-                          className={
-                            record.status === "on_leave"
-                              ? "bg-amber-100 text-amber-900"
-                              : record.status === "absent"
-                                ? "bg-rose-100 text-rose-900"
-                                : record.isLate
-                                  ? "bg-orange-100 text-orange-900"
-                                  : record.isEarly
-                                    ? "bg-sky-100 text-sky-900"
-                                    : "bg-emerald-100 text-emerald-900"
-                          }
-                        >
-                          {record.status === "on_leave"
-                            ? "On Leave"
-                            : record.status === "absent"
-                              ? "Absent"
-                              : record.isLate
-                                ? "Late"
-                                : record.isEarly
-                                  ? "Early departure"
-                                  : "On Time"}
-                        </Badge>
-                        {record.absenceReason === "missing_checkout" && <Badge className="bg-amber-100 text-amber-900">Absent · missing check-out</Badge>}
-                        {record.absenceReason === "no_check_in" && <Badge className="bg-rose-100 text-rose-900">No check-in</Badge>}
+                  {filteredAttendance.length === 0 ? (
+                    <div className="rounded-3xl border border-dashed border-slate-300 p-8 text-center text-slate-500">
+                      No attendance found for the selected filter.
+                    </div>
+                  ) : (
+                    filteredAttendance.map((record) => (
+                      <div key={record.id} className="rounded-3xl border border-slate-200 p-4">
+                        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                          <div>
+                            <p className="font-semibold text-slate-950">
+                              {formatDate(record.date)}
+                            </p>
+                            <p className="mt-1 text-sm text-slate-600">
+                              Check-in: {formatTime(record.checkInTime)} | Check-out:{" "}
+                              {formatTime(record.checkOutTime)} | Hours worked:{" "}
+                              {formatHoursWorked(record.hoursWorked)}
+                            </p>
+                            {record.breakTaken && (
+                              <p className="mt-1 text-sm text-slate-600">
+                                Break:{" "}
+                                {record.breakEndTime
+                                  ? formatDurationMinutes(Number(record.breakDurationMinutes || 0))
+                                  : "In progress"}
+                              </p>
+                            )}
+                            {(record.lateReason ||
+                              record.earlyReason ||
+                              record.lateCheckoutReason ||
+                              record.leaveReason) && (
+                              <div className="mt-3 rounded-2xl bg-slate-50 p-3 text-sm text-slate-700">
+                                {record.leaveReason && (
+                                  <p>
+                                    <span className="font-semibold">Leave:</span>{" "}
+                                    {record.leaveType || "Approved"} - {record.leaveReason}
+                                  </p>
+                                )}
+                                {record.lateReason && (
+                                  <p>
+                                    <span className="font-semibold">Late:</span> {record.lateReason}
+                                  </p>
+                                )}
+                                {record.earlyReason && (
+                                  <p>
+                                    <span className="font-semibold">Early:</span>{" "}
+                                    {record.earlyReason}
+                                  </p>
+                                )}
+                                {record.lateCheckoutReason && (
+                                  <p>
+                                    <span className="font-semibold">Late check-out:</span>{" "}
+                                    {record.lateCheckoutReason}
+                                  </p>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                          <div className="flex flex-wrap gap-2">
+                            <Badge
+                              className={
+                                record.status === "on_leave"
+                                  ? "bg-amber-100 text-amber-900"
+                                  : record.status === "absent"
+                                    ? "bg-rose-100 text-rose-900"
+                                    : record.isLate
+                                      ? "bg-orange-100 text-orange-900"
+                                      : record.isEarly
+                                        ? "bg-sky-100 text-sky-900"
+                                        : "bg-emerald-100 text-emerald-900"
+                              }
+                            >
+                              {record.status === "on_leave"
+                                ? "On Leave"
+                                : record.status === "absent"
+                                  ? "Absent"
+                                  : record.isLate
+                                    ? "Late"
+                                    : record.isEarly
+                                      ? "Early departure"
+                                      : "On Time"}
+                            </Badge>
+                            {record.absenceReason === "missing_checkout" && (
+                              <Badge className="bg-amber-100 text-amber-900">
+                                Absent · missing check-out
+                              </Badge>
+                            )}
+                            {record.absenceReason === "no_check_in" && (
+                              <Badge className="bg-rose-100 text-rose-900">No check-in</Badge>
+                            )}
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ))
-                )}
-              </CardContent>
+                    ))
+                  )}
+                </CardContent>
               </Card>
             )}
           </div>

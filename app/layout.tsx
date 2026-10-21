@@ -8,7 +8,8 @@ export const metadata: Metadata = {
     default: "EmployeeTracker | People Operations, Made Clear",
     template: "%s",
   },
-  description: "Bring people, shifts, attendance, leave, and workforce reporting together in one clear workspace with EmployeeTracker.",
+  description:
+    "Bring people, shifts, attendance, leave, and workforce reporting together in one clear workspace with EmployeeTracker.",
   icons: {
     icon: "/icon.svg",
     shortcut: "/icon.svg",
@@ -16,11 +17,7 @@ export const metadata: Metadata = {
   },
 }
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode
-}) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
       <body className="antialiased">

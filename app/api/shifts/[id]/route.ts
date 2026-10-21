@@ -47,7 +47,10 @@ export async function PUT(request: NextRequest, { params }: RouteContext) {
       return NextResponse.json({ error: "Shift not found" }, { status: 404 })
     }
 
-    const updatedShift = await shiftsCollection.findOne({ _id: new ObjectId(id), companyId: session.companyId })
+    const updatedShift = await shiftsCollection.findOne({
+      _id: new ObjectId(id),
+      companyId: session.companyId,
+    })
 
     await usersCollection.updateMany(
       { companyId: session.companyId, shiftId: id },

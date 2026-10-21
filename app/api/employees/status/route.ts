@@ -33,7 +33,7 @@ export async function GET(request: NextRequest) {
         message: "Employee hasn't joined yet on this date",
         canCheckIn: false,
         canApplyLeave: false,
-        canCheckOut: false
+        canCheckOut: false,
       })
     }
 
@@ -46,7 +46,7 @@ export async function GET(request: NextRequest) {
         message: "Weekend - No attendance required",
         canCheckIn: false,
         canApplyLeave: false,
-        canCheckOut: false
+        canCheckOut: false,
       })
     }
 
@@ -55,7 +55,7 @@ export async function GET(request: NextRequest) {
       userId: userId,
       status: "approved",
       startDate: { $lte: date },
-      endDate: { $gte: date }
+      endDate: { $gte: date },
     })
 
     if (approvedLeave) {
@@ -67,18 +67,18 @@ export async function GET(request: NextRequest) {
           type: approvedLeave.leaveType,
           reason: approvedLeave.reason,
           startDate: approvedLeave.startDate,
-          endDate: approvedLeave.endDate
+          endDate: approvedLeave.endDate,
         },
         canCheckIn: false,
         canApplyLeave: false,
-        canCheckOut: false
+        canCheckOut: false,
       })
     }
 
     // Check attendance record
     const attendanceRecord = await attendanceCollection.findOne({
       userId: userId,
-      date: date
+      date: date,
     })
 
     if (attendanceRecord) {
@@ -88,11 +88,11 @@ export async function GET(request: NextRequest) {
           message: "Employee is on leave",
           attendanceRecord: {
             id: attendanceRecord._id.toString(),
-            ...attendanceRecord
+            ...attendanceRecord,
           },
           canCheckIn: false,
           canApplyLeave: false,
-          canCheckOut: false
+          canCheckOut: false,
         })
       }
 
@@ -102,11 +102,11 @@ export async function GET(request: NextRequest) {
           message: "Employee is checked in",
           attendanceRecord: {
             id: attendanceRecord._id.toString(),
-            ...attendanceRecord
+            ...attendanceRecord,
           },
           canCheckIn: false,
           canApplyLeave: false,
-          canCheckOut: true
+          canCheckOut: true,
         })
       }
 
@@ -116,11 +116,11 @@ export async function GET(request: NextRequest) {
           message: "Attendance completed for the day",
           attendanceRecord: {
             id: attendanceRecord._id.toString(),
-            ...attendanceRecord
+            ...attendanceRecord,
           },
           canCheckIn: false,
           canApplyLeave: false,
-          canCheckOut: false
+          canCheckOut: false,
         })
       }
 
@@ -130,11 +130,11 @@ export async function GET(request: NextRequest) {
           message: "Employee was marked absent",
           attendanceRecord: {
             id: attendanceRecord._id.toString(),
-            ...attendanceRecord
+            ...attendanceRecord,
           },
           canCheckIn: false,
           canApplyLeave: false,
-          canCheckOut: false
+          canCheckOut: false,
         })
       }
     }
@@ -144,7 +144,7 @@ export async function GET(request: NextRequest) {
       userId: userId,
       status: "pending",
       startDate: { $lte: date },
-      endDate: { $gte: date }
+      endDate: { $gte: date },
     })
 
     const today = new Date().toISOString().split("T")[0]
@@ -153,22 +153,20 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       status: "available",
       message: "Employee can check in or apply for leave",
-      pendingLeave: pendingLeave ? {
-        id: pendingLeave._id.toString(),
-        type: pendingLeave.leaveType,
-        reason: pendingLeave.reason
-      } : null,
+      pendingLeave: pendingLeave
+        ? {
+            id: pendingLeave._id.toString(),
+            type: pendingLeave.leaveType,
+            reason: pendingLeave.reason,
+          }
+        : null,
       canCheckIn: isToday,
       canApplyLeave: isToday && !pendingLeave,
       canCheckOut: false,
-      isToday: isToday
+      isToday: isToday,
     })
-
   } catch (error) {
     console.error("Employee status check error:", error)
-    return NextResponse.json(
-      { error: "Failed to check employee status" },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: "Failed to check employee status" }, { status: 500 })
   }
 }

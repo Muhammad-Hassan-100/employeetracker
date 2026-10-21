@@ -67,7 +67,9 @@ export default function ReportsPage() {
       <div className="flex flex-1 flex-col gap-4 p-4">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Attendance reports</h1>
-          <p className="text-muted-foreground">View comprehensive attendance reports for all employees</p>
+          <p className="text-muted-foreground">
+            View comprehensive attendance reports for all employees
+          </p>
         </div>
         <AttendanceReports />
       </div>

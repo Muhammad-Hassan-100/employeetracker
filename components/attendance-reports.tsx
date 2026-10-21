@@ -7,7 +7,13 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { authFetch } from "@/lib/client-session"
 
 interface AttendanceReport {
@@ -26,20 +32,32 @@ interface AttendanceReport {
 }
 
 function getOnTimeRate(report: AttendanceReport) {
-  return report.checkInDays > 0 ? Math.max(0, (report.checkInDays - report.lateDays) / report.checkInDays) * 100 : 0
+  return report.checkInDays > 0
+    ? Math.max(0, (report.checkInDays - report.lateDays) / report.checkInDays) * 100
+    : 0
 }
 
 function needsAttention(report: AttendanceReport) {
   const lateRate = report.checkInDays > 0 ? report.lateDays / report.checkInDays : 0
-  return report.totalDays > 0 && (
-    report.attendanceRate < 85 || report.absentDays >= 3 || report.lateDays >= 3 ||
-    (report.checkInDays >= 2 && report.lateDays >= 2 && lateRate >= 0.75) || report.earlyLeaveDays >= 2
+  return (
+    report.totalDays > 0 &&
+    (report.attendanceRate < 85 ||
+      report.absentDays >= 3 ||
+      report.lateDays >= 3 ||
+      (report.checkInDays >= 2 && report.lateDays >= 2 && lateRate >= 0.75) ||
+      report.earlyLeaveDays >= 2)
   )
 }
 
 function getPerformanceBadge(report: AttendanceReport) {
-  if (report.totalDays === 0) return <Badge className="bg-slate-100 text-slate-700">No completed shifts</Badge>
-  if (report.attendanceRate >= 95 && getOnTimeRate(report) >= 95 && report.earlyLeaveDays === 0 && report.absentDays === 0) {
+  if (report.totalDays === 0)
+    return <Badge className="bg-slate-100 text-slate-700">No completed shifts</Badge>
+  if (
+    report.attendanceRate >= 95 &&
+    getOnTimeRate(report) >= 95 &&
+    report.earlyLeaveDays === 0 &&
+    report.absentDays === 0
+  ) {
     return <Badge className="bg-emerald-100 text-emerald-900">Strong</Badge>
   }
   if (!needsAttention(report)) return <Badge className="bg-sky-100 text-sky-900">On track</Badge>
@@ -85,12 +103,28 @@ export default function AttendanceReports() {
   }, [dateRange])
 
   const filteredReports = useMemo(() => {
-    return reports.filter((report) => report.employeeName.toLowerCase().includes(searchTerm.toLowerCase()))
+    return reports.filter((report) =>
+      report.employeeName.toLowerCase().includes(searchTerm.toLowerCase()),
+    )
   }, [reports, searchTerm])
 
   const exportToCSV = () => {
     const rows = [
-      ["Employee", "Department", "Completed shifts", "Present", "Check-ins", "Absent", "Leave", "Late arrivals", "Early departures", "Average hours", "Attendance rate", "On-time rate", "Early departure rate"],
+      [
+        "Employee",
+        "Department",
+        "Completed shifts",
+        "Present",
+        "Check-ins",
+        "Absent",
+        "Leave",
+        "Late arrivals",
+        "Early departures",
+        "Average hours",
+        "Attendance rate",
+        "On-time rate",
+        "Early departure rate",
+      ],
       ...filteredReports.map((report) => [
         report.employeeName,
         report.department,
@@ -104,7 +138,10 @@ export default function AttendanceReports() {
         report.avgHours.toFixed(2),
         formatRate(report.attendanceRate, report.totalDays),
         formatRate(getOnTimeRate(report), report.checkInDays),
-        formatRate(report.presentDays ? (report.earlyLeaveDays / report.presentDays) * 100 : 0, report.presentDays),
+        formatRate(
+          report.presentDays ? (report.earlyLeaveDays / report.presentDays) * 100 : 0,
+          report.presentDays,
+        ),
       ]),
     ]
 
@@ -125,7 +162,9 @@ export default function AttendanceReports() {
   const totalLate = reports.reduce((sum, report) => sum + report.lateDays, 0)
   const totalHours = reports.reduce((sum, report) => sum + report.avgHours * report.presentDays, 0)
   const avgAttendanceRate = completedShifts ? (totalPresent / completedShifts) * 100 : 0
-  const onTimeRate = totalCheckIns ? Math.max(0, (totalCheckIns - totalLate) / totalCheckIns) * 100 : 0
+  const onTimeRate = totalCheckIns
+    ? Math.max(0, (totalCheckIns - totalLate) / totalCheckIns) * 100
+    : 0
   const avgHours = totalPresent ? totalHours / totalPresent : 0
   const attentionCount = reports.filter(needsAttention).length
 
@@ -136,7 +175,9 @@ export default function AttendanceReports() {
           <CardContent className="p-5">
             <p className="text-sm text-slate-500">Completed shifts</p>
             <p className="text-2xl font-bold">{completedShifts}</p>
-            <p className="mt-1 text-xs text-slate-500">Current shifts are excluded until resolved</p>
+            <p className="mt-1 text-xs text-slate-500">
+              Current shifts are excluded until resolved
+            </p>
           </CardContent>
         </Card>
         <Card className="rounded-3xl shadow-sm">
@@ -177,9 +218,15 @@ export default function AttendanceReports() {
                 <BarChart3 className="h-5 w-5 text-emerald-600" />
                 Attendance Reports
               </CardTitle>
-              <CardDescription>Compare attendance, punctuality, and early departures across completed scheduled shifts.</CardDescription>
+              <CardDescription>
+                Compare attendance, punctuality, and early departures across completed scheduled
+                shifts.
+              </CardDescription>
             </div>
-            <Button className="rounded-2xl bg-emerald-600 text-white hover:bg-emerald-700" onClick={exportToCSV}>
+            <Button
+              className="rounded-2xl bg-emerald-600 text-white hover:bg-emerald-700"
+              onClick={exportToCSV}
+            >
               <Download className="mr-2 h-4 w-4" />
               Export CSV
             </Button>
@@ -192,9 +239,19 @@ export default function AttendanceReports() {
               How percentages are calculated
             </div>
             <div className="mt-3 grid gap-2 text-xs leading-5 text-emerald-950 sm:grid-cols-3 sm:gap-4">
-              <p><span className="font-semibold">Attendance:</span> Present shifts with both check-in and check-out ÷ completed scheduled shifts. Approved leave and shifts still in progress are excluded.</p>
-              <p><span className="font-semibold">On-time:</span> On-time check-ins ÷ all recorded check-ins.</p>
-              <p><span className="font-semibold">Early exit:</span> Early departures ÷ attended shifts.</p>
+              <p>
+                <span className="font-semibold">Attendance:</span> Present shifts with both check-in
+                and check-out ÷ completed scheduled shifts. Approved leave and shifts still in
+                progress are excluded.
+              </p>
+              <p>
+                <span className="font-semibold">On-time:</span> On-time check-ins ÷ all recorded
+                check-ins.
+              </p>
+              <p>
+                <span className="font-semibold">Early exit:</span> Early departures ÷ attended
+                shifts.
+              </p>
             </div>
           </div>
           <div className="flex flex-col gap-4 md:flex-row">
@@ -234,17 +291,33 @@ export default function AttendanceReports() {
                 <div className="flex flex-col gap-5 xl:flex-row xl:items-center xl:justify-between">
                   <div className="min-w-0 xl:w-52">
                     <div className="flex flex-wrap items-center gap-2">
-                      <h3 className="text-base font-semibold tracking-tight text-[var(--dashboard-ink)]">{report.employeeName}</h3>
+                      <h3 className="text-base font-semibold tracking-tight text-[var(--dashboard-ink)]">
+                        {report.employeeName}
+                      </h3>
                       {getPerformanceBadge(report)}
                     </div>
-                    <p className="mt-1 text-sm text-[var(--dashboard-muted)]">{report.department}</p>
+                    <p className="mt-1 text-sm text-[var(--dashboard-muted)]">
+                      {report.department}
+                    </p>
                     <div className="mt-4">
                       <div className="mb-1.5 flex items-center justify-between text-xs">
                         <span className="text-[var(--dashboard-muted)]">Attendance rate</span>
-                        <span className="font-semibold text-[var(--dashboard-ink)]">{formatRate(report.attendanceRate, report.totalDays)}</span>
+                        <span className="font-semibold text-[var(--dashboard-ink)]">
+                          {formatRate(report.attendanceRate, report.totalDays)}
+                        </span>
                       </div>
-                      <div className="h-1.5 overflow-hidden rounded-full bg-[#edf0e9]" role="progressbar" aria-label={`${report.employeeName} attendance rate`} aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(report.attendanceRate)}>
-                        <div className="h-full rounded-full bg-[var(--dashboard-green-text)] transition-[width] duration-300" style={{ width: `${Math.max(0, Math.min(100, report.attendanceRate))}%` }} />
+                      <div
+                        className="h-1.5 overflow-hidden rounded-full bg-[#edf0e9]"
+                        role="progressbar"
+                        aria-label={`${report.employeeName} attendance rate`}
+                        aria-valuemin={0}
+                        aria-valuemax={100}
+                        aria-valuenow={Math.round(report.attendanceRate)}
+                      >
+                        <div
+                          className="h-full rounded-full bg-[var(--dashboard-green-text)] transition-[width] duration-300"
+                          style={{ width: `${Math.max(0, Math.min(100, report.attendanceRate))}%` }}
+                        />
                       </div>
                     </div>
                   </div>
@@ -274,7 +347,14 @@ export default function AttendanceReports() {
                       <p className="text-xs text-slate-500">Early exits</p>
                     </div>
                     <div className="rounded-2xl bg-slate-50 p-3">
-                      <p className="text-xl font-bold">{formatRate(report.presentDays ? (report.earlyLeaveDays / report.presentDays) * 100 : 0, report.presentDays)}</p>
+                      <p className="text-xl font-bold">
+                        {formatRate(
+                          report.presentDays
+                            ? (report.earlyLeaveDays / report.presentDays) * 100
+                            : 0,
+                          report.presentDays,
+                        )}
+                      </p>
                       <p className="text-xs text-slate-500">Early exit rate</p>
                     </div>
                     <div className="rounded-2xl bg-slate-50 p-3">
@@ -282,7 +362,9 @@ export default function AttendanceReports() {
                       <p className="text-xs text-slate-500">Average hours</p>
                     </div>
                     <div className="rounded-2xl bg-slate-950 p-3 text-white">
-                      <p className="text-xl font-bold">{formatRate(getOnTimeRate(report), report.checkInDays)}</p>
+                      <p className="text-xl font-bold">
+                        {formatRate(getOnTimeRate(report), report.checkInDays)}
+                      </p>
                       <p className="text-xs text-slate-300">On-time rate</p>
                     </div>
                   </div>
