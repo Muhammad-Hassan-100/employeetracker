@@ -138,9 +138,9 @@ export function AppSidebar({ user }: AppSidebarProps) {
           href="/dashboard"
           className="flex items-center gap-3 rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--dashboard-brand)] group-data-[collapsible=icon]:justify-center"
         >
-          <BrandMark size={40} className="group-data-[collapsible=icon]:size-8" />
+          <BrandMark size={40} dashboardBranding className="group-data-[collapsible=icon]:size-8" />
           <span className="min-w-0 group-data-[collapsible=icon]:hidden">
-            <span className="block truncate text-sm font-semibold tracking-tight text-[#17251c]">
+            <span className="block truncate text-sm font-semibold tracking-tight text-[var(--dashboard-green)] transition-colors">
               EmployeeTracker
             </span>
             <span className="mt-0.5 block truncate text-xs text-[var(--dashboard-subtle)]">
