@@ -159,40 +159,65 @@ function SectionTitle({ id, kicker, title, children }) {
 
 function Table({ headings, rows, widths }) {
   return (
-    <div className="overflow-x-auto rounded-xl border border-[var(--guide-line)]">
-      <table className="w-full min-w-[620px] border-collapse text-left text-sm">
-        {widths && (
-          <colgroup>
-            {widths.map((width, index) => (
-              <col key={index} style={{ width }} />
-            ))}
-          </colgroup>
-        )}
-        <thead className="bg-[var(--guide-table-head)] text-xs font-semibold uppercase tracking-wide text-[var(--guide-muted)]">
-          <tr>
-            {headings.map((heading) => (
-              <th key={heading} scope="col" className="px-4 py-3">
-                {heading}
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-[var(--guide-line)] bg-white">
-          {rows.map((row) => (
-            <tr key={row[0]} className="align-top">
-              <th scope="row" className="px-4 py-3.5 font-semibold text-[var(--guide-ink)]">
-                {row[0]}
-              </th>
+    <>
+      <div className="space-y-3 md:hidden">
+        {rows.map((row) => (
+          <section
+            key={row[0]}
+            className="rounded-xl border border-[var(--guide-line)] bg-white p-4"
+          >
+            <h3 className="font-semibold text-[var(--guide-ink)]">{row[0]}</h3>
+            <dl className="mt-3 space-y-3">
               {row.slice(1).map((cell, index) => (
-                <td key={index} className="px-4 py-3.5 leading-6 text-[var(--guide-muted)]">
-                  {cell}
-                </td>
+                <div key={headings[index + 1]} className="min-w-0">
+                  <dt className="text-[11px] font-semibold uppercase tracking-wide text-[var(--guide-muted)]">
+                    {headings[index + 1]}
+                  </dt>
+                  <dd className="mt-1 break-words text-sm leading-6 text-[var(--guide-muted)]">
+                    {cell}
+                  </dd>
+                </div>
+              ))}
+            </dl>
+          </section>
+        ))}
+      </div>
+
+      <div className="hidden overflow-x-auto rounded-xl border border-[var(--guide-line)] md:block">
+        <table className="w-full min-w-[620px] border-collapse text-left text-sm">
+          {widths && (
+            <colgroup>
+              {widths.map((width, index) => (
+                <col key={index} style={{ width }} />
+              ))}
+            </colgroup>
+          )}
+          <thead className="bg-[var(--guide-table-head)] text-xs font-semibold uppercase tracking-wide text-[var(--guide-muted)]">
+            <tr>
+              {headings.map((heading) => (
+                <th key={heading} scope="col" className="px-4 py-3">
+                  {heading}
+                </th>
               ))}
             </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
+          </thead>
+          <tbody className="divide-y divide-[var(--guide-line)] bg-white">
+            {rows.map((row) => (
+              <tr key={row[0]} className="align-top">
+                <th scope="row" className="px-4 py-3.5 font-semibold text-[var(--guide-ink)]">
+                  {row[0]}
+                </th>
+                {row.slice(1).map((cell, index) => (
+                  <td key={index} className="px-4 py-3.5 leading-6 text-[var(--guide-muted)]">
+                    {cell}
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </>
   )
 }
 
@@ -222,21 +247,27 @@ export default function GuidePage() {
     >
       <PublicHeader activePage="guide" />
 
-      <div className="mx-auto grid max-w-[1360px] gap-8 px-5 py-8 sm:px-8 lg:grid-cols-[230px_minmax(0,820px)] lg:gap-12 lg:py-12">
-        <aside className="lg:sticky lg:top-8 lg:h-fit">
-          <div className="rounded-xl border border-[var(--guide-line)] bg-white p-4 lg:max-h-[calc(100vh-4rem)] lg:overflow-y-auto">
-            <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.12em] text-[var(--guide-muted)]">
-              <BookOpen className="size-4 text-[var(--guide-accent)]" /> Contents
-            </p>
+      <div className="mx-auto grid max-w-[1360px] gap-5 px-4 py-6 sm:px-6 sm:py-8 lg:grid-cols-[220px_minmax(0,1fr)] lg:gap-8 lg:px-8 lg:py-12 xl:gap-12">
+        <aside className="min-w-0">
+          <details className="group rounded-xl border border-[var(--guide-line)] bg-white lg:hidden">
+            <summary className="flex min-h-12 cursor-pointer list-none items-center justify-between gap-3 px-4 text-sm font-semibold text-[var(--guide-ink)] [&::-webkit-details-marker]:hidden">
+              <span className="flex items-center gap-2">
+                <BookOpen className="size-4 text-[var(--guide-accent)]" aria-hidden="true" />
+                Contents
+              </span>
+              <span className="text-xs font-normal text-[var(--guide-muted)]">
+                {contents.length} sections
+              </span>
+            </summary>
             <nav
               aria-label="Guide contents"
-              className="mt-3 flex gap-1 overflow-x-auto lg:flex-col lg:overflow-visible"
+              className="grid grid-cols-1 gap-1 border-t border-[var(--guide-line)] p-2 sm:grid-cols-2"
             >
               {contents.map(([id, label], index) => (
                 <a
                   key={id}
                   href={`#${id}`}
-                  className="shrink-0 rounded-lg px-3 py-2 text-sm text-[var(--guide-muted)] transition hover:bg-[var(--guide-table-head)] hover:text-[var(--guide-ink)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--guide-accent)]"
+                  className="min-w-0 rounded-lg px-3 py-2 text-sm text-[var(--guide-muted)] transition hover:bg-[var(--guide-table-head)] hover:text-[var(--guide-ink)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--guide-accent)]"
                 >
                   <span className="mr-2 text-xs text-[#8b968d]">
                     {String(index + 1).padStart(2, "0")}
@@ -245,14 +276,39 @@ export default function GuidePage() {
                 </a>
               ))}
             </nav>
-            <div className="mt-4 hidden border-t border-[var(--guide-line)] pt-4 text-xs leading-5 text-[var(--guide-muted)] lg:block">
-              Use this handbook to understand the workspace setup and the attendance rules currently
-              used by the product.
+          </details>
+
+          <div className="hidden lg:sticky lg:top-8 lg:block">
+            <div className="rounded-xl border border-[var(--guide-line)] bg-white p-4 lg:max-h-[calc(100vh-4rem)] lg:overflow-y-auto">
+              <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.12em] text-[var(--guide-muted)]">
+                <BookOpen className="size-4 text-[var(--guide-accent)]" /> Contents
+              </p>
+              <nav
+                aria-label="Guide contents"
+                className="mt-3 flex gap-1 overflow-x-auto lg:flex-col lg:overflow-visible"
+              >
+                {contents.map(([id, label], index) => (
+                  <a
+                    key={id}
+                    href={`#${id}`}
+                    className="shrink-0 rounded-lg px-3 py-2 text-sm text-[var(--guide-muted)] transition hover:bg-[var(--guide-table-head)] hover:text-[var(--guide-ink)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--guide-accent)]"
+                  >
+                    <span className="mr-2 text-xs text-[#8b968d]">
+                      {String(index + 1).padStart(2, "0")}
+                    </span>
+                    {label}
+                  </a>
+                ))}
+              </nav>
+              <div className="mt-4 hidden border-t border-[var(--guide-line)] pt-4 text-xs leading-5 text-[var(--guide-muted)] lg:block">
+                Use this handbook to understand the workspace setup and the attendance rules
+                currently used by the product.
+              </div>
             </div>
           </div>
         </aside>
 
-        <article className="min-w-0 rounded-2xl border border-[var(--guide-line)] bg-white px-5 py-7 shadow-[0_12px_40px_rgba(24,35,28,0.04)] sm:px-9 sm:py-10 lg:px-12">
+        <article className="min-w-0 [overflow-wrap:anywhere] rounded-2xl border border-[var(--guide-line)] bg-white px-4 py-6 shadow-[0_12px_40px_rgba(24,35,28,0.04)] sm:px-7 sm:py-9 lg:px-10 lg:py-10 xl:px-12">
           <header id="start" className="scroll-mt-6 border-b border-[var(--guide-line)] pb-7">
             <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.15em] text-[var(--guide-accent)]">
               <BookOpen className="size-4" aria-hidden="true" /> Product handbook
