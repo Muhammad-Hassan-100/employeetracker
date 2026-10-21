@@ -132,6 +132,10 @@ function formatDay(date = new Date()) {
   return new Intl.DateTimeFormat("en", { weekday: "long", month: "long", day: "numeric" }).format(date)
 }
 
+function formatClock(date: Date) {
+  return new Intl.DateTimeFormat("en", { hour: "numeric", minute: "2-digit", second: "2-digit" }).format(date)
+}
+
 function formatDate(value: string) {
   const date = new Date(`${value.slice(0, 10)}T12:00:00`)
   return new Intl.DateTimeFormat("en", { month: "short", day: "numeric" }).format(date)
@@ -167,6 +171,13 @@ function initials(name: string) {
 }
 
 function PageHeading({ eyebrow, title, description }: { eyebrow: string; title: string; description: string }) {
+  const [currentTime, setCurrentTime] = useState(() => new Date())
+
+  useEffect(() => {
+    const timer = setInterval(() => setCurrentTime(new Date()), 1000)
+    return () => clearInterval(timer)
+  }, [])
+
   return (
     <div className="mb-8 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
       <div>
@@ -174,7 +185,9 @@ function PageHeading({ eyebrow, title, description }: { eyebrow: string; title: 
         <h1 className="mt-2 text-3xl font-semibold tracking-tight text-[var(--dashboard-ink)] sm:text-4xl">{title}</h1>
         <p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--dashboard-muted)]">{description}</p>
       </div>
-      <p className="shrink-0 text-sm text-[var(--dashboard-muted)]">{formatDay()}</p>
+      <p className="shrink-0 text-sm tabular-nums text-[var(--dashboard-muted)]" suppressHydrationWarning>
+        {formatDay(currentTime)} <span aria-hidden="true">·</span> <time>{formatClock(currentTime)}</time>
+      </p>
     </div>
   )
 }
@@ -323,11 +336,11 @@ function AdminDashboard({ data, user }: { data: Extract<DashboardData, { role: "
                 <div key={item.label} className={item.color} style={{ width: `${activeRows.length ? (item.count / activeRows.length) * 100 : 0}%` }} title={`${item.label}: ${item.count}`} />
               ))}
             </div>
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-7">
+            <div className="grid grid-cols-2 gap-x-4 gap-y-3 sm:grid-cols-3 xl:grid-cols-2 2xl:grid-cols-4">
               {attendanceSummary.map((item) => (
-                <div key={item.label} className="flex items-center gap-2 text-sm text-[var(--dashboard-muted)]">
+                <div key={item.label} className="flex min-w-0 items-center gap-2 whitespace-nowrap text-sm text-[var(--dashboard-muted)]">
                   <span className={`size-2 rounded-full ${item.color}`} />
-                  <span>{item.label}</span><span className="ml-auto font-semibold text-[var(--dashboard-ink-soft)]">{item.count}</span>
+                  <span className="whitespace-nowrap">{item.label}</span><span className="ml-auto font-semibold text-[var(--dashboard-ink-soft)]">{item.count}</span>
                 </div>
               ))}
             </div>
