@@ -31,7 +31,7 @@ import { authFetch, getStoredUser } from "@/lib/client-session"
 import type { SessionUser } from "@/lib/session"
 import { formatTimeString12Hour } from "@/lib/time"
 import {
-  formatDurationMinutes,
+  formatBreakDurationWithOverage,
   formatLocalDateInput,
   getLocalTimeMinutes,
 } from "@/lib/attendance-time"
@@ -70,6 +70,7 @@ interface AttendanceRecord {
   breakStartTime?: string | null
   breakEndTime?: string | null
   breakDurationMinutes?: number
+  breakOverageMinutes?: number
   isLate: boolean
   isEarly: boolean
   needsCheckoutReview: boolean
@@ -159,6 +160,7 @@ function normalizeAttendanceRecords(value: unknown): AttendanceRecord[] {
       breakDurationMinutes: Number.isFinite(Number(entry.breakDurationMinutes))
         ? Number(entry.breakDurationMinutes)
         : 0,
+      breakOverageMinutes: Math.max(0, (Number(entry.breakDurationMinutes) || 0) - 60),
       isLate: Boolean(entry.isLate),
       isEarly: Boolean(entry.isEarly),
       needsCheckoutReview: Boolean(entry.needsCheckoutReview),
@@ -759,7 +761,9 @@ export default function EmployeeDetailPage() {
                               <p className="mt-1 text-sm text-slate-600">
                                 Break:{" "}
                                 {record.breakEndTime
-                                  ? formatDurationMinutes(Number(record.breakDurationMinutes || 0))
+                                  ? formatBreakDurationWithOverage(
+                                      Number(record.breakDurationMinutes || 0),
+                                    )
                                   : "In progress"}
                               </p>
                             )}

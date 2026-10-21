@@ -317,6 +317,7 @@ export async function GET(request: NextRequest) {
           breakStartTime: record?.breakStartTime || null,
           breakEndTime: record?.breakEndTime || null,
           breakDurationMinutes: Number(record?.breakDurationMinutes) || 0,
+          breakOverageMinutes: Math.max(0, (Number(record?.breakDurationMinutes) || 0) - 60),
           hoursWorked: record?.hoursWorked || 0,
           isLate: Boolean(record?.isLate),
           isEarly: Boolean(record?.isEarly),

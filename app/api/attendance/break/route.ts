@@ -14,6 +14,8 @@ import { getEmployeeShiftAssignmentForDate } from "@/lib/employee-schedule"
 import { assertSelfOrAdmin, requireSession } from "@/lib/session"
 import { getDatabase } from "@/lib/mongodb"
 
+const BREAK_ALLOWANCE_MINUTES = 60
+
 export async function POST(request: NextRequest) {
   try {
     const { session, response } = requireSession(request)
@@ -147,18 +149,9 @@ export async function POST(request: NextRequest) {
           (shiftSpansMidnight(shiftStartMinutes, shiftEndMinutes) ? 1 : 0)) *
           1440 +
         shiftStartMinutes
-      if (
-        windowState.absoluteCurrentMinutes < shiftStartAbsoluteMinutes ||
-        !windowState.isBeforeShiftEnd
-      ) {
+      if (windowState.absoluteCurrentMinutes < shiftStartAbsoluteMinutes) {
         return NextResponse.json(
-          { error: "A break can only be started during your shift" },
-          { status: 409 },
-        )
-      }
-      if (record.breakTaken || record.breakStartTime || record.breakEndTime) {
-        return NextResponse.json(
-          { error: "Your one break for this shift has already been used" },
+          { error: "A break can only be started after your shift begins" },
           { status: 409 },
         )
       }
@@ -168,15 +161,14 @@ export async function POST(request: NextRequest) {
           _id: record._id,
           companyId: session.companyId,
           checkOutTime: null,
-          breakTaken: { $ne: true },
-          breakStartTime: null,
+          breakStartTime: record.breakStartTime ?? null,
+          breakEndTime: record.breakEndTime ?? null,
         },
         {
           $set: {
             breakTaken: true,
             breakStartTime: now,
             breakEndTime: null,
-            breakDurationMinutes: 0,
             updatedAt: now,
           },
         },
@@ -191,18 +183,28 @@ export async function POST(request: NextRequest) {
         message: "Break started",
         breakStartTime: now,
         breakEndTime: null,
-        breakDurationMinutes: 0,
+        breakDurationMinutes: Number(record.breakDurationMinutes || 0),
+        breakOverageMinutes: Math.max(
+          0,
+          Number(record.breakDurationMinutes || 0) - BREAK_ALLOWANCE_MINUTES,
+        ),
         breakTaken: true,
       })
     }
 
-    if (!record.breakTaken || !record.breakStartTime || record.breakEndTime) {
+    if (!record.breakStartTime || record.breakEndTime) {
       return NextResponse.json({ error: "There is no active break to end" }, { status: 409 })
     }
 
     const breakDurationMinutes = Math.max(
       0,
       Math.round(((now.getTime() - new Date(record.breakStartTime).getTime()) / 60000) * 100) / 100,
+    )
+    const totalBreakDurationMinutes =
+      Math.round((Number(record.breakDurationMinutes || 0) + breakDurationMinutes) * 100) / 100
+    const breakOverageMinutes = Math.max(
+      0,
+      Math.round((totalBreakDurationMinutes - BREAK_ALLOWANCE_MINUTES) * 100) / 100,
     )
     const result = await attendanceCollection.updateOne(
       {
@@ -212,7 +214,14 @@ export async function POST(request: NextRequest) {
         breakEndTime: null,
         breakTaken: true,
       },
-      { $set: { breakEndTime: now, breakDurationMinutes, updatedAt: now } },
+      {
+        $set: {
+          breakEndTime: now,
+          breakDurationMinutes: totalBreakDurationMinutes,
+          breakOverageMinutes,
+          updatedAt: now,
+        },
+      },
     )
     if (!result.modifiedCount)
       return NextResponse.json(
@@ -221,10 +230,12 @@ export async function POST(request: NextRequest) {
       )
 
     return NextResponse.json({
-      message: "Break ended",
+      message: "Break stopped",
       breakStartTime: record.breakStartTime,
       breakEndTime: now,
-      breakDurationMinutes,
+      breakDurationMinutes: totalBreakDurationMinutes,
+      sessionDurationMinutes: breakDurationMinutes,
+      breakOverageMinutes,
       breakTaken: true,
     })
   } catch (error) {

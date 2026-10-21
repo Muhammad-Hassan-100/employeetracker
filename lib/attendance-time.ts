@@ -177,3 +177,11 @@ export function formatDurationMinutes(value: number) {
   const seconds = totalSeconds % 60
   return `${minutes}m ${String(seconds).padStart(2, "0")}s`
 }
+
+export function formatBreakDurationWithOverage(value: number) {
+  const totalMinutes = Math.max(0, Number.isFinite(value) ? value : 0)
+  const overageMinutes = Math.max(0, totalMinutes - 60)
+  const overageLabel = overageMinutes > 0 ? ` · ${formatDurationMinutes(overageMinutes)} extra` : ""
+
+  return `${formatDurationMinutes(totalMinutes)}${overageLabel}`
+}

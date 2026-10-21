@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input"
 import { authFetch } from "@/lib/client-session"
 import type { SessionUser } from "@/lib/session"
 import {
-  formatDurationMinutes,
+  formatBreakDurationWithOverage,
   formatLocalDateInput,
   getLocalTimeMinutes,
 } from "@/lib/attendance-time"
@@ -23,6 +23,7 @@ interface AttendanceRecord {
   breakStartTime?: string | null
   breakEndTime?: string | null
   breakDurationMinutes?: number
+  breakOverageMinutes?: number
   isLate: boolean
   isEarly: boolean
   needsCheckoutReview: boolean
@@ -218,7 +219,7 @@ export default function AttendanceHistory({ user }: AttendanceHistoryProps) {
                         </p>
                         <p className="mt-1 text-sm font-semibold text-[var(--dashboard-ink)]">
                           {record.breakEndTime
-                            ? formatDurationMinutes(Number(record.breakDurationMinutes || 0))
+                            ? formatBreakDurationWithOverage(Number(record.breakDurationMinutes || 0))
                             : "In progress"}
                         </p>
                       </div>

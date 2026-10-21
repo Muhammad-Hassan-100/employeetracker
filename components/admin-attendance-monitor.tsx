@@ -18,7 +18,7 @@ import {
 import { authFetch } from "@/lib/client-session"
 import { formatTimeString12Hour } from "@/lib/time"
 import {
-  formatDurationMinutes,
+  formatBreakDurationWithOverage,
   formatLocalDateInput,
   getLocalTimeMinutes,
 } from "@/lib/attendance-time"
@@ -48,6 +48,7 @@ interface SnapshotRow {
   breakStartTime: string | null
   breakEndTime: string | null
   breakDurationMinutes: number
+  breakOverageMinutes?: number
   hoursWorked: number
   isLate: boolean
   isEarly: boolean
@@ -77,6 +78,17 @@ function formatTime(value: string | null) {
     minute: "2-digit",
     hour12: true,
   })
+}
+
+function formatBreakStatus(row: SnapshotRow) {
+  const isOnBreak = Boolean(row.breakStartTime && !row.breakEndTime)
+  const activeMinutes = isOnBreak
+    ? Math.max(0, (Date.now() - new Date(row.breakStartTime as string).getTime()) / 60000)
+    : 0
+  const totalMinutes = Number(row.breakDurationMinutes || 0) + activeMinutes
+  const summary = formatBreakDurationWithOverage(totalMinutes)
+
+  return isOnBreak ? `In progress · ${summary} total` : summary
 }
 
 function getStatusBadge(status: SnapshotRow["attendanceStatus"], isLate = false) {
@@ -405,9 +417,7 @@ export default function AdminAttendanceMonitor() {
                           }
                         >
                           Break:{" "}
-                          {row.breakStartTime && !row.breakEndTime
-                            ? "In progress"
-                            : formatDurationMinutes(Number(row.breakDurationMinutes || 0))}
+                          {formatBreakStatus(row)}
                         </span>
                       )}
                     </div>

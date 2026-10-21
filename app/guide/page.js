@@ -45,7 +45,7 @@ const statusRows = [
   ],
   [
     "On break",
-    "The employee started their one allowed break and has not ended it yet. They must end the break before checking out.",
+    "The employee is on a break. The 60-minute allowance applies to total break time during the shift; extra time is recorded. They must stop an active break before checking out.",
   ],
   [
     "Early departure",
@@ -107,11 +107,11 @@ const employeeWorkflow = [
   ],
   [
     "During the shift",
-    "Use Start break after checking in, then End break when you return. Only one break is allowed per shift. Shift time continues while the break is in progress.",
+    "After checking in, use Start break when you leave and Stop break when you return. You can take multiple breaks up to checkout. The allowance is 60 minutes total per shift; extra time is recorded. Shift time continues during breaks.",
   ],
   [
     "At departure",
-    "End an active break before checking out. Check out by the deadline shown on Attendance. An early check-out can require a reason.",
+    "Stop an active break before checking out. Check out by the deadline shown on Attendance. An early check-out can require a reason.",
   ],
 ]
 
@@ -808,10 +808,11 @@ export default function GuidePage() {
             </ol>
             <h3 className="mb-3 mt-7 text-base font-semibold">Break rules</h3>
             <p className="text-sm leading-6 text-[var(--guide-muted)]">
-              After check-in, select Start break once. The button changes to End break while the
-              break is running; select it when you return. A completed break cannot be started again
-              during that shift. The shift clock and total shift duration continue during the break.
-              You must end a running break before checking out.
+              After check-in, an employee can start and end multiple breaks until checkout. The
+              total break allowance is 60 minutes per shift. Any time beyond 60 minutes is recorded
+              as extra break time. The shift clock and total shift duration continue during breaks,
+              and an active break must be stopped before checkout. Breaks can be started after the
+              shift begins and before the normal checkout deadline.
             </p>
             <h3 className="mb-3 mt-7 text-base font-semibold">Early check-out</h3>
             <p className="text-sm leading-6 text-[var(--guide-muted)]">

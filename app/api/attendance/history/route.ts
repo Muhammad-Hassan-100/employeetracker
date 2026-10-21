@@ -127,6 +127,7 @@ export async function GET(request: NextRequest) {
           breakStartTime: record.breakStartTime || null,
           breakEndTime: record.breakEndTime || null,
           breakDurationMinutes: Number(record.breakDurationMinutes) || 0,
+          breakOverageMinutes: Math.max(0, (Number(record.breakDurationMinutes) || 0) - 60),
           isLate: record.isLate,
           isEarly: record.isEarly,
           needsCheckoutReview,

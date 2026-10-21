@@ -882,7 +882,7 @@ function EmployeeDashboard({
         : record?.status === "absent" && record.absenceReason === "missing_checkout"
           ? "Absent · check-out missing"
           : record?.breakStartTime && !record.breakEndTime
-            ? "Your shift clock is still running. Return to Attendance to end your break before checking out."
+            ? "Your shift clock is still running. Return to Attendance to stop your break before checking out."
             : data.attendance.isCheckedIn
               ? "You’re checked in"
               : record?.status === "on_leave"

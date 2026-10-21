@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { authFetch } from "@/lib/client-session"
 import {
+  formatBreakDurationWithOverage,
   formatLocalDateInput,
   formatDurationMinutes,
   getAttendanceWindowState,
@@ -52,6 +53,7 @@ interface AttendanceRecord {
   breakStartTime?: string | null
   breakEndTime?: string | null
   breakDurationMinutes?: number
+  breakOverageMinutes?: number
 }
 
 interface AttendanceTabProps {
@@ -240,6 +242,14 @@ export default function AttendanceTab({ user }: AttendanceTabProps) {
           Math.floor((currentTime.getTime() - new Date(record.breakStartTime).getTime()) / 1000),
         )
       : 0
+  const breakTotalMinutes =
+    Number(record?.breakDurationMinutes || 0) + (isOnBreak ? breakElapsedSeconds / 60 : 0)
+  const breakOverageMinutes = Math.max(0, breakTotalMinutes - 60)
+  const breakStatusMessage = isOnBreak
+    ? `This break: ${formatDurationMinutes(breakElapsedSeconds / 60)} · total today ${formatDurationMinutes(breakTotalMinutes)}${breakOverageMinutes > 0 ? ` · ${formatDurationMinutes(breakOverageMinutes)} extra` : ""} · shift clock continues`
+    : record?.breakEndTime
+      ? `${formatDurationMinutes(Number(record.breakDurationMinutes || 0))} total used${breakOverageMinutes > 0 ? ` · ${formatDurationMinutes(breakOverageMinutes)} extra` : ` · ${formatDurationMinutes(Math.max(0, 60 - breakTotalMinutes))} remaining`} · you can take another break before checkout`
+      : "Up to 60 minutes total per shift. You can take multiple breaks before checkout; any extra time is recorded."
   const isAlreadyCompleted = Boolean(record?.checkInTime && record?.checkOutTime)
   const isOnLeave = record?.status === "on_leave"
   const isAbsent = record?.status === "absent"
@@ -272,8 +282,8 @@ export default function AttendanceTab({ user }: AttendanceTabProps) {
       : null
   const canStartBreak = Boolean(
     isCheckedIn &&
-    !hasUsedBreak &&
-    checkoutWindowState?.isBeforeShiftEnd &&
+    !isOnBreak &&
+    checkoutWindowState &&
     shiftStartAbsoluteMinutes !== null &&
     checkoutWindowState.absoluteCurrentMinutes >= shiftStartAbsoluteMinutes,
   )
@@ -441,7 +451,7 @@ export default function AttendanceTab({ user }: AttendanceTabProps) {
 
   const handleCheckOut = async () => {
     if (isOnBreak) {
-      toast.error("End your break first", {
+      toast.error("Stop your break first", {
         description: "You can check out after you return from your break.",
       })
       return
@@ -572,18 +582,17 @@ export default function AttendanceTab({ user }: AttendanceTabProps) {
       })
       const data = await response.json()
       if (!response.ok) {
-        toast.error(action === "start" ? "Could not start break" : "Could not end break", {
+        toast.error(action === "start" ? "Could not start break" : "Could not stop break", {
           description: data.error || "Please try again.",
         })
         await refreshAttendance()
         return
       }
-      toast.success(action === "start" ? "Break started" : "Welcome back", {
-        description:
-          action === "start"
-            ? "Your shift clock keeps running during this break."
-            : `Break recorded: ${formatDurationMinutes(Number(data.breakDurationMinutes || 0))}.`,
-      })
+      let description = "Your shift clock keeps running. You have a 60-minute total break allowance."
+      if (action === "end") {
+        description = `Total break: ${formatBreakDurationWithOverage(Number(data.breakDurationMinutes || 0))}.`
+      }
+      toast.success(action === "start" ? "Break started" : "Welcome back", { description })
       await refreshAttendance()
     } catch {
       toast.error("Break update failed", {
@@ -777,11 +786,7 @@ export default function AttendanceTab({ user }: AttendanceTabProps) {
                                     : "Your shift break"}
                               </p>
                               <p className="mt-1 text-sm text-[var(--dashboard-muted)]">
-                                {isOnBreak
-                                  ? `Elapsed ${Math.floor(breakElapsedSeconds / 60)}m ${String(breakElapsedSeconds % 60).padStart(2, "0")}s · shift clock continues`
-                                  : record?.breakEndTime
-                                    ? `${formatDurationMinutes(Number(record.breakDurationMinutes || 0))} recorded · no second break this shift`
-                                    : "One break per shift. Your shift time continues while you are away."}
+                                {breakStatusMessage}
                               </p>
                             </div>
                           </div>
@@ -799,7 +804,7 @@ export default function AttendanceTab({ user }: AttendanceTabProps) {
                               ) : (
                                 <>
                                   <Coffee className="mr-2 size-4" />
-                                  End break
+                                  Stop break
                                 </>
                               )}
                             </Button>
@@ -965,7 +970,7 @@ export default function AttendanceTab({ user }: AttendanceTabProps) {
             {
               label: "Break",
               value: isOnBreak
-                ? "In progress"
+                ? `In progress · ${formatDurationMinutes(breakTotalMinutes)} total`
                 : hasUsedBreak
                   ? formatDurationMinutes(Number(record?.breakDurationMinutes || 0))
                   : "Not taken",

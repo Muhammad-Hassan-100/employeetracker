@@ -104,7 +104,7 @@ export async function POST(request: NextRequest) {
     }
 
     if (record.breakStartTime && !record.breakEndTime) {
-      return NextResponse.json({ error: "End your break before checking out" }, { status: 409 })
+      return NextResponse.json({ error: "Stop your break before checking out" }, { status: 409 })
     }
 
     const checkInTime = new Date(record.checkInTime)
