@@ -12,8 +12,6 @@ import {
 import { getEmployeeShiftAssignmentForDate } from "@/lib/employee-schedule"
 import { assertSelfOrAdmin, requireSession } from "@/lib/session"
 
-const CHECKOUT_GRACE_MINUTES = 360
-
 export async function POST(request: NextRequest) {
   try {
     const { session, response } = requireSession(request)
@@ -21,7 +19,7 @@ export async function POST(request: NextRequest) {
       return response
     }
 
-    const { userId, checkOutTime, isEarly, earlyReason, lateCheckoutReason, latitude, longitude, clientPublicIp, localDate, localTimeMinutes } =
+    const { userId, checkOutTime, isEarly, earlyReason, latitude, longitude, clientPublicIp, localDate, localTimeMinutes } =
       await request.json()
     const accessError = assertSelfOrAdmin(session, userId)
     if (accessError) {
@@ -54,7 +52,6 @@ export async function POST(request: NextRequest) {
       typeof localDate === "string" && /^\d{4}-\d{2}-\d{2}$/.test(localDate) ? localDate : formatLocalDateInput(checkOutMoment)
     const actionTimeMinutes = Number.isFinite(Number(localTimeMinutes)) ? Number(localTimeMinutes) : getLocalTimeMinutes(checkOutMoment)
     let computedIsEarly = false
-    let computedNeedsLateCheckoutReason = false
     let employeeCheckOutGraceMinutes = 0
     let employee: any = null
 
@@ -88,6 +85,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Already checked out today" }, { status: 400 })
     }
 
+    if (record.breakStartTime && !record.breakEndTime) {
+      return NextResponse.json({ error: "End your break before checking out" }, { status: 409 })
+    }
+
     const checkInTime = new Date(record.checkInTime)
     const checkOutTimeDate = checkOutMoment
     const hoursWorked = Math.max(0, (checkOutTimeDate.getTime() - checkInTime.getTime()) / (1000 * 60 * 60))
@@ -108,7 +109,7 @@ export async function POST(request: NextRequest) {
       const windowState = getAttendanceWindowState({
         currentDateInput: localDateInput,
         currentMinutes: actionTimeMinutes,
-        graceMinutes: CHECKOUT_GRACE_MINUTES,
+        graceMinutes: employeeCheckOutGraceMinutes,
         lateCheckoutGraceMinutes: employeeCheckOutGraceMinutes,
         recordDateInput: record.date,
         startMinutes: shiftStartMinutes,
@@ -116,14 +117,13 @@ export async function POST(request: NextRequest) {
       })
 
       computedIsEarly = windowState.isBeforeShiftEnd
-      computedNeedsLateCheckoutReason = !windowState.isBeforeShiftEnd && windowState.isAfterNormalCheckoutWindow
-
       if (windowState.isCheckoutExpired) {
         await attendanceCollection.updateOne(
           { _id: record._id, companyId: session.companyId },
           {
             $set: {
-              status: "present",
+              status: "absent",
+              absenceReason: "missing_checkout",
               isEarly: false,
               earlyReason: null,
               lateCheckoutReason: null,
@@ -135,7 +135,7 @@ export async function POST(request: NextRequest) {
         )
 
         return NextResponse.json(
-          { error: "Checkout is no longer allowed because the 6-hour window after shift end has expired." },
+          { error: "The normal checkout deadline has passed. This shift is marked absent and can no longer be checked out." },
           { status: 400 },
         )
       }
@@ -147,21 +147,17 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Early checkout reason is required before shift end" }, { status: 400 })
     }
 
-    if (computedNeedsLateCheckoutReason && !String(lateCheckoutReason || "").trim()) {
-      return NextResponse.json(
-        { error: "Late checkout reason is required after your normal checkout window" },
-        { status: 400 },
-      )
-    }
-
     const updateResult = await attendanceCollection.updateOne(
       { _id: record._id, companyId: session.companyId },
       {
         $set: {
           checkOutTime: checkOutTimeDate,
+          status: "present",
+          absenceReason: null,
+          checkoutWindowExpired: false,
           isEarly: computedIsEarly || Boolean(isEarly),
           earlyReason: computedIsEarly || isEarly ? String(earlyReason || "").trim() || null : null,
-          lateCheckoutReason: computedNeedsLateCheckoutReason ? String(lateCheckoutReason || "").trim() || null : null,
+          lateCheckoutReason: null,
           hoursWorked: Math.round(hoursWorked * 100) / 100,
           updatedAt: new Date(),
         },

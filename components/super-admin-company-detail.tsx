@@ -155,7 +155,7 @@ export default function SuperAdminCompanyDetail({ companyId }: { companyId: stri
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" data-dashboard-view="platform-company-detail">
       <div className="flex flex-col gap-4 rounded-3xl bg-white p-6 shadow-sm md:flex-row md:items-center md:justify-between">
         <div>
           <div className="flex flex-wrap items-center gap-2">

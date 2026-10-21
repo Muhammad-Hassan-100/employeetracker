@@ -2,7 +2,14 @@ import { type NextRequest, NextResponse } from "next/server"
 import { getDatabase } from "@/lib/mongodb"
 import { ObjectId } from "mongodb"
 import { getCompanyAttendancePolicy, requiresAttendanceLocation, requiresAttendanceOfficeIp } from "@/lib/attendance-policy"
-import { formatLocalDateInput } from "@/lib/attendance-time"
+import {
+  formatLocalDateInput,
+  getAttendanceWindowState,
+  getLocalTimeMinutes,
+  getPreviousLocalDateInput,
+  getTimeStringMinutes,
+  shiftSpansMidnight,
+} from "@/lib/attendance-time"
 import { getCompanyWorkingDays } from "@/lib/company-settings"
 import { getEmployeeShiftAssignmentForDate } from "@/lib/employee-schedule"
 import { assertSelfOrAdmin, requireSession } from "@/lib/session"
@@ -16,6 +23,15 @@ export async function GET(request: NextRequest) {
 
     const { searchParams } = new URL(request.url)
     const userId = searchParams.get("userId")
+    const now = new Date()
+    const localDateInput = searchParams.get("localDate")
+    const currentDateInput = typeof localDateInput === "string" && /^\d{4}-\d{2}-\d{2}$/.test(localDateInput)
+      ? localDateInput
+      : formatLocalDateInput(now)
+    const requestedMinutes = Number(searchParams.get("localTimeMinutes"))
+    const currentMinutes = Number.isFinite(requestedMinutes) && requestedMinutes >= 0 && requestedMinutes < 1440
+      ? requestedMinutes
+      : getLocalTimeMinutes(now)
 
     if (!userId) {
       return NextResponse.json({ error: "User ID is required" }, { status: 400 })
@@ -43,13 +59,41 @@ export async function GET(request: NextRequest) {
     const company = await companiesCollection.findOne({ companyId: session.companyId })
     const attendancePolicy = getCompanyAttendancePolicy(company)
     const workingDays = getCompanyWorkingDays(company)
-    const shiftAssignment = await getEmployeeShiftAssignmentForDate({
+    let shiftDate = currentDateInput
+    let shiftAssignment = await getEmployeeShiftAssignmentForDate({
       user,
-      dateInput: formatLocalDateInput(new Date()),
+      dateInput: currentDateInput,
       workingDays,
       shiftsCollection,
       companyId: session.companyId,
     })
+    const previousDate = getPreviousLocalDateInput(currentDateInput)
+    const previousShiftAssignment = await getEmployeeShiftAssignmentForDate({
+      user,
+      dateInput: previousDate,
+      workingDays,
+      shiftsCollection,
+      companyId: session.companyId,
+    })
+    const previousShift = previousShiftAssignment.shift
+    if (previousShift?.startTime && previousShift?.endTime) {
+      const startMinutes = getTimeStringMinutes(previousShift.startTime)
+      const endMinutes = getTimeStringMinutes(previousShift.endTime)
+      if (shiftSpansMidnight(startMinutes, endMinutes)) {
+        const previousShiftWindow = getAttendanceWindowState({
+          currentDateInput,
+          currentMinutes,
+          graceMinutes: Number.isInteger(user.checkOutGraceMinutes) ? user.checkOutGraceMinutes : 0,
+          recordDateInput: previousDate,
+          startMinutes,
+          endMinutes,
+        })
+        if (!previousShiftWindow.isCheckoutExpired) {
+          shiftDate = previousDate
+          shiftAssignment = previousShiftAssignment
+        }
+      }
+    }
     const shift = shiftAssignment.shift
 
     return NextResponse.json({
@@ -60,6 +104,7 @@ export async function GET(request: NextRequest) {
         endTime: shift.endTime,
         description: shift.description,
       } : null,
+      shiftDate,
       user: {
         hasShiftAssigned: shiftAssignment.isScheduled,
         shiftId: shiftAssignment.shiftId,
@@ -69,7 +114,7 @@ export async function GET(request: NextRequest) {
       },
       attendanceRules: {
         checkInBeforeMinutes: user.checkInBeforeMinutes ?? 5,
-        lateGraceMinutes: user.lateGraceMinutes ?? 0,
+        lateGraceMinutes: user.lateGraceMinutes ?? 5,
         checkOutGraceMinutes: user.checkOutGraceMinutes ?? 0,
       },
       attendancePolicy: {

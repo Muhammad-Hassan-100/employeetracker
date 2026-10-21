@@ -153,7 +153,7 @@ export default function LeaveManagement({ user }: LeaveManagementProps) {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" data-dashboard-view="leave-management">
       <div className="flex flex-col gap-4 rounded-3xl bg-white p-6 shadow-sm md:flex-row md:items-center md:justify-between">
         <div>
           <h2 className="text-2xl font-bold text-slate-950">Leave Requests</h2>
@@ -198,7 +198,7 @@ export default function LeaveManagement({ user }: LeaveManagementProps) {
       {showForm && (
         <Card className="rounded-3xl shadow-sm">
           <CardHeader>
-            <CardTitle>New Leave Request</CardTitle>
+            <CardTitle className="tracking-tight">Plan a leave request</CardTitle>
             <CardDescription>Only future dates are allowed for this workflow.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -279,24 +279,27 @@ export default function LeaveManagement({ user }: LeaveManagementProps) {
           ) : (
             leaves.map((leave) => (
               <div key={leave.id} className="rounded-3xl border border-slate-200 p-5">
-                <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-                  <div>
-                    <div className="flex flex-wrap items-center gap-2">
-                      <h3 className="text-lg font-semibold text-slate-950">
-                        {leave.leaveType.charAt(0).toUpperCase() + leave.leaveType.slice(1)} Leave
-                      </h3>
-                      {getStatusBadge(leave.status)}
+                <div className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-start">
+                  <div className="flex items-start gap-3">
+                    <div className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-[var(--dashboard-green-soft)] text-[var(--dashboard-green-text)]">
+                      <CalendarDays className="size-5" />
                     </div>
-                    <p className="mt-2 text-sm text-slate-600">
-                      {leave.startDate} to {leave.endDate}
-                    </p>
-                    <p className="mt-2 text-sm text-slate-700">{leave.reason}</p>
+                    <div className="min-w-0">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <h3 className="text-base font-semibold tracking-tight text-[var(--dashboard-ink)]">
+                          {leave.leaveType.charAt(0).toUpperCase() + leave.leaveType.slice(1)} leave
+                        </h3>
+                        {getStatusBadge(leave.status)}
+                      </div>
+                      <p className="mt-1.5 text-sm text-[var(--dashboard-muted)]">{leave.startDate} <span className="px-1">to</span> {leave.endDate}</p>
+                      <p className="mt-2 text-sm leading-6 text-[var(--dashboard-ink-soft)]">{leave.reason}</p>
+                    </div>
                   </div>
-                  <div className="text-sm text-slate-500">Applied: {new Date(leave.appliedDate).toLocaleDateString()}</div>
+                  <div className="text-xs text-[var(--dashboard-muted)] sm:text-right">Applied {new Date(leave.appliedDate).toLocaleDateString()}</div>
                 </div>
                 {leave.reviewComments && (
-                  <div className="mt-4 rounded-2xl bg-slate-50 p-4 text-sm text-slate-700">
-                    <span className="font-semibold">Admin note:</span> {leave.reviewComments}
+                  <div className="mt-4 rounded-xl border border-[var(--dashboard-border-soft)] bg-[#f8f9f6] p-4 text-sm leading-6 text-[var(--dashboard-ink-soft)]">
+                    <span className="font-semibold">Admin note</span><span className="px-2 text-[var(--dashboard-subtle)]">/</span>{leave.reviewComments}
                   </div>
                 )}
               </div>

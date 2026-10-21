@@ -17,6 +17,7 @@ import { SidebarTrigger } from "@/components/ui/sidebar"
 import { authFetch, getStoredUser } from "@/lib/client-session"
 import type { SessionUser } from "@/lib/session"
 import { formatTimeString12Hour } from "@/lib/time"
+import { formatDurationMinutes, formatLocalDateInput, getLocalTimeMinutes } from "@/lib/attendance-time"
 
 interface Employee {
   id: string
@@ -48,8 +49,14 @@ interface AttendanceRecord {
   date: string
   checkInTime: string | null
   checkOutTime: string | null
+  breakTaken?: boolean
+  breakStartTime?: string | null
+  breakEndTime?: string | null
+  breakDurationMinutes?: number
   isLate: boolean
   isEarly: boolean
+  needsCheckoutReview: boolean
+  absenceReason?: string | null
   lateReason?: string | null
   earlyReason?: string | null
   lateCheckoutReason?: string | null
@@ -106,7 +113,7 @@ function normalizeEmployeePayload(value: any): Employee | null {
             date: String(entry.date || ""),
             shiftId: String(entry.shiftId || ""),
           }))
-          .filter((entry) => entry.date && entry.shiftId)
+          .filter((entry: { date: string; shiftId: string }) => entry.date && entry.shiftId)
       : [],
     checkInBeforeMinutes: Number(value.checkInBeforeMinutes) || 0,
     lateGraceMinutes: Number(value.lateGraceMinutes) || 0,
@@ -129,8 +136,14 @@ function normalizeAttendanceRecords(value: unknown): AttendanceRecord[] {
       date: String(entry.date || ""),
       checkInTime: entry.checkInTime ? String(entry.checkInTime) : null,
       checkOutTime: entry.checkOutTime ? String(entry.checkOutTime) : null,
+      breakTaken: Boolean(entry.breakTaken),
+      breakStartTime: entry.breakStartTime ? String(entry.breakStartTime) : null,
+      breakEndTime: entry.breakEndTime ? String(entry.breakEndTime) : null,
+      breakDurationMinutes: Number.isFinite(Number(entry.breakDurationMinutes)) ? Number(entry.breakDurationMinutes) : 0,
       isLate: Boolean(entry.isLate),
       isEarly: Boolean(entry.isEarly),
+      needsCheckoutReview: Boolean(entry.needsCheckoutReview),
+      absenceReason: entry.absenceReason ? String(entry.absenceReason) : null,
       lateReason: entry.lateReason ? String(entry.lateReason) : null,
       earlyReason: entry.earlyReason ? String(entry.earlyReason) : null,
       lateCheckoutReason: entry.lateCheckoutReason ? String(entry.lateCheckoutReason) : null,
@@ -192,7 +205,7 @@ export default function EmployeeDetailPage() {
 
       const [employeeRes, attendanceRes, shiftsRes, settingsRes] = await Promise.all([
         authFetch(`/api/employees/${employeeId}`),
-        authFetch(`/api/attendance/history?userId=${employeeId}`),
+        authFetch(`/api/attendance/history?userId=${employeeId}&nowDate=${formatLocalDateInput()}&nowMinutes=${getLocalTimeMinutes()}`),
         authFetch("/api/shifts"),
         authFetch("/api/company/settings"),
       ])
@@ -325,7 +338,7 @@ export default function EmployeeDetailPage() {
       </header>
 
       <main className="flex-1 bg-slate-50 p-6">
-        <div className="mx-auto max-w-7xl space-y-6">
+        <div className="mx-auto max-w-[1440px] space-y-6" data-dashboard-view="employee-detail">
           <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
             <div>
               <h1 className="text-3xl font-bold text-slate-950">
@@ -544,6 +557,9 @@ export default function EmployeeDetailPage() {
                   ) : (
                     <div className="rounded-2xl bg-slate-50 px-4 py-3">{employee.checkOutGraceMinutes}</div>
                   )}
+                  <p className="text-xs leading-5 text-slate-500">
+                    Without a check-out, status becomes Absent after this many minutes past shift end. Check-out closes at that deadline.
+                  </p>
                 </div>
                 <div className="space-y-2">
                   <Label>Joined On</Label>
@@ -608,6 +624,7 @@ export default function EmployeeDetailPage() {
                           <p className="mt-1 text-sm text-slate-600">
                             In: {formatTime(record.checkInTime)} | Out: {formatTime(record.checkOutTime)} | Hours: {formatHoursWorked(record.hoursWorked)}
                           </p>
+                          {record.breakTaken && <p className="mt-1 text-sm text-slate-600">Break: {record.breakEndTime ? formatDurationMinutes(Number(record.breakDurationMinutes || 0)) : "In progress"}</p>}
                           {(record.lateReason || record.earlyReason || record.lateCheckoutReason || record.leaveReason) && (
                             <div className="mt-3 rounded-2xl bg-slate-50 p-3 text-sm text-slate-700">
                               {record.leaveReason && (
@@ -633,6 +650,7 @@ export default function EmployeeDetailPage() {
                             </div>
                           )}
                         </div>
+                        <div className="flex flex-wrap gap-2">
                         <Badge
                           className={
                             record.status === "on_leave"
@@ -656,6 +674,9 @@ export default function EmployeeDetailPage() {
                                   ? "Early Exit"
                                   : "On Time"}
                         </Badge>
+                        {record.absenceReason === "missing_checkout" && <Badge className="bg-amber-100 text-amber-900">Absent · missing checkout</Badge>}
+                        {record.absenceReason === "no_check_in" && <Badge className="bg-rose-100 text-rose-900">No check-in</Badge>}
+                        </div>
                       </div>
                     </div>
                   ))

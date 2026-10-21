@@ -4,9 +4,11 @@ import "./globals.css"
 import { Toaster } from "sonner"
 
 export const metadata: Metadata = {
-  title: "Employee Tracker - Professional Workforce Management",
-  description: "Comprehensive employee management and attendance tracking system",
-  generator: "v0.dev",
+  title: {
+    default: "EmployeeTracker | People Operations, Made Clear",
+    template: "%s",
+  },
+  description: "Bring people, shifts, attendance, leave, and workforce reporting together in one clear workspace with EmployeeTracker.",
   icons: {
     icon: "/icon.svg",
     shortcut: "/icon.svg",

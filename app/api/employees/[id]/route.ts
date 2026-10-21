@@ -47,7 +47,7 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
       customScheduleMonth: employee.customScheduleMonth || "",
       customSchedule: employee.customSchedule || [],
       checkInBeforeMinutes: employee.checkInBeforeMinutes ?? 5,
-      lateGraceMinutes: employee.lateGraceMinutes ?? 0,
+      lateGraceMinutes: employee.lateGraceMinutes ?? 5,
       checkOutGraceMinutes: employee.checkOutGraceMinutes ?? 0,
       joinDate: employee.joinDate,
       status: employee.status,

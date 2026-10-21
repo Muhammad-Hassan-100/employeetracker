@@ -111,7 +111,7 @@ export default function SuperAdminRequests() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" data-dashboard-view="platform-requests">
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
         <Card className="rounded-3xl shadow-sm">
           <CardContent className="flex items-center gap-4 p-5">

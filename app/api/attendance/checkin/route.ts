@@ -5,10 +5,14 @@ import { getCompanyAttendancePolicy, validateAttendanceActionAccess } from "@/li
 import { getCompanyWorkingDays } from "@/lib/company-settings"
 import {
   formatLocalDateInput,
+  getAttendanceWindowState,
   getLocalTimeMinutes,
+  getLocalDateDifference,
+  getPreviousLocalDateInput,
   getRecentShiftDateInputs,
   getTimeStringMinutes,
   hasShiftEndedForRecordDate,
+  shiftSpansMidnight,
 } from "@/lib/attendance-time"
 import { getEmployeeShiftAssignmentForDate } from "@/lib/employee-schedule"
 import { assertSelfOrAdmin, requireSession } from "@/lib/session"
@@ -56,12 +60,14 @@ export async function POST(request: NextRequest) {
     let computedIsLate = false
     let employeeCheckInBeforeMinutes = 5
     let todayShiftHasEnded = false
+    let attendanceDate = today
+    let selectedShiftAssignment: any = null
 
     try {
       const user = await usersCollection.findOne({ _id: new ObjectId(userId), companyId: session.companyId })
       if (user) {
         employeeCheckInBeforeMinutes = Number.isInteger(user.checkInBeforeMinutes) ? user.checkInBeforeMinutes : 5
-        const employeeLateGraceMinutes = Number.isInteger(user.lateGraceMinutes) ? user.lateGraceMinutes : 0
+        const employeeLateGraceMinutes = Number.isInteger(user.lateGraceMinutes) ? user.lateGraceMinutes : 5
 
         const todayShiftAssignment = await getEmployeeShiftAssignmentForDate({
           user,
@@ -70,6 +76,34 @@ export async function POST(request: NextRequest) {
           shiftsCollection,
           companyId: session.companyId,
         })
+        selectedShiftAssignment = todayShiftAssignment
+        const previousDate = getPreviousLocalDateInput(today)
+        const previousShiftAssignment = await getEmployeeShiftAssignmentForDate({
+          user,
+          dateInput: previousDate,
+          workingDays,
+          shiftsCollection,
+          companyId: session.companyId,
+        })
+        const previousShift = previousShiftAssignment.shift
+        if (previousShift?.startTime && previousShift?.endTime) {
+          const startMinutes = getTimeStringMinutes(previousShift.startTime)
+          const endMinutes = getTimeStringMinutes(previousShift.endTime)
+          if (shiftSpansMidnight(startMinutes, endMinutes)) {
+            const previousWindow = getAttendanceWindowState({
+              currentDateInput: today,
+              currentMinutes: actionTimeMinutes,
+              graceMinutes: Number.isInteger(user.checkOutGraceMinutes) ? user.checkOutGraceMinutes : 0,
+              recordDateInput: previousDate,
+              startMinutes,
+              endMinutes,
+            })
+            if (!previousWindow.isCheckoutExpired) {
+              attendanceDate = previousDate
+              selectedShiftAssignment = previousShiftAssignment
+            }
+          }
+        }
 
         for (const candidateDate of getRecentShiftDateInputs(today)) {
           const candidateShiftAssignment = await getEmployeeShiftAssignmentForDate({
@@ -123,8 +157,13 @@ export async function POST(request: NextRequest) {
               lateReason: null,
               earlyReason: null,
               lateCheckoutReason: null,
+              breakTaken: false,
+              breakStartTime: null,
+              breakEndTime: null,
+              breakDurationMinutes: 0,
               hoursWorked: 0,
               status: "absent",
+              absenceReason: "no_check_in",
               autoAbsent: true,
               createdAt: new Date(),
               updatedAt: new Date(),
@@ -132,26 +171,27 @@ export async function POST(request: NextRequest) {
           }
         }
 
-        if (todayShiftAssignment.shift?.startTime && todayShiftAssignment.shift?.endTime) {
-          const shiftStartMinutes = getTimeStringMinutes(todayShiftAssignment.shift.startTime)
-          const shiftEndMinutes = getTimeStringMinutes(todayShiftAssignment.shift.endTime)
+        if (selectedShiftAssignment?.shift?.startTime && selectedShiftAssignment?.shift?.endTime) {
+          const shiftStartMinutes = getTimeStringMinutes(selectedShiftAssignment.shift.startTime)
+          const shiftEndMinutes = getTimeStringMinutes(selectedShiftAssignment.shift.endTime)
           const earliestCheckInMinutes = shiftStartMinutes - employeeCheckInBeforeMinutes
           const lateCutoffMinutes = shiftStartMinutes + employeeLateGraceMinutes
           todayShiftHasEnded = hasShiftEndedForRecordDate({
             currentDateInput: today,
             currentMinutes: actionTimeMinutes,
-            recordDateInput: today,
+            recordDateInput: attendanceDate,
             startMinutes: shiftStartMinutes,
             endMinutes: shiftEndMinutes,
           })
 
-          if (actionTimeMinutes < earliestCheckInMinutes) {
+          const elapsedShiftMinutes = getLocalDateDifference(attendanceDate, today) * 1440 + actionTimeMinutes
+          if (elapsedShiftMinutes < earliestCheckInMinutes) {
             return NextResponse.json(
               { error: `Check-in allowed only ${employeeCheckInBeforeMinutes} minutes before shift start` },
               { status: 400 },
             )
           }
-          computedIsLate = actionTimeMinutes > lateCutoffMinutes
+          computedIsLate = elapsedShiftMinutes > lateCutoffMinutes
         } else {
           return NextResponse.json({ error: "No shift is assigned for today" }, { status: 400 })
         }
@@ -162,11 +202,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Late reason is required for late check-in" }, { status: 400 })
     }
 
-    // Check if user already has an attendance record today
+    // Check the record belonging to the active shift date.
     let existingRecord = await attendanceCollection.findOne({
       companyId: session.companyId,
       userId: userId,
-      date: today,
+      date: attendanceDate,
     })
 
     if (existingRecord) {
@@ -178,7 +218,7 @@ export async function POST(request: NextRequest) {
           await attendanceCollection.deleteOne({ _id: existingRecord._id, companyId: session.companyId })
           existingRecord = null
         } else {
-          return NextResponse.json({ error: "Shift has ended. You were marked absent for today." }, { status: 400 })
+          return NextResponse.json({ error: "Shift has ended. You were marked absent for this shift." }, { status: 400 })
         }
       }
       if (existingRecord?.checkInTime) {
@@ -190,8 +230,8 @@ export async function POST(request: NextRequest) {
       companyId: session.companyId,
       userId: userId,
       status: "approved",
-      startDate: { $lte: today },
-      endDate: { $gte: today },
+      startDate: { $lte: attendanceDate },
+      endDate: { $gte: attendanceDate },
     })
 
     if (hasLeave) {
@@ -201,7 +241,7 @@ export async function POST(request: NextRequest) {
     const record = {
       userId,
       companyId: session.companyId,
-      date: today,
+      date: attendanceDate,
       checkInTime: new Date(checkInTime),
       checkOutTime: null,
       isLate: computedIsLate,
@@ -209,6 +249,10 @@ export async function POST(request: NextRequest) {
       lateReason: computedIsLate ? lateReason || null : null,
       earlyReason: null,
       lateCheckoutReason: null,
+      breakTaken: false,
+      breakStartTime: null,
+      breakEndTime: null,
+      breakDurationMinutes: 0,
       hoursWorked: 0,
       status: "present",
       createdAt: new Date(),
@@ -224,6 +268,10 @@ export async function POST(request: NextRequest) {
             isLate: computedIsLate,
             lateReason: computedIsLate ? lateReason || null : null,
             lateCheckoutReason: null,
+            breakTaken: false,
+            breakStartTime: null,
+            breakEndTime: null,
+            breakDurationMinutes: 0,
             status: "present",
             updatedAt: new Date(),
           },

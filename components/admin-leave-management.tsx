@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useMemo, useState } from "react"
-import { CheckCircle2, Clock3, Loader2, RefreshCw, Search, XCircle } from "lucide-react"
+import { CalendarDays, CheckCircle2, Clock3, Loader2, RefreshCw, Search, XCircle } from "lucide-react"
 import { toast } from "sonner"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -128,7 +128,7 @@ export default function AdminLeaveManagement({ adminUser }: AdminLeaveManagement
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" data-dashboard-view="leave-approvals">
       <div className="flex flex-col gap-4 rounded-3xl bg-white p-6 shadow-sm md:flex-row md:items-center md:justify-between">
         <div>
           <h2 className="text-2xl font-bold text-slate-950">Leave Approval Queue</h2>
@@ -221,18 +221,28 @@ export default function AdminLeaveManagement({ adminUser }: AdminLeaveManagement
           ) : (
             filteredLeaves.map((leave) => (
               <div key={leave.id} className="rounded-3xl border border-slate-200 p-5">
-                <div className="flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
-                  <div className="space-y-2">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <h3 className="text-lg font-semibold text-slate-950">{leave.employeeName}</h3>
-                      {getStatusBadge(leave.status)}
-                      <Badge variant="outline">{leave.leaveType}</Badge>
+                <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_340px]">
+                  <div className="space-y-4">
+                    <div className="flex items-start gap-3">
+                      <div aria-hidden="true" className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-[var(--dashboard-green-soft)] text-sm font-semibold text-[var(--dashboard-green-text)]">
+                        {leave.employeeName.split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]).join("").toUpperCase()}
+                      </div>
+                      <div className="min-w-0">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <h3 className="text-base font-semibold tracking-tight text-[var(--dashboard-ink)]">{leave.employeeName}</h3>
+                          {getStatusBadge(leave.status)}
+                          <Badge variant="outline">{leave.leaveType}</Badge>
+                        </div>
+                        <p className="mt-1 text-xs text-[var(--dashboard-muted)]">Applied {new Date(leave.appliedDate).toLocaleDateString()}</p>
+                      </div>
                     </div>
-                    <p className="text-sm text-slate-600">
-                      {leave.startDate} to {leave.endDate}
-                    </p>
-                    <p className="text-sm text-slate-700">{leave.reason}</p>
-                    <p className="text-xs text-slate-500">Applied: {new Date(leave.appliedDate).toLocaleString()}</p>
+                    <div className="flex items-start gap-3 rounded-xl bg-[#f7f8f5] p-3.5">
+                      <CalendarDays className="mt-0.5 size-4 shrink-0 text-[var(--dashboard-green-text)]" />
+                      <div>
+                        <p className="text-sm font-medium text-[var(--dashboard-ink-soft)]">{leave.startDate} <span className="px-1 text-[var(--dashboard-subtle)]">to</span> {leave.endDate}</p>
+                        <p className="mt-1 text-sm leading-5 text-[var(--dashboard-muted)]">{leave.reason}</p>
+                      </div>
+                    </div>
                     {leave.reviewComments && (
                       <div className="rounded-2xl bg-slate-50 p-3 text-sm text-slate-700">
                         <span className="font-semibold">Review note:</span> {leave.reviewComments}

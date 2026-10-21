@@ -19,8 +19,12 @@ Company-facing records are generally queried with the signed-in session's `compa
 ### Public routes
 
 - `/` — product landing page, feature overview, and links to sign in or create a company.
-- `/login` — sign-in and company signup tabs. `/login?mode=signup` opens the signup tab.
+- `/login` — dedicated sign-in page.
+- `/signup` — dedicated company signup page. Legacy `/login?mode=signup` links redirect here.
+- `/privacy`, `/terms`, `/cookies` — public legal-information pages linked from the landing-page footer. Their copy is a Pakistan-oriented product draft and should be reviewed before production use.
 - Unknown routes render the custom 404 page at `app/not-found.tsx`.
+
+The landing page presents employee management, shift-aware attendance, scheduling, and reporting, then links visitors to create a workspace or sign in. Generated local artwork is used on the landing page and shared by the legal pages. The legal pages describe the repository's current browser storage behavior: the signed-in profile is stored in `localStorage`, and the sidebar preference is stored in a browser cookie.
 
 ### Sign-in flow
 
@@ -28,23 +32,25 @@ Company-facing records are generally queried with the signed-in session's `compa
 2. `POST /api/auth/login` finds the user and checks the password and account/company state.
 3. Inactive accounts cannot sign in. Admins whose account or company approval is pending/rejected are denied.
 4. On success, the UI stores the returned user in browser `localStorage` under `user` and navigates to `/dashboard`.
-5. Dashboard routing sends `super_admin` to `/dashboard/platform/requests`, `admin` to `/dashboard/employees`, and employees to `/dashboard/attendance`.
+5. Each role opens the shared overview at `/dashboard`; the overview loads role-specific data and provides links to the existing feature pages.
 6. The dashboard layout reads the stored user and renders the role-specific sidebar. Missing client session redirects to `/login`.
 
 `authFetch` adds the stored user's identity fields as request headers. The app does not use a server-managed cookie session in this flow. Individual API handlers still apply their own session/role checks.
 
 ### Company signup and approval flow
 
-1. The applicant opens `/login?mode=signup` and provides company name/domain, admin name, work email, and password.
+1. The applicant opens `/signup` and provides company name/domain, admin name, work email, and password.
 2. The UI and `POST /api/auth/signup` reject public email domains and require the admin email domain to match the company domain. Password minimum is six characters.
 3. The server creates a company and admin account with `approvalStatus: pending`; the admin is inactive. Company defaults are Monday–Friday working days, default departments, open attendance access, and employee password changes disabled.
-4. The applicant sees a submitted message and returns to the sign-in tab. The new admin cannot sign in until platform approval activates it.
+4. The applicant sees a submitted confirmation on `/signup`. The new admin cannot sign in until platform approval activates it.
 5. A super admin opens Approval Requests, reviews the pending company and approves or rejects it. The company detail route can also edit approval state.
 6. On approval, the company/admin become approved and the admin account becomes active. The admin can sign in and start configuring the workspace.
 
 ## 3. Role navigation and page features
 
 ### Super admin
+
+The Overview dashboard shows pending company approvals, approved workspaces, active employee count, a short approval queue, and links to platform management pages.
 
 Sidebar entries:
 
@@ -56,6 +62,8 @@ Sidebar entries:
 
 ### Company admin
 
+The Overview dashboard shows active employees, today's present and late counts, pending leave requests, attendance distribution, and shortcuts to employee, shift, and report pages.
+
 Sidebar entries:
 
 - **Add Employee** (`/dashboard/employees`) — create an employee account, choose department/position, set attendance allowances, and assign either a company-default shift or a custom monthly schedule.
@@ -64,15 +72,17 @@ Sidebar entries:
 - **All Employees** (`/dashboard/employee-list`) — view employee list and active/inactive counts; edit, activate/deactivate, or delete employees.
 - **Leave Queue** (`/dashboard/leaves`) — review pending requests and view pending/approved/rejected counts; approve or reject pending leave.
 - **Reports** (`/dashboard/reports`) — filter attendance summary by this week, this month, last month, or last three months; search/report employee attendance metrics and export CSV.
-- **Settings** (`/dashboard/settings`) — update admin name/email and optionally password. Admin email must stay on the company's domain.
+- **Settings** (`/dashboard/settings`) — update admin name/email, optionally change password, and set the organization's shared dashboard primary color. Admin email must stay on the company's domain.
 
 Employee detail uses `/dashboard/employees/[id]`. The view mode is linked from the attendance monitor and shows a date-filtered attendance timeline with check-in/out, hours, status, and recorded reasons. Edit mode is linked from All Employees (`?mode=edit`) and edits profile fields, department, position, schedule type, shift/custom monthly dates, and per-employee check-in/late/check-out rules.
 
 ### Employee
 
+The Overview dashboard shows today's shift and attendance state, including an active break, monthly attendance/hour totals, pending leave requests, recent attendance, and shortcuts to attendance/history/leave pages.
+
 Sidebar entries:
 
-- **Attendance** (`/dashboard/attendance`) — today's shift, attendance policy, check-in/check-out action, and action reasons where needed.
+- **Attendance** (`/dashboard/attendance`) — today's shift, attendance policy, check-in/check-out actions, a one-time shift break, and action reasons where needed.
 - **Leave Requests** (`/dashboard/leaves`) — submit future leave and review own request statuses.
 - **My History** (`/dashboard/history`) — view personal attendance records and summary counts.
 - **Settings** — shown only when the company admin has enabled employee password changes; employees can update their own password.
@@ -91,13 +101,14 @@ Sidebar entries:
 
 1. Attendance page loads the employee's shift assignment for today and the current attendance record. Shift assignment uses company working days or the employee's custom monthly dates.
 2. Check-in is available within the shift's allowed early window (`checkInBeforeMinutes`, defaulting to five minutes when not set). The server rejects an action with no assigned shift, an off-day, approved leave, an existing check-in, or an already-finalized absence.
-3. A check-in after the shift start plus the employee's `lateGraceMinutes` is late and requires a reason. The app records check-in time and late state.
-4. Check-out requires an open check-in record and its shift assignment. Before shift end, a reason is required and the record is marked early. After the employee's normal checkout grace (`checkOutGraceMinutes`), a late checkout reason is required.
-5. Checkout remains available until six hours after shift end. Once that fixed window expires, checkout is closed, the record remains `present`, `hoursWorked` is set to zero, and the record is marked expired. Within the allowed window, actual elapsed hours are saved (rounded to two decimal places).
-6. Overnight shifts are supported. After-midnight actions can attach to the previous local shift date.
-7. If no check-in exists after a scheduled shift ends, attendance routes can create an `absent` record. This is lazy finalization: it runs when relevant attendance routes are requested, not through a background job.
+3. A check-in after the shift start plus the employee's `lateGraceMinutes` (default five minutes) is late and requires a reason. The app records check-in time and late state.
+4. Check-out requires an open check-in record and its shift assignment. Before shift end, a reason is required and the record is marked early. Check-out is unavailable after the employee's configured normal checkout deadline.
+5. After check-in and before shift end, an employee may start one break from the Attendance page. The employee ends it on return. Break start, end, and duration are saved to the same attendance record; the shift clock and `hoursWorked` continue to count from check-in to check-out, so break time is not deducted. A break cannot be started again that shift, and check-out is blocked while the break is active.
+6. If an employee has checked in but has not checked out by their configured deadline (`shift end + checkOutGraceMinutes`), the record becomes `absent` with reason `missing_checkout`, hours remain zero, and `checkoutWindowExpired` is set. Checkout is then rejected by the API and removed from the employee's Attendance actions. There is no late-checkout reason or correction action after the deadline. Once that deadline passes, the monitor and employee page resolve the next assigned shift.
+7. Overnight shifts are supported. After-midnight actions can attach to the previous local shift date.
+8. From shift start until shift end, a missing check-in appears as `no_show` (shown in the UI as **Not come yet**). A late check-in after the employee's `lateGraceMinutes` is shown as **Late** and requires a reason. At shift end, no check-in becomes `absent` with reason `no_check_in`. This is lazy finalization: it runs when relevant attendance routes are requested, not through a background job.
 
-Attendance statuses are `present`, `absent`, and `on_leave`; `isLate` and `isEarly` add detail to a present record. The UI shows late, early exit, on leave, absent, or on time states and displays saved reasons in history/detail views.
+Attendance statuses include `present`, `absent`, `on_leave`, and the monitor's derived `scheduled` and `no_show` states. The UI labels `no_show` as **Not come yet**. `isLate` and `isEarly` add detail to checked-in records. The monitor, dashboard, employee attendance page, and history/detail views show status and absence reason (`no_check_in` or `missing_checkout`) consistently.
 
 ### Leave request and review
 
@@ -116,6 +127,7 @@ Attendance statuses are `present`, `absent`, and `on_leave`; `isLate` and `isEar
 ### Profile/settings
 
 - Admin can change their name, email on the same company domain, and password.
+- Admin can choose a preset or custom six-digit hex brand color. It is stored on the company record and applied across company admin and employee dashboards; the platform super-admin workspace keeps its platform theme.
 - Employee password changes are available only if the admin enables the company-wide option. The UI checks password strength/confirmation and the server enforces the minimum length and company permission.
 - Sidebar refreshes the current admin/employee profile from `/api/auth/profile` so the displayed user/settings permission can update.
 
@@ -137,6 +149,8 @@ All routes are under `app/api`. Protected calls receive session headers through 
 | `/api/auth/signup` | POST | Create pending company and admin request |
 | `/api/auth/profile` | GET, PUT | Read/update admin profile or employee password (employee changes gated by company setting) |
 | `/api/company/settings` | GET, PUT | Read/update company rules; admin only |
+| `/api/company/branding` | GET | Read the current company's dashboard color; authenticated company users |
+| `/api/company/branding` | PUT | Update the company's dashboard color; admin only |
 | `/api/employees/create` | POST | Create employee; admin only |
 | `/api/employees` | GET | List employees in the admin's company |
 | `/api/employees/[id]` | GET, PUT, DELETE | Read/edit/delete a company employee; admin only |
@@ -150,6 +164,7 @@ All routes are under `app/api`. Protected calls receive session headers through 
 | `/api/attendance/today` | GET | Read today's state and lazily finalize eligible absence/expired records; self/admin access |
 | `/api/attendance/checkin` | POST | Validate and record check-in; self/admin access |
 | `/api/attendance/checkout` | POST | Validate and record check-out; self/admin access |
+| `/api/attendance/break` | POST | Start or end a one-time break on an open shift; self/admin access |
 | `/api/attendance/history` | GET | Read attendance history; self/admin access |
 | `/api/attendance/admin` | GET | Selected-date company snapshot; admin only |
 | `/api/reports/attendance` | GET | Period attendance summaries; admin only |

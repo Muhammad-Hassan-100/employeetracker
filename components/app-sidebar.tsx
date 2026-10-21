@@ -1,11 +1,22 @@
 "use client"
 
 import Link from "next/link"
+import BrandMark from "@/components/brand-mark"
 import { useEffect, useState } from "react"
 import { usePathname, useRouter } from "next/navigation"
-import { BarChart3, Building2, CalendarClock, ClipboardList, Home, LogOut, Settings2, ShieldCheck, UserPlus2, UsersRound } from "lucide-react"
+import {
+  BarChart3,
+  Building2,
+  CalendarClock,
+  ClipboardList,
+  Home,
+  LogOut,
+  Settings2,
+  ShieldCheck,
+  UserPlus2,
+  UsersRound,
+} from "lucide-react"
 import { toast } from "sonner"
-import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
   Sidebar,
@@ -34,21 +45,14 @@ export function AppSidebar({ user }: AppSidebarProps) {
   const { isMobile, setOpenMobile } = useSidebar()
   const [currentUser, setCurrentUser] = useState(user)
 
-  useEffect(() => {
-    setCurrentUser(user)
-  }, [user])
+  useEffect(() => setCurrentUser(user), [user])
 
   useEffect(() => {
-    if (isMobile) {
-      setOpenMobile(false)
-    }
+    if (isMobile) setOpenMobile(false)
   }, [isMobile, pathname, setOpenMobile])
 
   useEffect(() => {
-    if (user.role === "super_admin") {
-      return
-    }
-
+    if (user.role === "super_admin") return
     let isCancelled = false
 
     const syncCurrentUser = async () => {
@@ -56,10 +60,7 @@ export function AppSidebar({ user }: AppSidebarProps) {
         const response = await authFetch("/api/auth/profile")
         if (!response.ok) {
           if (response.status === 403 && user.role === "employee") {
-            const nextUser = {
-              ...user,
-              allowEmployeePasswordChange: false,
-            }
+            const nextUser = { ...user, allowEmployeePasswordChange: false }
             setCurrentUser(nextUser)
             setStoredUser(nextUser)
           }
@@ -67,98 +68,88 @@ export function AppSidebar({ user }: AppSidebarProps) {
         }
 
         const data = await response.json()
-        if (!data.user || isCancelled) {
-          return
-        }
-
+        if (!data.user || isCancelled) return
         setCurrentUser(data.user)
         setStoredUser(data.user)
       } catch {
-        // Silent refresh keeps the sidebar current without interrupting the user.
+        // Keep the current sidebar available when profile refresh fails.
       }
     }
 
     syncCurrentUser()
-
-    return () => {
-      isCancelled = true
-    }
-  }, [user.role])
+    return () => { isCancelled = true }
+  }, [user])
 
   const handleLogout = () => {
     clearStoredUser()
-    toast.success("Signed out", {
-      description: "Your workspace session has been cleared.",
-    })
+    toast.success("Signed out", { description: "Your workspace session has been cleared." })
     router.push("/")
   }
 
-  const menuItems =
-    currentUser.role === "super_admin"
+  const menuItems = currentUser.role === "super_admin"
+    ? [
+        { title: "Overview", url: "/dashboard", icon: Home },
+        { title: "Approval requests", url: "/dashboard/platform/requests", icon: ShieldCheck },
+        { title: "Companies", url: "/dashboard/platform/companies", icon: Building2 },
+        { title: "Employees", url: "/dashboard/platform/employees", icon: UsersRound },
+      ]
+    : currentUser.role === "admin"
       ? [
-          { title: "Approval Requests", url: "/dashboard/platform/requests", icon: ShieldCheck },
-          { title: "Companies", url: "/dashboard/platform/companies", icon: Building2 },
-          { title: "Employees", url: "/dashboard/platform/employees", icon: UsersRound },
-        ]
-      : currentUser.role === "admin"
-      ? [
-          { title: "Add Employee", url: "/dashboard/employees", icon: UserPlus2 },
-          { title: "Shifts & Rules", url: "/dashboard/shifts", icon: CalendarClock },
-          { title: "Attendance Monitor", url: "/dashboard/attendance-monitor", icon: Home },
-          { title: "All Employees", url: "/dashboard/employee-list", icon: UsersRound },
-          { title: "Leave Queue", url: "/dashboard/leaves", icon: ClipboardList },
+          { title: "Overview", url: "/dashboard", icon: Home },
+          { title: "Add employee", url: "/dashboard/employees", icon: UserPlus2 },
+          { title: "All employees", url: "/dashboard/employee-list", icon: UsersRound },
+          { title: "Attendance monitor", url: "/dashboard/attendance-monitor", icon: ClipboardList },
+          { title: "Leave queue", url: "/dashboard/leaves", icon: CalendarClock },
+          { title: "Shifts & rules", url: "/dashboard/shifts", icon: CalendarClock },
           { title: "Reports", url: "/dashboard/reports", icon: BarChart3 },
           { title: "Settings", url: "/dashboard/settings", icon: Settings2 },
         ]
       : [
-          { title: "Attendance", url: "/dashboard/attendance", icon: Home },
-          { title: "Leave Requests", url: "/dashboard/leaves", icon: ClipboardList },
-          { title: "My History", url: "/dashboard/history", icon: BarChart3 },
+          { title: "Overview", url: "/dashboard", icon: Home },
+          { title: "Attendance", url: "/dashboard/attendance", icon: ClipboardList },
+          { title: "Leave requests", url: "/dashboard/leaves", icon: CalendarClock },
+          { title: "My history", url: "/dashboard/history", icon: BarChart3 },
           ...(currentUser.allowEmployeePasswordChange
             ? [{ title: "Settings", url: "/dashboard/settings", icon: Settings2 }]
             : []),
         ]
 
+  const workspaceLabel = currentUser.role === "super_admin"
+    ? "Platform control"
+    : currentUser.role === "admin"
+      ? "Company workspace"
+      : "Employee workspace"
+
   return (
-    <Sidebar className="border-r border-slate-200 bg-white">
-      <SidebarHeader className="border-b border-slate-200 px-4 py-5">
-        <div className="rounded-3xl bg-slate-950 p-4 text-white">
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <p className="text-xs uppercase tracking-[0.2em] text-emerald-300">
-                {currentUser.role === "super_admin" ? "Platform" : "Workspace"}
-              </p>
-              <h1 className="mt-1 text-lg font-bold">{currentUser.companyName}</h1>
-              <p className="mt-1 text-sm text-slate-300">{currentUser.name}</p>
-            </div>
-            <Badge
-              className={
-                currentUser.role === "super_admin"
-                  ? "bg-amber-300 text-slate-950"
-                  : currentUser.role === "admin"
-                    ? "bg-emerald-400 text-slate-950"
-                    : "bg-sky-400 text-slate-950"
-              }
-            >
-              {currentUser.role === "super_admin" ? "Super Admin" : currentUser.role === "admin" ? "Admin" : "Employee"}
-            </Badge>
-          </div>
-        </div>
+    <Sidebar collapsible="icon" className="border-r border-[#e6e9e2] bg-[var(--dashboard-sidebar)] text-[var(--dashboard-ink-soft)]">
+      <SidebarHeader className="border-b border-[var(--dashboard-border)] px-4 py-5 group-data-[collapsible=icon]:items-center group-data-[collapsible=icon]:px-2">
+        <Link href="/dashboard" className="flex items-center gap-3 rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--dashboard-brand)] group-data-[collapsible=icon]:justify-center">
+          <BrandMark size={40} className="group-data-[collapsible=icon]:size-8" />
+          <span className="min-w-0 group-data-[collapsible=icon]:hidden">
+            <span className="block truncate text-sm font-semibold tracking-tight text-[#1f2a22]">EmployeeTracker</span>
+            <span className="mt-0.5 block truncate text-xs text-[var(--dashboard-subtle)]">{currentUser.companyName}</span>
+          </span>
+        </Link>
       </SidebarHeader>
 
-      <SidebarContent className="px-3 py-4">
+      <SidebarContent className="px-3 py-5 group-data-[collapsible=icon]:px-0">
         <SidebarGroup>
-          <SidebarGroupLabel className="px-2 text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
-            Menu
+          <SidebarGroupLabel className="px-3 pb-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-[#8a948c]">
+            {workspaceLabel}
           </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               {menuItems.map((item) => (
                 <SidebarMenuItem key={item.url}>
-                  <SidebarMenuButton asChild isActive={pathname === item.url} className="h-11 rounded-2xl px-3">
+                  <SidebarMenuButton
+                    asChild
+                    isActive={pathname === item.url}
+                    tooltip={item.title}
+                    className="h-10 rounded-xl px-3 text-[13px] font-medium text-[#5c6860] transition-colors data-[active=true]:bg-[var(--dashboard-green-soft)] data-[active=true]:text-[var(--dashboard-green-text)] data-[active=true]:shadow-[inset_2px_0_0_var(--dashboard-brand)] hover:bg-[var(--dashboard-green-soft)] hover:text-[var(--dashboard-green-text)] focus-visible:ring-2 focus-visible:ring-[var(--dashboard-brand)]"
+                  >
                     <Link href={item.url}>
-                      <item.icon className="h-4 w-4" />
-                      <span>{item.title}</span>
+                      <item.icon className="size-[17px]" aria-hidden="true" />
+                      <span className="group-data-[collapsible=icon]:hidden">{item.title}</span>
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -168,10 +159,23 @@ export function AppSidebar({ user }: AppSidebarProps) {
         </SidebarGroup>
       </SidebarContent>
 
-      <SidebarFooter className="border-t border-slate-200 p-4">
-        <Button variant="outline" className="w-full rounded-2xl border-slate-300" onClick={handleLogout}>
-          <LogOut className="mr-2 h-4 w-4" />
-          Sign Out
+      <SidebarFooter className="border-t border-[var(--dashboard-border)] p-3 group-data-[collapsible=icon]:items-center group-data-[collapsible=icon]:p-1">
+        <div className="flex items-center gap-3 rounded-xl px-2 py-2 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0">
+          <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-[var(--dashboard-green-soft)] text-xs font-semibold text-[var(--dashboard-green-text)] group-data-[collapsible=icon]:size-8">
+            {currentUser.name.split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]).join("").toUpperCase()}
+          </span>
+          <span className="min-w-0 flex-1 group-data-[collapsible=icon]:hidden">
+            <span className="block truncate text-xs font-semibold text-[#2c382f]">{currentUser.name}</span>
+            <span className="mt-0.5 block truncate text-[11px] text-[#849087]">{currentUser.role === "super_admin" ? "Super admin" : currentUser.role}</span>
+          </span>
+        </div>
+        <Button
+          variant="ghost"
+          className="mt-1 h-10 w-full justify-start rounded-xl px-3 text-xs font-medium text-[#6e7971] hover:bg-[#f3f4f1] hover:text-[#29372e] focus-visible:ring-2 focus-visible:ring-[#779c61] group-data-[collapsible=icon]:size-8 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0"
+          onClick={handleLogout}
+        >
+          <LogOut className="mr-2 size-4 group-data-[collapsible=icon]:mr-0" aria-hidden="true" />
+          <span className="group-data-[collapsible=icon]:hidden">Sign out</span>
         </Button>
       </SidebarFooter>
       <SidebarRail />

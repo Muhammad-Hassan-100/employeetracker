@@ -46,8 +46,8 @@ export default function EmployeesPage() {
   }
 
   return (
-    <div className="flex flex-col h-full">
-      <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4 bg-white">
+    <div className="flex min-h-full flex-col">
+      <header className="flex h-16 shrink-0 items-center gap-2 border-b border-[var(--dashboard-border)] bg-white/90 px-4 backdrop-blur-xl sm:px-7">
         <SidebarTrigger className="-ml-1" />
         <Separator orientation="vertical" className="mr-2 h-4" />
         <Breadcrumb>
@@ -63,11 +63,12 @@ export default function EmployeesPage() {
         </Breadcrumb>
       </header>
 
-      <main className="flex-1 p-4 md:p-6 bg-gray-50">
-        <div className="max-w-7xl mx-auto space-y-6">
-          <div>
-            <h1 className="text-2xl md:text-3xl font-bold text-gray-900">Employee Management</h1>
-            <p className="text-gray-600 mt-1">Register new employees and assign them to shifts</p>
+      <main className="flex-1 bg-[var(--dashboard-canvas)] px-4 py-7 sm:px-7 sm:py-9 xl:px-10">
+        <div className="mx-auto max-w-[1440px] space-y-7">
+          <div className="max-w-3xl">
+            <p className="mb-2 text-xs font-semibold uppercase tracking-[0.16em] text-[var(--dashboard-green-text)]">Team setup</p>
+            <h1 className="text-3xl font-semibold tracking-[-0.035em] text-[var(--dashboard-ink)] sm:text-[2.15rem]">Employee management</h1>
+            <p className="mt-2 text-sm leading-6 text-[var(--dashboard-muted)] sm:text-base">Create employee accounts and set their schedule and attendance rules.</p>
           </div>
           {/* Employee Management */}
           <EmployeeManagement />

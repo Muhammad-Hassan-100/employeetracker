@@ -158,7 +158,7 @@ export function validateAttendanceActionAccess({
   policy,
   request,
 }: {
-  actionLabel: "Check-in" | "Check-out"
+  actionLabel: "Check-in" | "Check-out" | "Break"
   clientPublicIp?: unknown
   latitude?: unknown
   longitude?: unknown

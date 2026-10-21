@@ -112,7 +112,7 @@ export default function EmployeeList() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" data-dashboard-view="employee-list">
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <Card className="rounded-3xl shadow-sm">
           <CardContent className="flex items-center gap-4 p-5">
@@ -147,7 +147,7 @@ export default function EmployeeList() {
         <CardHeader>
           <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div>
-              <CardTitle className="text-2xl">Employees Directory</CardTitle>
+              <CardTitle className="text-xl tracking-tight">People directory</CardTitle>
               <CardDescription>Search, review, and manage employees from one place.</CardDescription>
             </div>
             <div className="relative w-full md:w-72">
@@ -173,35 +173,40 @@ export default function EmployeeList() {
           ) : (
             filteredEmployees.map((employee) => (
               <div key={employee.id} className="rounded-3xl border border-slate-200 p-5">
-                <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
-                  <div className="space-y-2">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <h3 className="text-lg font-semibold text-slate-950">{employee.name}</h3>
-                      <Badge className={employee.status === "active" ? "bg-emerald-100 text-emerald-900" : "bg-slate-200 text-slate-700"}>
-                        {employee.status}
-                      </Badge>
+                <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_auto] xl:items-center">
+                  <div className="flex min-w-0 items-start gap-4">
+                    <div aria-hidden="true" className="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-[var(--dashboard-green-soft)] text-sm font-semibold text-[var(--dashboard-green-text)]">
+                      {employee.name.split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]).join("").toUpperCase()}
                     </div>
-                    <p className="text-sm text-slate-600">{employee.email}</p>
-                    <div className="flex flex-wrap gap-x-6 gap-y-1 text-sm text-slate-600">
-                      <span>Department: {employee.department}</span>
-                      <span>Position: {employee.position}</span>
-                      <span>{employee.scheduleMode === "custom_monthly" ? `Schedule: ${employee.shift}` : `Shift: ${employee.shift || "Unassigned"}`}</span>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <h3 className="truncate text-base font-semibold tracking-tight text-[var(--dashboard-ink)]">{employee.name}</h3>
+                        <Badge className={employee.status === "active" ? "bg-emerald-100 text-emerald-900" : "bg-slate-200 text-slate-700"}>
+                          {employee.status === "active" ? "Active" : "Inactive"}
+                        </Badge>
+                      </div>
+                      <p className="mt-1 truncate text-sm text-[var(--dashboard-muted)]">{employee.email}</p>
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        <span className="rounded-lg bg-[#f5f6f3] px-2.5 py-1 text-xs font-medium text-[var(--dashboard-ink-soft)]">{employee.department || "No department"}</span>
+                        <span className="rounded-lg bg-[#f5f6f3] px-2.5 py-1 text-xs text-[var(--dashboard-muted)]">{employee.position || "Position not set"}</span>
+                        <span className="rounded-lg bg-[#f5f6f3] px-2.5 py-1 text-xs text-[var(--dashboard-muted)]">{employee.scheduleMode === "custom_monthly" ? `Custom: ${employee.shift}` : `Shift: ${employee.shift || "Unassigned"}`}</span>
+                      </div>
                     </div>
                   </div>
-                  <div className="flex flex-wrap gap-2">
+                  <div className="flex flex-wrap gap-2 xl:justify-end">
                     <Button
                       variant="outline"
-                      className="rounded-2xl"
+                      className="rounded-xl"
                       onClick={() => router.push(`/dashboard/employees/${employee.id}?mode=edit`)}
                     >
                       <Pencil className="mr-2 h-4 w-4" />
                       Edit
                     </Button>
-                    <Button variant="outline" className="rounded-2xl" disabled={busyId === employee.id} onClick={() => handleToggleStatus(employee)}>
+                    <Button variant="outline" className="rounded-xl" disabled={busyId === employee.id} onClick={() => handleToggleStatus(employee)}>
                       <ToggleLeft className="mr-2 h-4 w-4" />
                       {employee.status === "active" ? "Deactivate" : "Activate"}
                     </Button>
-                    <Button variant="outline" className="rounded-2xl text-rose-700" disabled={busyId === employee.id} onClick={() => handleDelete(employee)}>
+                    <Button variant="outline" className="rounded-xl text-rose-700" disabled={busyId === employee.id} onClick={() => handleDelete(employee)}>
                       {busyId === employee.id ? (
                         <Loader2 className="h-4 w-4 animate-spin" />
                       ) : (

@@ -2,7 +2,7 @@
 
 import type React from "react"
 import { useEffect, useState } from "react"
-import { CalendarClock, Loader2, Pencil, Plus, Trash2 } from "lucide-react"
+import { CalendarClock, Clock3, Loader2, Pencil, Plus, Trash2 } from "lucide-react"
 import { toast } from "sonner"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -258,7 +258,7 @@ export default function ShiftManagement() {
   const requiresOfficeIp = companyRules.attendancePolicyMode === "office_ip"
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" data-dashboard-view="shift-management">
       <div className="grid gap-6 xl:grid-cols-[0.95fr_1.05fr]">
         <Card className="rounded-3xl shadow-sm">
           <CardHeader>
@@ -400,44 +400,43 @@ export default function ShiftManagement() {
 
         <Card className="rounded-3xl shadow-sm">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-2xl">
+            <CardTitle className="flex items-center gap-2 text-xl tracking-tight">
               <CalendarClock className="h-5 w-5 text-sky-600" />
-              Shift Library
+              Saved shifts
             </CardTitle>
             <CardDescription>All saved shifts appear here for quick review and editing.</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="grid gap-3 sm:grid-cols-2">
             {isLoading ? (
-              <div className="flex items-center justify-center py-12">
+              <div className="col-span-full flex items-center justify-center py-12">
                 <Loader2 className="h-8 w-8 animate-spin text-emerald-600" />
               </div>
             ) : shifts.length === 0 ? (
-              <div className="rounded-3xl border border-dashed border-slate-300 p-8 text-center text-slate-500">
+              <div className="col-span-full rounded-2xl border border-dashed border-slate-300 p-8 text-center text-slate-500">
                 No shifts yet. Create your first shift to start assigning employees.
               </div>
             ) : (
               shifts.map((shift) => (
-                <div key={shift.id} className="rounded-3xl border border-slate-200 p-5">
-                  <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-                    <div>
-                      <div className="flex flex-wrap items-center gap-2">
-                        <h3 className="text-lg font-semibold text-slate-950">{shift.name}</h3>
-                        <Badge variant="outline">
-                          {formatTimeString12Hour(shift.startTime)} to {formatTimeString12Hour(shift.endTime)}
-                        </Badge>
-                      </div>
-                      {shift.description && <p className="mt-3 text-sm text-slate-600">{shift.description}</p>}
+                <div key={shift.id} className="rounded-3xl border border-slate-200 p-4">
+                  <div className="flex items-start gap-3">
+                    <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-[var(--dashboard-green-soft)] text-[var(--dashboard-green-text)]">
+                      <Clock3 className="size-5" />
                     </div>
-                    <div className="flex gap-2">
-                      <Button variant="outline" className="rounded-2xl" onClick={() => handleEdit(shift)}>
-                        <Pencil className="mr-2 h-4 w-4" />
-                        Edit
-                      </Button>
-                      <Button variant="outline" className="rounded-2xl text-rose-700" onClick={() => handleDelete(shift.id)}>
-                        <Trash2 className="mr-2 h-4 w-4" />
-                        Delete
-                      </Button>
+                    <div className="min-w-0 flex-1">
+                      <h3 className="font-semibold text-[var(--dashboard-ink)]">{shift.name}</h3>
+                      <p className="mt-1 text-sm font-medium text-[var(--dashboard-green-text)]">
+                        {formatTimeString12Hour(shift.startTime)} <span className="px-1 text-[var(--dashboard-subtle)]">to</span> {formatTimeString12Hour(shift.endTime)}
+                      </p>
+                      {shift.description && <p className="mt-2 line-clamp-2 text-xs leading-5 text-[var(--dashboard-muted)]">{shift.description}</p>}
                     </div>
+                  </div>
+                  <div className="mt-4 flex gap-2 border-t border-[var(--dashboard-border-soft)] pt-3">
+                    <Button variant="outline" className="flex-1 rounded-xl" onClick={() => handleEdit(shift)}>
+                      <Pencil className="mr-2 size-4" />Edit
+                    </Button>
+                    <Button variant="outline" className="flex-1 rounded-xl text-rose-700" onClick={() => handleDelete(shift.id)}>
+                      <Trash2 className="mr-2 size-4" />Delete
+                    </Button>
                   </div>
                 </div>
               ))

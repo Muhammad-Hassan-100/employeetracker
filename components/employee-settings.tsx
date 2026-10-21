@@ -126,7 +126,7 @@ export default function EmployeeSettings({ user, onUserUpdate, onAccessDenied }:
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" data-dashboard-view="employee-settings">
       <div className="grid gap-4 md:grid-cols-2">
         <Card className="rounded-3xl shadow-sm">
           <CardContent className="flex items-center gap-4 p-5">

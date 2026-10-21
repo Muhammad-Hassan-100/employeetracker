@@ -1,3 +1,6 @@
+export const DEFAULT_LATE_GRACE_MINUTES = 5
+export const NO_SHOW_AFTER_MINUTES = 0
+
 export function formatLocalDateInput(value = new Date()) {
   const year = value.getFullYear()
   const month = String(value.getMonth() + 1).padStart(2, "0")
@@ -77,7 +80,8 @@ export function getAttendanceWindowState({
   return {
     isBeforeShiftEnd: absoluteCurrentMinutes < shiftEndAbsoluteMinutes,
     isAfterNormalCheckoutWindow: absoluteCurrentMinutes > normalCheckoutDeadlineMinutes,
-    isCheckoutExpired: absoluteCurrentMinutes > checkoutDeadlineMinutes,
+    isMissingCheckoutDeadlineReached: absoluteCurrentMinutes >= normalCheckoutDeadlineMinutes,
+    isCheckoutExpired: absoluteCurrentMinutes >= checkoutDeadlineMinutes,
     shiftEndAbsoluteMinutes,
     normalCheckoutDeadlineMinutes,
     checkoutDeadlineMinutes,
@@ -103,6 +107,33 @@ export function hasShiftEndedForRecordDate({
   return absoluteCurrentMinutes >= getShiftEndAbsoluteMinutes(startMinutes, endMinutes)
 }
 
+export function getNoCheckInShiftStatus({
+  currentDateInput,
+  currentMinutes,
+  noShowAfterMinutes = NO_SHOW_AFTER_MINUTES,
+  recordDateInput,
+  startMinutes,
+  endMinutes,
+}: {
+  currentDateInput: string
+  currentMinutes: number
+  noShowAfterMinutes?: number
+  recordDateInput: string
+  startMinutes: number
+  endMinutes: number
+}): "scheduled" | "no_show" | "absent" {
+  const dayDifference = getLocalDateDifference(recordDateInput, currentDateInput)
+  const absoluteCurrentMinutes = dayDifference * 1440 + currentMinutes
+  const shiftEndAbsoluteMinutes = getShiftEndAbsoluteMinutes(startMinutes, endMinutes)
+
+  if (absoluteCurrentMinutes >= shiftEndAbsoluteMinutes) {
+    return "absent"
+  }
+
+  const noShowCutoff = startMinutes + noShowAfterMinutes
+  return absoluteCurrentMinutes >= noShowCutoff ? "no_show" : "scheduled"
+}
+
 export function normalizeShiftTimeline(currentMinutes: number, startMinutes: number, endMinutes: number) {
   const isOvernight = shiftSpansMidnight(startMinutes, endMinutes)
 
@@ -124,4 +155,11 @@ export function getTimeStringFromMinutes(totalMinutes: number) {
   const minutes = normalizedMinutes % 60
 
   return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`
+}
+
+export function formatDurationMinutes(value: number) {
+  const totalSeconds = Math.max(0, Math.round((Number.isFinite(value) ? value : 0) * 60))
+  const minutes = Math.floor(totalSeconds / 60)
+  const seconds = totalSeconds % 60
+  return `${minutes}m ${String(seconds).padStart(2, "0")}s`
 }

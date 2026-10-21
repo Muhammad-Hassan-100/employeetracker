@@ -135,7 +135,7 @@ export default function SuperAdminEmployees() {
   }
 
   return (
-    <Card className="rounded-3xl shadow-sm">
+    <Card className="rounded-3xl shadow-sm" data-dashboard-view="platform-employees">
       <CardHeader>
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
@@ -161,25 +161,30 @@ export default function SuperAdminEmployees() {
         ) : (
           filteredEmployees.map((employee) => (
             <div key={employee.id} className="rounded-3xl border border-slate-200 p-5">
-              <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
-                <div className="space-y-2">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <h3 className="text-lg font-semibold text-slate-950">{employee.name}</h3>
-                    <Badge className={employee.status === "active" ? "bg-emerald-100 text-emerald-900" : "bg-slate-200 text-slate-700"}>
-                      {employee.status}
-                    </Badge>
+              <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_auto] xl:items-center">
+                <div className="flex items-start gap-4">
+                  <div aria-hidden="true" className="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-[var(--dashboard-green-soft)] text-sm font-semibold text-[var(--dashboard-green-text)]">
+                    {employee.name.split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]).join("").toUpperCase()}
                   </div>
-                  <p className="text-sm text-slate-600">{employee.email}</p>
-                  <div className="flex flex-wrap gap-x-6 gap-y-1 text-sm text-slate-600">
-                    <span>Company: {employee.companyName}</span>
-                    <span>Department: {employee.department || "Not set"}</span>
-                    <span>Position: {employee.position || "Not set"}</span>
+                  <div className="min-w-0 space-y-1.5">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <h3 className="text-base font-semibold tracking-tight text-[var(--dashboard-ink)]">{employee.name}</h3>
+                      <Badge className={employee.status === "active" ? "bg-emerald-100 text-emerald-900" : "bg-slate-200 text-slate-700"}>
+                        {employee.status}
+                      </Badge>
+                    </div>
+                    <p className="truncate text-sm text-[var(--dashboard-muted)]">{employee.email}</p>
+                    <div className="flex flex-wrap gap-2 pt-1 text-xs">
+                      <span className="rounded-lg bg-[#f5f6f3] px-2.5 py-1 font-medium text-[var(--dashboard-ink-soft)]">{employee.companyName}</span>
+                      <span className="rounded-lg bg-[#f5f6f3] px-2.5 py-1 text-[var(--dashboard-muted)]">{employee.department || "No department"}</span>
+                      <span className="rounded-lg bg-[#f5f6f3] px-2.5 py-1 text-[var(--dashboard-muted)]">{employee.position || "No position"}</span>
+                    </div>
                   </div>
                 </div>
-                <div className="flex flex-wrap gap-3">
+                <div className="flex flex-wrap gap-2 xl:justify-end">
                   <Button
                     variant="outline"
-                    className="rounded-2xl"
+                    className="rounded-xl"
                     disabled={busyKey === `status-${employee.id}`}
                     onClick={() => toggleEmployeeStatus(employee)}
                   >
@@ -187,7 +192,7 @@ export default function SuperAdminEmployees() {
                   </Button>
                   <Button
                     variant="outline"
-                    className="rounded-2xl text-rose-700"
+                    className="rounded-xl text-rose-700"
                     disabled={busyKey === `delete-${employee.id}`}
                     onClick={() => deleteEmployee(employee)}
                   >

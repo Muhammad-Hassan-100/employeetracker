@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import Link from "next/link"
 import { CalendarDays, Clock3, Eye, Loader2, RefreshCw, Search, UsersRound } from "lucide-react"
 import { toast } from "sonner"
@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { authFetch } from "@/lib/client-session"
 import { formatTimeString12Hour } from "@/lib/time"
+import { formatDurationMinutes, formatLocalDateInput, getLocalTimeMinutes } from "@/lib/attendance-time"
 
 interface SnapshotRow {
   employeeId: string
@@ -21,12 +22,19 @@ interface SnapshotRow {
   status: string
   joinDate: string
   selectedDate: string
-  attendanceStatus: "present" | "absent" | "on_leave" | "weekend" | "off_day" | "not_joined"
+  attendanceStatus: "present" | "absent" | "on_leave" | "scheduled" | "no_show" | "weekend" | "off_day" | "not_joined" | "inactive"
   checkInTime: string | null
   checkOutTime: string | null
+  breakTaken: boolean
+  breakStartTime: string | null
+  breakEndTime: string | null
+  breakDurationMinutes: number
   hoursWorked: number
   isLate: boolean
   isEarly: boolean
+  needsCheckoutReview: boolean
+  absenceReason: string | null
+  lateOccurrencesLast30Days: number
   lateReason: string | null
   earlyReason: string | null
   lateCheckoutReason: string | null
@@ -52,18 +60,32 @@ function formatTime(value: string | null) {
   })
 }
 
-function getStatusBadge(status: SnapshotRow["attendanceStatus"]) {
+function getStatusBadge(status: SnapshotRow["attendanceStatus"], isLate = false) {
   switch (status) {
+    case "inactive":
+      return <Badge className="bg-slate-200 text-slate-700">Inactive</Badge>
     case "present":
-      return <Badge className="bg-emerald-100 text-emerald-900">Present</Badge>
+      return <>
+        <Badge className="bg-emerald-100 text-emerald-900">Present</Badge>
+        {isLate && <Badge className="bg-orange-100 text-orange-900">Late</Badge>}
+      </>
     case "on_leave":
       return <Badge className="bg-amber-100 text-amber-900">On Leave</Badge>
+    case "scheduled":
+      return <Badge className="bg-slate-100 text-slate-700">Scheduled</Badge>
+    case "no_show":
+      return <Badge className="bg-orange-100 text-orange-900">Not come yet</Badge>
     case "weekend":
       return <Badge className="bg-sky-100 text-sky-900">Weekend</Badge>
     case "off_day":
       return <Badge className="bg-slate-200 text-slate-700">Off Day</Badge>
     case "not_joined":
       return <Badge className="bg-slate-200 text-slate-700">Not Joined</Badge>
+    case "absent":
+      return <>
+        <Badge className="bg-rose-100 text-rose-900">Absent</Badge>
+        {isLate && <Badge className="bg-orange-100 text-orange-900">Late</Badge>}
+      </>
     default:
       return <Badge className="bg-rose-100 text-rose-900">Absent</Badge>
   }
@@ -74,7 +96,8 @@ function formatHoursWorked(value?: number | null) {
 }
 
 export default function AdminAttendanceMonitor() {
-  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split("T")[0])
+  const [selectedDate, setSelectedDate] = useState(formatLocalDateInput())
+  const lastCurrentDate = useRef(formatLocalDateInput())
   const [rows, setRows] = useState<SnapshotRow[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState("")
@@ -87,7 +110,12 @@ export default function AdminAttendanceMonitor() {
     }
 
     try {
-      const response = await authFetch(`/api/attendance/admin?date=${selectedDate}`)
+      const now = new Date()
+      const currentDate = formatLocalDateInput(now)
+      const shiftView = selectedDate === currentDate ? "&shiftView=current" : ""
+      const response = await authFetch(
+        `/api/attendance/admin?date=${selectedDate}&nowDate=${currentDate}&nowMinutes=${getLocalTimeMinutes(now)}${shiftView}`,
+      )
       const data = await response.json()
 
       if (!response.ok) {
@@ -111,6 +139,13 @@ export default function AdminAttendanceMonitor() {
 
   useEffect(() => {
     const interval = setInterval(() => {
+      const currentDate = formatLocalDateInput()
+      if (currentDate !== lastCurrentDate.current) {
+        if (selectedDate === lastCurrentDate.current) {
+          setSelectedDate(currentDate)
+        }
+        lastCurrentDate.current = currentDate
+      }
       fetchSnapshot(false)
     }, 30000)
 
@@ -125,7 +160,7 @@ export default function AdminAttendanceMonitor() {
           .toLowerCase()
           .includes(searchTerm.toLowerCase()),
       )
-      .filter((row) => (statusFilter === "all" ? true : row.attendanceStatus === statusFilter))
+      .filter((row) => (statusFilter === "all" ? true : statusFilter === "late" ? row.status === "active" && row.isLate : row.attendanceStatus === statusFilter))
       .filter((row) => (shiftFilter === "all" ? true : row.shift?.name === shiftFilter))
   }, [rows, searchTerm, shiftFilter, statusFilter])
 
@@ -136,11 +171,15 @@ export default function AdminAttendanceMonitor() {
   const presentCount = rows.filter((row) => row.attendanceStatus === "present").length
   const absentCount = rows.filter((row) => row.attendanceStatus === "absent").length
   const leaveCount = rows.filter((row) => row.attendanceStatus === "on_leave").length
-  const lateCount = rows.filter((row) => row.attendanceStatus === "present" && row.isLate).length
+  const scheduledCount = rows.filter((row) => row.attendanceStatus === "scheduled").length
+  const lateCount = rows.filter((row) => row.isLate).length
+  const noShowCount = rows.filter((row) => row.attendanceStatus === "no_show").length
+  const missingCheckoutCount = rows.filter((row) => row.status === "active" && row.absenceReason === "missing_checkout").length
+  const repeatedLateCount = rows.filter((row) => row.lateOccurrencesLast30Days >= 3).length
 
   return (
-    <div className="space-y-6">
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+    <div className="space-y-6" data-dashboard-view="attendance-monitor">
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4 2xl:grid-cols-7">
         <Card className="rounded-3xl shadow-sm">
           <CardContent className="p-5">
             <p className="text-sm text-slate-500">Present</p>
@@ -161,8 +200,33 @@ export default function AdminAttendanceMonitor() {
         </Card>
         <Card className="rounded-3xl shadow-sm">
           <CardContent className="p-5">
+            <p className="text-sm text-slate-500">Scheduled</p>
+            <p className="text-2xl font-bold">{scheduledCount}</p>
+          </CardContent>
+        </Card>
+        <Card className="rounded-3xl shadow-sm">
+          <CardContent className="p-5">
             <p className="text-sm text-slate-500">Late</p>
             <p className="text-2xl font-bold">{lateCount}</p>
+          </CardContent>
+        </Card>
+        <Card className="rounded-3xl shadow-sm">
+          <CardContent className="p-5">
+            <p className="text-sm text-slate-500">Not come yet</p>
+            <p className="text-2xl font-bold">{noShowCount}</p>
+          </CardContent>
+        </Card>
+        <Card className="rounded-3xl shadow-sm">
+          <CardContent className="p-5">
+            <p className="text-sm text-slate-500">Missing checkout</p>
+            <p className="text-2xl font-bold">{missingCheckoutCount}</p>
+          </CardContent>
+        </Card>
+        <Card className="rounded-3xl shadow-sm">
+          <CardContent className="p-5">
+            <p className="text-sm text-slate-500">Repeated late</p>
+            <p className="text-2xl font-bold">{repeatedLateCount}</p>
+            <p className="mt-1 text-xs text-slate-500">3+ times in 30 days</p>
           </CardContent>
         </Card>
       </div>
@@ -212,9 +276,13 @@ export default function AdminAttendanceMonitor() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All statuses</SelectItem>
+                  <SelectItem value="inactive">Inactive</SelectItem>
                   <SelectItem value="present">Present</SelectItem>
+                  <SelectItem value="late">Late</SelectItem>
                   <SelectItem value="absent">Absent</SelectItem>
                   <SelectItem value="on_leave">On Leave</SelectItem>
+                  <SelectItem value="scheduled">Scheduled</SelectItem>
+                  <SelectItem value="no_show">Not come yet</SelectItem>
                   <SelectItem value="weekend">Weekend</SelectItem>
                   <SelectItem value="off_day">Off Day</SelectItem>
                   <SelectItem value="not_joined">Not Joined</SelectItem>
@@ -254,9 +322,12 @@ export default function AdminAttendanceMonitor() {
                   <div className="space-y-2">
                     <div className="flex flex-wrap items-center gap-2">
                       <h3 className="text-lg font-semibold text-slate-950">{row.name}</h3>
-                      {getStatusBadge(row.attendanceStatus)}
-                      {row.isLate && <Badge className="bg-orange-100 text-orange-900">Late</Badge>}
-                      {row.isEarly && <Badge className="bg-sky-100 text-sky-900">Early Exit</Badge>}
+                      {getStatusBadge(row.attendanceStatus, row.isLate)}
+                      {row.status === "active" && row.breakStartTime && !row.breakEndTime && <Badge className="bg-amber-100 text-amber-900">On break</Badge>}
+                      {row.status === "active" && row.isEarly && <Badge className="bg-sky-100 text-sky-900">Early Exit</Badge>}
+                      {row.status === "active" && row.absenceReason === "missing_checkout" && <Badge className="bg-amber-100 text-amber-900">Missing checkout</Badge>}
+                      {row.status === "active" && row.absenceReason === "no_check_in" && <Badge className="bg-rose-100 text-rose-900">No check-in</Badge>}
+                      {row.status === "active" && row.lateOccurrencesLast30Days >= 3 && <Badge className="bg-orange-100 text-orange-900">{row.lateOccurrencesLast30Days} Late / 30d</Badge>}
                     </div>
                     <p className="text-sm text-slate-600">{row.email}</p>
                     <div className="flex flex-wrap gap-x-6 gap-y-1 text-sm text-slate-600">
@@ -275,6 +346,9 @@ export default function AdminAttendanceMonitor() {
                       </span>
                       <span>Out: {formatTime(row.checkOutTime)}</span>
                       <span>Hours: {formatHoursWorked(row.hoursWorked)}</span>
+                      {row.breakTaken && <span className={row.breakStartTime && !row.breakEndTime ? "font-medium text-amber-800" : ""}>
+                        Break: {row.breakStartTime && !row.breakEndTime ? "In progress" : formatDurationMinutes(Number(row.breakDurationMinutes || 0))}
+                      </span>}
                     </div>
                     {(row.lateReason || row.earlyReason || row.lateCheckoutReason || row.leaveReason) && (
                       <div className="rounded-2xl bg-slate-50 p-3 text-sm text-slate-700">

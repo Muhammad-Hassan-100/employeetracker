@@ -10,6 +10,7 @@ import {
 } from "@/lib/company-utils"
 import {
   DEFAULT_ALLOW_EMPLOYEE_PASSWORD_CHANGE,
+  DEFAULT_DASHBOARD_PRIMARY_COLOR,
   DEFAULT_DEPARTMENTS,
   DEFAULT_WORKING_DAYS,
 } from "@/lib/company-settings"
@@ -75,6 +76,7 @@ export async function POST(request: NextRequest) {
       departments: DEFAULT_DEPARTMENTS,
       attendancePolicy: DEFAULT_ATTENDANCE_POLICY,
       allowEmployeePasswordChange: DEFAULT_ALLOW_EMPLOYEE_PASSWORD_CHANGE,
+      dashboardPrimaryColor: DEFAULT_DASHBOARD_PRIMARY_COLOR,
       createdAt: new Date(),
       updatedAt: new Date(),
     }

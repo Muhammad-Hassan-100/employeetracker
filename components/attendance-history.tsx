@@ -8,14 +8,21 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input"
 import { authFetch } from "@/lib/client-session"
 import type { SessionUser } from "@/lib/session"
+import { formatDurationMinutes, formatLocalDateInput, getLocalTimeMinutes } from "@/lib/attendance-time"
 
 interface AttendanceRecord {
   id: string
   date: string
   checkInTime: string | null
   checkOutTime: string | null
+  breakTaken?: boolean
+  breakStartTime?: string | null
+  breakEndTime?: string | null
+  breakDurationMinutes?: number
   isLate: boolean
   isEarly: boolean
+  needsCheckoutReview: boolean
+  absenceReason?: string | null
   lateReason: string | null
   earlyReason: string | null
   lateCheckoutReason: string | null
@@ -62,7 +69,7 @@ export default function AttendanceHistory({ user }: AttendanceHistoryProps) {
   useEffect(() => {
     const loadRecords = async () => {
       try {
-        const response = await authFetch(`/api/attendance/history?userId=${user.id}`)
+        const response = await authFetch(`/api/attendance/history?userId=${user.id}&nowDate=${formatLocalDateInput()}&nowMinutes=${getLocalTimeMinutes()}`)
         const data = await response.json()
         if (response.ok) {
           setRecords(data)
@@ -87,7 +94,7 @@ export default function AttendanceHistory({ user }: AttendanceHistoryProps) {
     : "0.0"
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" data-dashboard-view="attendance-history">
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <Card className="rounded-3xl shadow-sm">
           <CardContent className="p-5">
@@ -119,7 +126,7 @@ export default function AttendanceHistory({ user }: AttendanceHistoryProps) {
         <CardHeader>
           <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div>
-              <CardTitle className="flex items-center gap-2 text-2xl">
+              <CardTitle className="flex items-center gap-2 text-xl tracking-tight">
                 <History className="h-5 w-5 text-sky-600" />
                 Attendance History
               </CardTitle>
@@ -145,33 +152,35 @@ export default function AttendanceHistory({ user }: AttendanceHistoryProps) {
           ) : (
             filteredRecords.map((record) => (
               <div key={record.id} className="rounded-3xl border border-slate-200 p-5">
-                <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-2">
-                      <CalendarDays className="h-4 w-4 text-slate-500" />
-                      <h3 className="font-semibold text-slate-950">{formatDate(record.date)}</h3>
+                <div className="grid gap-5 md:grid-cols-[minmax(180px,0.8fr)_minmax(0,1.2fr)_auto] md:items-center">
+                  <div className="flex items-center gap-3">
+                    <div className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-[var(--dashboard-green-soft)] text-[var(--dashboard-green-text)]">
+                      <CalendarDays className="size-5" />
                     </div>
-                    <div className="flex flex-wrap gap-x-6 gap-y-1 text-sm text-slate-600">
-                      <span className="flex items-center gap-1">
-                        <Clock3 className="h-4 w-4" />
-                        In: {formatTime(record.checkInTime)}
-                      </span>
-                      <span>Out: {formatTime(record.checkOutTime)}</span>
-                      <span>Hours: {formatHoursWorked(record.hoursWorked)}</span>
+                    <div className="min-w-0">
+                      <h3 className="text-sm font-semibold text-[var(--dashboard-ink)]">{new Date(record.date).toLocaleDateString("en-US", { weekday: "short" })}</h3>
+                      <p className="mt-0.5 text-sm text-[var(--dashboard-muted)]">{new Date(record.date).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}</p>
                     </div>
-                    {(record.lateReason || record.earlyReason || record.lateCheckoutReason || record.leaveReason) && (
-                      <div className="rounded-2xl bg-slate-50 p-3 text-sm text-slate-700">
-                        {record.leaveReason && (
-                          <p>
-                            <span className="font-semibold">Leave:</span> {record.leaveType || "Approved"} - {record.leaveReason}
-                          </p>
-                        )}
-                        {record.lateReason && <p><span className="font-semibold">Late:</span> {record.lateReason}</p>}
-                        {record.earlyReason && <p><span className="font-semibold">Early:</span> {record.earlyReason}</p>}
-                        {record.lateCheckoutReason && <p><span className="font-semibold">Late Check-Out:</span> {record.lateCheckoutReason}</p>}
-                      </div>
-                    )}
                   </div>
+                  <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                    <div className="rounded-xl bg-[#f7f8f5] px-3 py-2.5">
+                      <p className="text-[11px] font-medium uppercase tracking-wide text-[var(--dashboard-muted)]">Check in</p>
+                      <p className="mt-1 flex items-center gap-1.5 text-sm font-semibold text-[var(--dashboard-ink)]"><Clock3 className="size-3.5 text-[var(--dashboard-green-text)]" />{formatTime(record.checkInTime)}</p>
+                    </div>
+                    <div className="rounded-xl bg-[#f7f8f5] px-3 py-2.5">
+                      <p className="text-[11px] font-medium uppercase tracking-wide text-[var(--dashboard-muted)]">Check out</p>
+                      <p className="mt-1 text-sm font-semibold text-[var(--dashboard-ink)]">{formatTime(record.checkOutTime)}</p>
+                    </div>
+                    <div className="rounded-xl bg-[#f7f8f5] px-3 py-2.5">
+                      <p className="text-[11px] font-medium uppercase tracking-wide text-[var(--dashboard-muted)]">Hours</p>
+                      <p className="mt-1 text-sm font-semibold text-[var(--dashboard-ink)]">{formatHoursWorked(record.hoursWorked)}</p>
+                    </div>
+                    {record.breakTaken && <div className="rounded-xl bg-[#f7f8f5] px-3 py-2.5">
+                      <p className="text-[11px] font-medium uppercase tracking-wide text-[var(--dashboard-muted)]">Break</p>
+                      <p className="mt-1 text-sm font-semibold text-[var(--dashboard-ink)]">{record.breakEndTime ? formatDurationMinutes(Number(record.breakDurationMinutes || 0)) : "In progress"}</p>
+                    </div>}
+                  </div>
+                  <div className="flex flex-wrap gap-2">
                   <Badge
                     className={
                       record.status === "on_leave"
@@ -195,7 +204,22 @@ export default function AttendanceHistory({ user }: AttendanceHistoryProps) {
                             ? "Early Exit"
                             : "On Time"}
                   </Badge>
+                  {record.absenceReason === "missing_checkout" && <Badge className="bg-amber-100 text-amber-900">Absent · missing checkout</Badge>}
+                  {record.absenceReason === "no_check_in" && <Badge className="bg-rose-100 text-rose-900">No check-in</Badge>}
+                  </div>
                 </div>
+                {(record.lateReason || record.earlyReason || record.lateCheckoutReason || record.leaveReason) && (
+                  <div className="mt-4 border-t border-[var(--dashboard-border-soft)] pt-3 text-sm text-[var(--dashboard-muted)]">
+                    {(record.lateReason || record.earlyReason || record.lateCheckoutReason || record.leaveReason) && (
+                      <>
+                        {record.leaveReason && <p><span className="font-medium text-[var(--dashboard-ink-soft)]">Leave:</span> {record.leaveType || "Approved"} - {record.leaveReason}</p>}
+                        {record.lateReason && <p><span className="font-medium text-[var(--dashboard-ink-soft)]">Late:</span> {record.lateReason}</p>}
+                        {record.earlyReason && <p><span className="font-medium text-[var(--dashboard-ink-soft)]">Early:</span> {record.earlyReason}</p>}
+                        {record.lateCheckoutReason && <p><span className="font-medium text-[var(--dashboard-ink-soft)]">Late check-out:</span> {record.lateCheckoutReason}</p>}
+                      </>
+                    )}
+                  </div>
+                )}
               </div>
             ))
           )}

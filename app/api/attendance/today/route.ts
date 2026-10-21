@@ -6,14 +6,14 @@ import {
   formatLocalDateInput,
   getAttendanceWindowState,
   getLocalTimeMinutes,
+  getPreviousLocalDateInput,
   getRecentShiftDateInputs,
   getTimeStringMinutes,
   hasShiftEndedForRecordDate,
+  shiftSpansMidnight,
 } from "@/lib/attendance-time"
 import { getEmployeeShiftAssignmentForDate } from "@/lib/employee-schedule"
 import { assertSelfOrAdmin, requireSession } from "@/lib/session"
-
-const CHECKOUT_GRACE_MINUTES = 360
 
 export async function GET(request: NextRequest) {
   try {
@@ -42,11 +42,18 @@ export async function GET(request: NextRequest) {
     const companiesCollection = db.collection("companies")
 
     const now = new Date()
-    const localDateInput = formatLocalDateInput(now)
-    const currentMinutes = getLocalTimeMinutes(now)
+    const requestedDate = searchParams.get("localDate")
+    const localDateInput = typeof requestedDate === "string" && /^\d{4}-\d{2}-\d{2}$/.test(requestedDate)
+      ? requestedDate
+      : formatLocalDateInput(now)
+    const requestedMinutes = Number(searchParams.get("localTimeMinutes"))
+    const currentMinutes = Number.isFinite(requestedMinutes) && requestedMinutes >= 0 && requestedMinutes < 1440
+      ? requestedMinutes
+      : getLocalTimeMinutes(now)
     let activeOpenRecord: any = null
     let todayHasScheduledShift = false
     let todayShiftHasEnded = false
+    let effectiveRecordDate = localDateInput
 
     try {
       const user = await usersCollection.findOne({
@@ -65,15 +72,43 @@ export async function GET(request: NextRequest) {
           shiftsCollection,
           companyId: session.companyId,
         })
-        todayHasScheduledShift = todayShiftAssignment.isScheduled
+        let effectiveShiftAssignment = todayShiftAssignment
+        const previousDate = getPreviousLocalDateInput(localDateInput)
+        const previousShiftAssignment = await getEmployeeShiftAssignmentForDate({
+          user,
+          dateInput: previousDate,
+          workingDays,
+          shiftsCollection,
+          companyId: session.companyId,
+        })
+        const previousShift = previousShiftAssignment.shift
+        if (previousShift?.startTime && previousShift?.endTime) {
+          const startMinutes = getTimeStringMinutes(previousShift.startTime)
+          const endMinutes = getTimeStringMinutes(previousShift.endTime)
+          if (shiftSpansMidnight(startMinutes, endMinutes)) {
+            const previousWindow = getAttendanceWindowState({
+              currentDateInput: localDateInput,
+              currentMinutes,
+              graceMinutes: Number.isInteger(user.checkOutGraceMinutes) ? user.checkOutGraceMinutes : 0,
+              recordDateInput: previousDate,
+              startMinutes,
+              endMinutes,
+            })
+            if (!previousWindow.isCheckoutExpired) {
+              effectiveRecordDate = previousDate
+              effectiveShiftAssignment = previousShiftAssignment
+            }
+          }
+        }
+        todayHasScheduledShift = effectiveShiftAssignment.isScheduled
 
-        if (todayShiftAssignment.shift?.startTime && todayShiftAssignment.shift?.endTime) {
+        if (effectiveShiftAssignment.shift?.startTime && effectiveShiftAssignment.shift?.endTime) {
           todayShiftHasEnded = hasShiftEndedForRecordDate({
             currentDateInput: localDateInput,
             currentMinutes,
-            recordDateInput: localDateInput,
-            startMinutes: getTimeStringMinutes(todayShiftAssignment.shift.startTime),
-            endMinutes: getTimeStringMinutes(todayShiftAssignment.shift.endTime),
+            recordDateInput: effectiveRecordDate,
+            startMinutes: getTimeStringMinutes(effectiveShiftAssignment.shift.startTime),
+            endMinutes: getTimeStringMinutes(effectiveShiftAssignment.shift.endTime),
           })
         }
 
@@ -131,6 +166,7 @@ export async function GET(request: NextRequest) {
               lateCheckoutReason: null,
               hoursWorked: 0,
               status: "absent",
+              absenceReason: "no_check_in",
               autoAbsent: true,
               createdAt: new Date(),
               updatedAt: new Date(),
@@ -163,30 +199,43 @@ export async function GET(request: NextRequest) {
             const windowState = getAttendanceWindowState({
               currentDateInput: localDateInput,
               currentMinutes,
-              graceMinutes: CHECKOUT_GRACE_MINUTES,
+              graceMinutes: Number.isInteger(user.checkOutGraceMinutes) ? user.checkOutGraceMinutes : 0,
               lateCheckoutGraceMinutes: Number.isInteger(user.checkOutGraceMinutes) ? user.checkOutGraceMinutes : 0,
               recordDateInput: openRecord.date,
               startMinutes: getTimeStringMinutes(recordShiftAssignment.shift.startTime),
               endMinutes: getTimeStringMinutes(recordShiftAssignment.shift.endTime),
             })
 
-            if (windowState.isCheckoutExpired) {
+            const missingCheckoutDeadlineReached = windowState.isMissingCheckoutDeadlineReached
+            if (missingCheckoutDeadlineReached || windowState.isCheckoutExpired) {
               await attendanceCollection.updateOne(
                 { _id: openRecord._id, companyId: session.companyId },
                 {
                   $set: {
-                    status: "present",
+                    status: "absent",
+                    absenceReason: "missing_checkout",
                     isEarly: false,
                     earlyReason: null,
                     lateCheckoutReason: null,
                     hoursWorked: 0,
-                    checkoutWindowExpired: true,
+                    checkoutWindowExpired: windowState.isCheckoutExpired,
                     updatedAt: new Date(),
                   },
                 },
               )
+              if (!windowState.isCheckoutExpired) {
+                activeOpenRecord = { ...openRecord, status: "absent", absenceReason: "missing_checkout" }
+              }
             } else {
-              activeOpenRecord = openRecord
+              if (openRecord.status === "absent" && openRecord.absenceReason === "missing_checkout") {
+                await attendanceCollection.updateOne(
+                  { _id: openRecord._id, companyId: session.companyId },
+                  { $set: { status: "present", absenceReason: null, updatedAt: new Date() } },
+                )
+                activeOpenRecord = { ...openRecord, status: "present", absenceReason: null }
+              } else {
+                activeOpenRecord = openRecord
+              }
             }
           }
         }
@@ -198,7 +247,7 @@ export async function GET(request: NextRequest) {
       (await attendanceCollection.findOne({
         companyId: session.companyId,
         userId: userId,
-        date: localDateInput,
+        date: effectiveRecordDate,
       }))
 
     if (todayRecord?.status === "absent" && todayRecord.autoAbsent && (!todayHasScheduledShift || !todayShiftHasEnded)) {
@@ -215,6 +264,7 @@ export async function GET(request: NextRequest) {
             ...todayRecord,
           }
         : null,
+      attendanceDate: todayRecord?.date || effectiveRecordDate,
     })
   } catch (error) {
     console.error("Today attendance error:", error)
